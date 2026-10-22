@@ -57,8 +57,7 @@ github链接：https://github.com/Caspainnn/class-flow/
      https://github.com/Caspainnn/class-flow/archive/refs/heads/main.zip
 
 2. 放哪儿
-   - 选一个短路径，例如 D:\ClassFlow。不要放 C:\Program Files（需要管理员权限，
-     程序写不了数据），也不要放 C:\Windows 或桌面深层目录。
+   - 当前项目所在根目录，比如 D:\ClassFlow（下面以此举例，不一定是真实目录）。禁止放在C盘
 
 3. 装依赖
    - cd D:\ClassFlow\server
@@ -79,7 +78,7 @@ github链接：https://github.com/Caspainnn/class-flow/
 
 6. 做成双击就能用
    - pip install pyinstaller
-   - 在 当前根目录 下执行 tools\build.bat，产出 课中签到.exe
+   - 在 D:\ClassFlow 下执行 tools\build.bat，产出 课中签到.exe
    - 再执行 python tools\make-shortcut.py 生成桌面快捷方式
    - 关掉第 4 步那个终端，双击桌面图标，确认服务能起来、浏览器能打开。
 
