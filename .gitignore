@@ -24,3 +24,6 @@ desktop.ini
 .workbuddy/
 .tmp_shots/
 .tmp*
+
+# 发行包产物
+dist/

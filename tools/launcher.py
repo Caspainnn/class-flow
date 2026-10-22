@@ -47,6 +47,13 @@ def is_ours():
 
 
 def find_node():
+    """优先用发行包自带的运行时，其次系统 PATH，最后常见安装位置"""
+    for p in (
+        os.path.join(base_dir(), "runtime", "node.exe"),
+        os.path.join(base_dir(), "node", "node.exe"),
+    ):
+        if os.path.isfile(p):
+            return p
     for d in os.environ.get("PATH", "").split(os.pathsep):
         p = os.path.join(d.strip('"'), "node.exe")
         if os.path.isfile(p):
@@ -94,12 +101,15 @@ def main():
     # 2. 找 node 和服务端
     node = find_node()
     if not node:
-        msg("这台电脑上没找到 Node.js。\n\n请先安装：https://nodejs.org\n装好后再双击一次。")
+        msg("没找到 Node.js 运行时。\n\n"
+            "· 从发行包安装的：解压时可能少了 runtime 文件夹，请重新解压完整的压缩包；\n"
+            "· 从源码跑的：先装 https://nodejs.org 的 LTS 版本，装完再双击一次。")
         return 1
     js = find_server()
     if not js:
-        msg("找不到 server\\server.js。\n\n课中签到这个程序和它的文件夹必须放在一起，"
-            "不要单独把 exe 拷走。")
+        msg("找不到 server\\server.js。\n\n"
+            "课中签到.exe 必须和 server 文件夹待在一起，不能单独把 exe 拷出来。\n"
+            "把整个文件夹一起移动即可。")
         return 1
 
     # 3. 启动（无窗口，日志写文件，父进程退出不影响）
