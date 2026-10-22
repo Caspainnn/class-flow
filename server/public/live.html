@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>点名中 · 课中签到</title>
+<style>
+:root{
+  --ink:#1F1D1A; --ink2:#5F5E5A; --ink3:#8A867E; --ink4:#B8B4AC;
+  --line:#D6D2CA; --line2:#ECE8E0; --fill:#F5F3EE;
+  --accent:#B5502E;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+body{
+  background:#fff;color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei","PingFang SC",sans-serif;
+  padding:2.4vh 2.4vw;
+  display:flex;
+}
+.screen{display:none;flex:1;min-height:0;min-width:0;flex-direction:column;gap:1.8vh}
+.screen.on{display:flex}
+
+header{display:flex;align-items:flex-start;justify-content:space-between;gap:2vw;flex:none}
+h1{font-size:clamp(17px,3.1vh,36px);font-weight:500;line-height:1.2}
+.meta{font-size:clamp(10px,1.6vh,19px);color:var(--ink3);margin-top:.5vh}
+
+.cnt{display:flex;flex-direction:column;align-items:flex-end;gap:.2vh;flex:none}
+.cnt .cl{font-size:clamp(10px,1.5vh,17px);color:var(--ink3)}
+.cnt .num{display:flex;align-items:baseline;font-variant-numeric:tabular-nums}
+.cnt .num b{font-size:clamp(21px,4vh,46px);font-weight:500;line-height:1}
+.cnt .num i{font-style:normal;color:var(--ink4);margin:0 .28em;font-size:clamp(13px,2.1vh,25px)}
+.cnt .num em{font-style:normal;color:var(--ink2);font-size:clamp(13px,2.1vh,25px)}
+
+main{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,47fr) minmax(0,53fr);gap:2.4vw}
+
+.sign{display:flex;align-items:center;gap:2vw;min-width:0}
+.qrwrap{flex:0 0 auto;height:min(100%,36vh);aspect-ratio:1;border:1px solid var(--line2);border-radius:1.4vh;
+  padding:1.2vh;display:flex;align-items:center;justify-content:center;background:#fff}
+.qrwrap img{width:100%;height:100%;object-fit:contain;display:block}
+.side{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center;gap:.9vh}
+.hint{font-size:clamp(10px,1.6vh,19px);color:var(--ink3)}
+.code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:clamp(32px,7.2vh,84px);font-weight:500;
+  letter-spacing:.1em;line-height:1.1;font-variant-numeric:tabular-nums}
+.ring{height:.55vh;min-height:3px;max-width:86%;background:var(--line2);border-radius:99px;overflow:hidden;margin-top:.4vh}
+.ring i{display:block;height:100%;width:100%;background:var(--accent);transition:width .3s linear}
+.small{font-size:clamp(10px,1.5vh,18px);color:var(--ink3);font-variant-numeric:tabular-nums}
+.url{font-size:clamp(10px,1.5vh,17px);color:var(--ink4);font-family:ui-monospace,monospace;margin-top:1.4vh;word-break:break-all}
+
+.roster{display:flex;flex-direction:column;min-height:0;min-width:0}
+.rhead{display:flex;align-items:baseline;gap:.5em;margin-bottom:1.4vh;flex:none}
+.rhead .lbl{font-size:clamp(11px,1.8vh,22px);color:var(--ink2)}
+.rhead b{font-size:clamp(13px,2vh,24px);font-weight:500;color:var(--accent);font-variant-numeric:tabular-nums}
+.rhead .unit{font-size:clamp(10px,1.6vh,19px);color:var(--accent)}
+.grid{flex:1;min-height:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(clamp(70px,6vw,128px),1fr));
+  gap:.9vh .7vw;align-content:center;overflow:hidden}
+.seat{display:flex;align-items:center;justify-content:center;height:clamp(30px,6vh,64px);padding:0 .35em;
+  border-radius:.9vh;background:var(--fill);color:var(--ink2);white-space:nowrap;overflow:hidden;
+  font-size:clamp(11px,2.1vh,24px);transition:background .8s ease,color .8s ease}
+.seat.done{background:transparent;color:transparent}
+.allhere{display:none;height:100%;align-items:center;justify-content:center;font-size:clamp(14px,2.6vh,32px);color:var(--ink3)}
+.allhere.on{display:flex}
+
+footer{display:flex;align-items:center;gap:2vw;padding-top:1.6vh;border-top:1px solid var(--line2);flex:none}
+.tip{flex:1;min-width:0;font-size:clamp(10px,1.5vh,18px);color:var(--ink4);font-variant-numeric:tabular-nums}
+.acts{display:flex;gap:1vh;flex:none}
+.btn{font-family:inherit;font-size:clamp(12px,1.9vh,22px);padding:clamp(6px,1.2vh,14px) clamp(14px,1.6vw,30px);
+  border-radius:1vh;border:1px solid var(--line);background:#fff;color:var(--ink2);cursor:pointer;white-space:nowrap;transition:.15s}
+.btn:hover{border-color:var(--ink3);color:var(--ink)}
+.btn.pri{background:var(--ink);border-color:var(--ink);color:#fff}
+.btn.pri:hover{background:#332F2A;border-color:#332F2A}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+
+.rz{flex:1;min-height:0;display:flex;flex-direction:column;justify-content:center}
+.rq{font-size:clamp(19px,3.6vh,44px);font-weight:500;line-height:1.35;max-width:88%}
+.rmeta{font-size:clamp(10px,1.7vh,20px);color:var(--ink3);margin:.9vh 0 3vh;font-variant-numeric:tabular-nums}
+.bars{display:flex;flex-direction:column;gap:1.5vh;max-width:88%}
+.brow{display:flex;align-items:center;gap:1.2vw}
+.bk{flex:0 0 auto;width:clamp(22px,3.2vh,36px);height:clamp(22px,3.2vh,36px);border-radius:50%;
+  display:flex;align-items:center;justify-content:center;border:1px solid var(--line);
+  color:var(--ink3);font-size:clamp(10px,1.7vh,18px)}
+.brow.ok .bk{background:var(--ink);border-color:var(--ink);color:#fff}
+.bt{flex:0 0 26%;min-width:0;font-size:clamp(10px,1.8vh,21px);color:var(--ink2);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bw{flex:1;min-width:0;height:clamp(13px,2.6vh,30px);background:var(--line2);border-radius:.6vh;overflow:hidden}
+.bw i{display:block;height:100%;width:0;background:var(--line);transition:width .6s ease}
+.brow.ok .bw i{background:var(--ink)}
+.bn{flex:0 0 auto;width:5em;text-align:right;font-size:clamp(11px,1.9vh,22px);
+  color:var(--ink2);font-variant-numeric:tabular-nums}
+.bp{flex:0 0 auto;width:4em;text-align:right;font-size:clamp(11px,1.9vh,22px);
+  color:var(--ink3);font-variant-numeric:tabular-nums}
+</style>
+</head>
+<body>
+
+<div class="screen on" id="live">
+  <header>
+    <div>
+      <h1 id="title">—</h1>
+      <div class="meta" id="meta">—</div>
+    </div>
+    <div class="cnt">
+      <span class="cl">已签到</span>
+      <span class="num"><b id="present">0</b><i>/</i><em id="total">0</em></span>
+    </div>
+  </header>
+
+  <main>
+    <section class="sign">
+      <div class="qrwrap"><img id="qr" alt="签到二维码"></div>
+      <div class="side">
+        <div class="hint">扫码，或输入课堂码</div>
+        <div class="code" id="code">----</div>
+        <div class="ring"><i id="ring"></i></div>
+        <div class="small" id="remain">—</div>
+        <div class="url" id="origin">—</div>
+      </div>
+    </section>
+
+    <section class="roster">
+      <div class="rhead"><span class="lbl">未签到</span><b id="absN">0</b><span class="unit">人</span></div>
+      <div class="grid" id="grid"></div>
+      <div class="allhere" id="allHere">全班都签到了</div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="tip" id="tip">—</div>
+    <div class="acts">
+      <button class="btn" id="home" type="button">回主页</button>
+      <button class="btn pri" id="end" type="button">结束本次点名</button>
+    </div>
+  </footer>
+</div>
+
+<div class="screen" id="result">
+  <header>
+    <div>
+      <h1 id="rtitle">—</h1>
+      <div class="meta" id="rmeta2">—</div>
+    </div>
+  </header>
+
+  <div class="rz">
+    <div class="rq" id="rq">—</div>
+    <div class="rmeta" id="rmeta">—</div>
+    <div class="bars" id="bars"></div>
+  </div>
+
+  <footer>
+    <div class="tip" id="rtip">—</div>
+    <div class="acts">
+      <button class="btn" id="rHome" type="button">回主页</button>
+      <button class="btn pri" id="rNext" type="button">再出一道题</button>
+    </div>
+  </footer>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const LETTER = 'ABCDEF';
+
+let ORIGIN = '';
+let COURSE_ID = '';
+let CUR_SID = null;
+let RENDERED = null;
+let LAST_SLICE = -1;
+let pollTimer = null;
+let ENDING = false;
+let ENDED = false;
+let MODE = 'live';
+
+function esc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+}
+
+function fmtTime(ts) {
+  const d = new Date(ts);
+  const p = n => String(n).padStart(2, '0');
+  return `${d.getMonth() + 1}月${d.getDate()}日 周${'日一二三四五六'[d.getDay()]} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
+/* 换码：先让浏览器把新图拉下来，加载完再换 src，避免闪白 */
+function renderQR(s) {
+  if (s.slice === LAST_SLICE) return;
+  LAST_SLICE = s.slice;
+  const url = '/qr.svg?s=' + s.slice;
+  const img = new Image();
+  img.onload = () => { $('qr').src = url; };
+  img.src = url;
+}
+
+/* 座位格：签一个褪一个，位置不动，避免剩下的人整体跳 */
+function renderSeats(absent) {
+  const grid = $('grid');
+  const ids = absent.map(x => x.id);
+  const nameById = new Map(absent.map(x => [x.id, x.name]));
+
+  if (RENDERED) {
+    const now = new Set(ids);
+    let shrunk = false;
+    RENDERED.forEach(id => {
+      if (!now.has(id)) {
+        const el = grid.querySelector(`[data-id="${id}"]`);
+        if (el) { el.classList.add('done'); shrunk = true; }
+      }
+    });
+    if (shrunk && ids.every(id => RENDERED.includes(id))) return;   // 只减不增，位置保持
+  }
+
+  grid.innerHTML = ids.map(id =>
+    `<div class="seat" data-id="${esc(id)}">${esc(nameById.get(id))}</div>`).join('');
+  RENDERED = ids;
+
+  const all = $('allHere');
+  if (!ids.length) { grid.style.display = 'none'; all.classList.add('on'); }
+  else { grid.style.display = ''; all.classList.remove('on'); }
+}
+
+function render(s) {
+  if (!s.active) { showEmpty(); return; }
+  if (MODE !== 'live') { swapTo('live'); }
+
+  if (s.id !== CUR_SID) { CUR_SID = s.id; RENDERED = null; LAST_SLICE = -1; }
+  COURSE_ID = s.courseId || COURSE_ID;
+
+  $('title').textContent = s.course || '点名';
+  $('meta').textContent = fmtTime(s.startedAt);
+  $('present').textContent = s.present;
+  $('total').textContent = s.total;
+  $('code').textContent = s.code;
+  $('absN').textContent = s.absent.length;
+
+  const ratio = s.open ? Math.max(0, s.remainMs / s.windowMs) : 0;
+  $('ring').style.width = (ratio * 100) + '%';
+  $('ring').style.background = s.open ? 'var(--accent)' : 'var(--line)';
+  $('remain').textContent = s.open
+    ? `剩余 ${Math.ceil(s.remainMs / 1000)} 秒`
+    : '窗口已关';
+  $('tip').textContent = s.open
+    ? '窗口关闭后仍可补签，记作迟到'
+    : '仍可补签，之后的提交记作迟到';
+  $('origin').textContent = (ORIGIN || '').replace(/^https?:\/\//, '') + '/join';
+
+  renderSeats(s.absent);
+  if (s.open) renderQR(s);
+}
+
+function swapTo(name) {
+  MODE = name;
+  $('live').classList.toggle('on', name === 'live');
+  $('result').classList.toggle('on', name === 'result');
+}
+
+function showEmpty() {
+  swapTo('result');
+  $('rtitle').textContent = '课中签到';
+  $('rmeta2').textContent = '';
+  $('rq').textContent = '现在没有进行中的点名';
+  $('rmeta').textContent = '回主页选一门课，出一道题就能开始。';
+  $('bars').innerHTML = '';
+  $('rtip').textContent = '';
+  $('rNext').style.display = 'none';
+  $('rHome').classList.add('pri');
+  $('rHome').textContent = '回主页';
+}
+
+function renderResult(s) {
+  swapTo('result');
+  $('rtitle').textContent = s.course || '点名';
+  $('rmeta2').textContent = fmtTime(s.startedAt);
+  $('rq').textContent = s.question.text;
+
+  const answered = s.answered || 0;
+  const rate = answered ? Math.round(s.correct / answered * 100) : null;
+  $('rmeta').textContent =
+    `${answered} 人作答 · 正确率 ${rate == null ? '—' : rate + '%'} · ` +
+    `已签到 ${s.present} / ${s.total}` +
+    (s.late ? ` · 迟到 ${s.late}` : '');
+
+  const max = Math.max(1, ...s.dist);
+  $('bars').innerHTML = s.question.options.map((t, i) => {
+    const n = s.dist[i] || 0;
+    const pct = answered ? Math.round(n / answered * 100) : 0;
+    const ok = i === s.question.correct;
+    return `<div class="brow ${ok ? 'ok' : ''}">
+      <span class="bk">${LETTER[i]}</span>
+      <span class="bt" title="${esc(t)}">${esc(t)}</span>
+      <span class="bw"><i style="width:${Math.round(n / max * 100)}%"></i></span>
+      <span class="bn">${n} 人</span>
+      <span class="bp">${pct}%</span>
+    </div>`;
+  }).join('');
+
+  $('rtip').textContent = `正确答案 ${LETTER[s.question.correct]}`;
+  $('rNext').style.display = '';
+  $('rNext').disabled = false;
+  $('rNext').textContent = '再出一道题';
+  $('rHome').classList.remove('pri');
+  $('rHome').textContent = '回主页';
+}
+
+async function poll() {
+  if (ENDED) return;
+  try {
+    const s = await (await fetch('/api/session/state', { cache: 'no-store' })).json();
+    render(s);
+  } catch (e) { /* 下一轮再试 */ }
+}
+
+$('end').onclick = async () => {
+  if ($('end').disabled || ENDING) return;
+  ENDING = true;
+  $('end').disabled = true;
+  $('end').textContent = '正在结束…';
+  ENDED = true;
+  clearInterval(pollTimer);
+
+  let snap = null;
+  try { snap = await (await fetch('/api/session/state', { cache: 'no-store' })).json(); } catch (e) {}
+
+  try {
+    const r = await fetch('/api/session/end', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}'
+    });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+  } catch (e) {
+    ENDING = false;
+    ENDED = false;
+    $('end').disabled = false;
+    $('end').textContent = '结束本次点名';
+    alert('结束失败：' + e.message + '\n再点一次试试。');
+    pollTimer = setInterval(poll, 1000);
+    return;
+  }
+
+  ENDING = false;
+  if (snap && snap.active) renderResult(snap);
+  else showEmpty();
+};
+
+$('home').onclick = () => { location.href = '/'; };
+$('rHome').onclick = () => { location.href = '/'; };
+$('rNext').onclick = () => {
+  location.href = '/compose?courseId=' + encodeURIComponent(COURSE_ID);
+};
+
+/* 结果页按 N 直接出下一题 */
+document.addEventListener('keydown', e => {
+  if (MODE !== 'result') return;
+  if (e.key === 'n' || e.key === 'N') {
+    if ($('rNext').style.display !== 'none') $('rNext').click();
+  }
+});
+
+async function boot() {
+  try {
+    const all = await (await fetch('/api/all', { cache: 'no-store' })).json();
+    ORIGIN = all.origin || '';
+    if (all.active) CUR_SID = all.active;
+  } catch (e) {}
+  await poll();
+  pollTimer = setInterval(poll, 1000);
+}
+
+boot();
+</script>
+</body>
+</html>

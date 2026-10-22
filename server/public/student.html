@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>课中签到</title>
+<style>
+:root{--ink:#1F1D1A;--ink2:#5F5E5A;--ink3:#8A867E;--ink4:#B8B4AC;
+  --line:#E2DED6;--line2:#ECE8E0;--fill:#F5F3EE;--accent:#B5502E;--ok:#1D9E75}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#F7F6F3;color:var(--ink);min-height:100vh;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei","PingFang SC",sans-serif;
+  display:flex;flex-direction:column;align-items:center;padding:16px}
+.card{width:100%;max-width:430px;margin:auto 0;background:#fff;border-radius:18px;padding:22px 20px 18px;
+  border:0.5px solid var(--line2)}
+.top{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;gap:10px}
+.course{font-size:12px;color:var(--ink3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.state{font-size:11px;color:var(--ink2);display:flex;align-items:center;gap:6px;flex:none}
+.state i{width:5px;height:5px;border-radius:50%;background:var(--ok);display:block}
+.state.warn{color:#8a5a12}.state.warn i{background:#BA7517}
+
+h1{font-size:18px;font-weight:500;line-height:1.55;margin-bottom:16px}
+.sub{font-size:13px;color:var(--ink2);line-height:1.7;margin-bottom:16px}
+
+.opt{display:flex;gap:11px;align-items:center;padding:14px;border:1px solid var(--line);border-radius:12px;
+  margin-bottom:9px;cursor:pointer;background:#fff;transition:background .15s,border-color .15s,box-shadow .15s}
+.opt:active{background:#FAF9F6}
+.opt.sel{border-color:var(--ink);background:#F7F6F3;box-shadow:0 0 0 1px var(--ink)}
+.opt .k{width:20px;height:20px;flex:0 0 20px;border-radius:50%;background:var(--fill);color:var(--ink3);
+  font-size:11px;font-family:ui-monospace,Menlo,monospace;display:flex;align-items:center;justify-content:center}
+.opt.sel .k{background:var(--ink);color:#fff}
+.opt .t{font-size:14.5px;line-height:1.5;word-break:break-word}
+
+.who{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:16px;
+  font-size:12px;color:var(--ink3);min-height:20px}
+.who .nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.link{font-family:inherit;font-size:12px;color:var(--ink3);background:none;border:none;
+  padding:6px 2px;cursor:pointer;text-decoration:underline;text-underline-offset:3px;flex:none}
+.link:active{color:var(--ink)}
+
+.wform{display:none;gap:8px;margin-top:14px}
+.wform.on{display:flex}
+.wform input{flex:1;min-width:0;font-family:inherit;font-size:15px;padding:11px 12px;border:1px solid var(--line);
+  border-radius:10px;background:#FCFBF9;color:var(--ink);outline:none}
+.wform input:focus{border-color:var(--accent);background:#fff}
+.wform input#sid{flex:1.35}
+
+.btn{width:100%;font-family:inherit;font-size:15px;font-weight:500;padding:14px;border:none;border-radius:11px;
+  background:var(--ink);color:#fff;cursor:pointer;margin-top:12px;transition:.15s}
+.btn:disabled{background:#E6E2DA;color:#B0ACA4;cursor:not-allowed}
+.btn:not(:disabled):active{background:#332F2A}
+.timer{font-size:11px;color:var(--ink4);text-align:center;margin-top:10px;font-variant-numeric:tabular-nums}
+
+.hint{font-size:12px;color:var(--ink3);text-align:center;line-height:1.7;margin-top:14px}
+.err{background:#FBEDE9;color:#93401F;font-size:13px;line-height:1.6;padding:11px 13px;border-radius:10px;
+  margin-bottom:14px;display:none}
+.err.on{display:block}
+
+.center{text-align:center;padding:22px 0 8px}
+.center .t{font-size:18px;font-weight:500;margin-bottom:8px}
+.center .s{font-size:13px;color:var(--ink2);line-height:1.75}
+.check{width:54px;height:54px;border-radius:50%;background:#EDF6F1;color:var(--ok);
+  display:flex;align-items:center;justify-content:center;margin:0 auto 16px}
+.spin{width:24px;height:24px;border:2px solid var(--line2);border-top-color:var(--accent);border-radius:50%;
+  margin:0 auto 14px;animation:sp .8s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+
+.field{margin-bottom:14px}
+.field label{display:block;font-size:12px;color:var(--ink3);margin-bottom:7px}
+.field input{width:100%;font-family:inherit;font-size:17px;padding:12px 13px;border:1px solid var(--line);
+  border-radius:11px;background:#FCFBF9;color:var(--ink);outline:none}
+.field input:focus{border-color:var(--accent);background:#fff}
+.field input.codeinput{text-align:center;font-size:26px;letter-spacing:10px;padding:13px 14px 13px 24px;
+  font-family:ui-monospace,Menlo,monospace;color:var(--ink);font-weight:500}
+
+.view{display:none}.view.on{display:block}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="top">
+    <span class="course" id="course">课中签到</span>
+    <span class="state" id="state"><i></i><span id="stateText">已连接</span></span>
+  </div>
+
+  <div class="view" id="vCode">
+    <h1>输入课堂码</h1>
+    <div class="sub">投影上有一组 4 位数字，每 30 秒变一次。二维码扫不出来时用这个。</div>
+    <div class="field">
+      <label>课堂码</label>
+      <input id="ccode" class="codeinput" maxlength="4" inputmode="numeric" placeholder="––––" autocomplete="off">
+    </div>
+    <button class="btn" id="codeGo" disabled>下一步</button>
+    <div class="hint">也可以直接打开投影下方的网址</div>
+  </div>
+
+  <div class="view" id="vLoading">
+    <div class="center"><div class="spin"></div><div class="s">正在校验……</div></div>
+  </div>
+
+  <div class="view" id="vError">
+    <h1>签到没完成</h1>
+    <div class="err on" id="errMsg"></div>
+    <div class="sub" id="errHint">请抬头看讲台，重新扫一次最新的二维码。</div>
+    <button class="btn" id="retry">改成输入课堂码</button>
+  </div>
+
+  <div class="view" id="vForm">
+    <h1 id="qtext">—</h1>
+    <div id="opts"></div>
+    <div class="err" id="formErr"></div>
+
+    <div class="who" id="whoKnown">
+      <span class="nm" id="whoName">—</span>
+      <button class="link" id="whoEdit" type="button">不是本人</button>
+    </div>
+    <div class="wform" id="whoForm">
+      <input id="sid" inputmode="numeric" placeholder="学号" autocomplete="off">
+      <input id="sname" placeholder="姓名" autocomplete="off">
+    </div>
+
+    <button class="btn" id="submit" disabled>提交并签到</button>
+    <div class="timer" id="ticketTimer"></div>
+  </div>
+
+  <div class="view" id="vDone">
+    <div class="center">
+      <div class="check">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+          stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+      </div>
+      <div class="t" id="doneTitle">已签到</div>
+      <div class="s" id="doneSub"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const LS_SID = 'inclass_sid', LS_NAME = 'inclass_name';
+
+const token = new URLSearchParams(location.search).get('t') || '';
+let MODE = token ? 'qr' : 'code';
+let TICKET = null, PICK = null, LEFT = 0, timerId = null;
+let KNOWN = false;          // 用的是记住的身份，还是正在手动填
+
+function view(name) {
+  ['vCode', 'vLoading', 'vError', 'vForm', 'vDone'].forEach(v => $(v).classList.toggle('on', v === name));
+}
+
+function fail(msg, hint) {
+  clearInterval(timerId);
+  $('errMsg').textContent = msg;
+  $('errHint').textContent = hint || (MODE === 'code'
+    ? '请抬头看投影上最新的课堂码。'
+    : '请抬头看讲台，重新扫一次最新的二维码。');
+  $('retry').style.display = MODE === 'code' ? 'none' : 'block';
+  $('state').classList.add('warn');
+  $('stateText').textContent = '已失效';
+  view('vError');
+}
+
+async function claim(payload) {
+  view('vLoading');
+  try {
+    const r = await fetch('/api/claim', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const d = await r.json();
+    if (!r.ok) return fail(d.error || '校验失败');
+    TICKET = d.ticket;
+    LEFT = Math.floor(d.expiresIn / 1000);
+    if (d.title) $('course').textContent = d.title;
+    buildForm(d.question, d.late);
+  } catch (e) {
+    fail('网络不通', '请确认手机和讲台电脑连的是同一个 Wi-Fi。');
+  }
+}
+
+function openCodeView() {
+  MODE = 'code';
+  const inp = $('ccode'), btn = $('codeGo');
+  inp.value = '';
+  btn.disabled = true;
+  inp.oninput = () => {
+    inp.value = inp.value.replace(/\D/g, '').slice(0, 4);
+    btn.disabled = inp.value.length !== 4;
+  };
+  btn.onclick = () => claim({ code: inp.value });
+  view('vCode');
+  setTimeout(() => inp.focus(), 60);
+}
+
+$('retry').onclick = openCodeView;
+
+/* 记住的人：一进来就是题目，名字收在底下；没记住的才展开两个输入框 */
+function useKnown(on) {
+  KNOWN = on;
+  $('whoKnown').style.display = on ? 'flex' : 'none';
+  $('whoForm').classList.toggle('on', !on);
+  if (on) {
+    $('whoName').textContent = `${localStorage.getItem(LS_NAME)} · ${localStorage.getItem(LS_SID)}`;
+  } else {
+    $('sid').value = localStorage.getItem(LS_SID) || '';
+    $('sname').value = localStorage.getItem(LS_NAME) || '';
+    setTimeout(() => { if (!localStorage.getItem(LS_SID)) $('sid').focus(); }, 120);
+  }
+  sync();
+}
+
+function buildForm(q, late) {
+  $('formErr').classList.remove('on');
+  $('formErr').textContent = '';
+  $('submit').textContent = '提交并签到';
+  PICK = null;
+  $('qtext').textContent = q.text;
+  $('opts').innerHTML = q.options.map((t, i) => `
+    <div class="opt" data-i="${i}">
+      <span class="k">${'ABCDEF'[i]}</span>
+      <span class="t">${esc(t)}</span>
+    </div>`).join('');
+  $('opts').querySelectorAll('.opt').forEach(el => {
+    el.onclick = () => {
+      PICK = Number(el.dataset.i);
+      $('opts').querySelectorAll('.opt').forEach(o => o.classList.toggle('sel', o === el));
+      sync();
+    };
+  });
+
+  const hasId = localStorage.getItem(LS_SID) && localStorage.getItem(LS_NAME);
+  KNOWN = !!hasId;
+  useKnown(!!hasId);
+
+  $('sid').oninput = () => { $('sid').value = $('sid').value.replace(/\D/g, ''); sync(); };
+  $('sname').oninput = () => sync();
+  $('whoEdit').onclick = () => useKnown(false);
+
+  if (late) {
+    $('state').classList.add('warn');
+    $('stateText').textContent = '迟到签到';
+  }
+
+  view('vForm');
+  sync();
+  clearInterval(timerId);
+  tick();
+  timerId = setInterval(tick, 1000);
+}
+
+function currentWho() {
+  if (KNOWN) {
+    return { sid: localStorage.getItem(LS_SID) || '', name: localStorage.getItem(LS_NAME) || '' };
+  }
+  return { sid: $('sid').value.trim(), name: $('sname').value.trim() };
+}
+
+function sync() {
+  const { sid, name } = currentWho();
+  const okSid = /^\d{6,}$/.test(sid);
+  const okName = name.length >= 2;
+  $('submit').disabled = !(okSid && okName && PICK !== null);
+}
+
+function tick() {
+  if (LEFT <= 0) return fail('答题超时', '请抬头看讲台，重新扫一次最新的二维码。');
+  $('ticketTimer').textContent = `本次签到凭证 ${LEFT} 秒后失效`;
+  LEFT--;
+}
+
+$('submit').onclick = async () => {
+  const { sid, name } = currentWho();
+  $('formErr').classList.remove('on');
+  $('submit').disabled = true;
+  $('submit').textContent = '提交中…';
+  try {
+    const r = await fetch('/api/submit', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ticket: TICKET, studentId: sid, studentName: name, answer: PICK })
+    });
+    const d = await r.json();
+
+    if (!r.ok) {
+      const msg = d.error || '提交失败';
+      if (/已经签过/.test(msg)) {
+        clearInterval(timerId);
+        $('doneTitle').textContent = '这个学号已经签过了';
+        $('doneSub').textContent = '一个人只能签一个学号。如果不是你签的，举手告诉老师。';
+        return view('vDone');
+      }
+      if (/凭证|超时|还没开始/.test(msg)) return fail(msg);
+      $('formErr').textContent = msg;
+      $('formErr').classList.add('on');
+      $('submit').textContent = '提交并签到';
+      sync();
+      return;
+    }
+
+    localStorage.setItem(LS_SID, sid);
+    localStorage.setItem(LS_NAME, name);
+    clearInterval(timerId);
+    $('doneTitle').textContent = '签到成功';
+    $('doneSub').innerHTML = `${esc(d.name)} · 第 ${d.present} 位到课`
+      + (d.status === 'late' ? '（迟到）' : '')
+      + '<br>答案已提交，这节课的题老师会讲。';
+    view('vDone');
+  } catch (e) {
+    $('submit').textContent = '提交并签到';
+    sync();
+    fail('提交失败', '网络不稳，请重试一次。');
+  }
+};
+
+if (token) claim({ token }); else openCodeView();
+</script>
+</body>
+</html>

@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>选课 · 课中签到</title>
+<style>
+:root{--ink:#1F1D1A;--ink2:#5F5E5A;--ink3:#8A867E;--ink4:#B8B4AC;
+  --line:#E2DED6;--line2:#ECE8E0;--fill:#F5F3EE;--accent:#B5502E;--ok:#1D9E75}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#F7F6F3;color:var(--ink);min-height:100vh;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei","PingFang SC",sans-serif;
+  display:flex;align-items:center;justify-content:center;padding:24px}
+.sheet{width:100%;max-width:404px;background:#fff;border-radius:14px;padding:18px 18px 14px;
+  border:0.5px solid var(--line);box-shadow:0 1px 3px rgba(31,29,26,.04)}
+
+.hd{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+.hd .t{font-size:15px;font-weight:500}
+.hd .kbd{font-size:11px;color:var(--ink4);flex:none}
+.sub{font-size:12px;color:var(--ink3);margin-top:3px;margin-bottom:14px}
+
+.banner{display:none;align-items:center;gap:9px;background:#FBF3EF;border:0.5px solid #EBD8CE;
+  border-radius:10px;padding:9px 11px;margin-bottom:12px;cursor:pointer}
+.banner.on{display:flex}
+.banner .dot{width:6px;height:6px;border-radius:50%;background:var(--accent);flex:none}
+.banner .txt{flex:1;font-size:12px;color:#8C4526;line-height:1.5}
+.banner .go{font-size:12px;color:var(--accent);flex:none}
+
+.list{display:flex;flex-direction:column;gap:4px}
+.row{display:flex;align-items:center;gap:11px;padding:9px 11px;border-radius:10px;
+  cursor:pointer;transition:background .12s;border:0.5px solid transparent}
+.row:hover{background:#FAF9F6}
+.row.sel{background:var(--fill);border-color:var(--line)}
+.row .k{width:21px;height:21px;flex:none;border-radius:6px;background:#F2F0EB;color:var(--ink3);
+  font-size:12px;display:flex;align-items:center;justify-content:center;font-variant-numeric:tabular-nums}
+.row.sel .k{background:var(--ink);color:#fff}
+.row .mid{flex:1;min-width:0}
+.row .nm{font-size:14px;font-weight:500;line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .meta{font-size:12px;color:var(--ink3);margin-top:1px}
+.row .meta.warn{color:#946013}
+.row .rt{font-size:11px;color:var(--ink4);flex:none}
+.row.empty{opacity:.6}
+.row.empty .nm{color:var(--ink2)}
+
+.ft{display:flex;align-items:center;justify-content:space-between;gap:10px;
+  border-top:0.5px solid var(--line2);margin-top:12px;padding-top:11px}
+.ft .tip{font-size:12px;color:var(--ink4)}
+.link{font-family:inherit;font-size:12px;color:var(--ink3);background:none;border:none;
+  padding:5px 2px;cursor:pointer;text-decoration:none}
+.link:hover{color:var(--ink)}
+
+.blank{padding:20px 4px 12px;text-align:center}
+.blank .t{font-size:13px;color:var(--ink2);margin-bottom:6px}
+.blank .s{font-size:12px;color:var(--ink3);line-height:1.7}
+</style>
+</head>
+<body>
+<div class="sheet">
+  <div class="hd">
+    <span class="t">今天上哪门课</span>
+    <span class="kbd">数字键直选</span>
+  </div>
+  <div class="sub" id="sub">—</div>
+
+  <div class="banner" id="banner">
+    <span class="dot"></span>
+    <span class="txt" id="bannerTxt">有一场点名还没结束</span>
+    <span class="go">回到投影页 →</span>
+  </div>
+
+  <div class="list" id="list"></div>
+
+  <div class="ft">
+    <span class="tip" id="tip">↑↓ 选择 · 回车开始</span>
+    <a class="link" href="/admin">名单管理</a>
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+let COURSES = [];
+let SEL = 0;
+let ACTIVE = null;
+
+function fmtToday() {
+  const d = new Date();
+  const p = n => String(n).padStart(2, '0');
+  return `${d.getMonth() + 1}月${d.getDate()}日 周${'日一二三四五六'[d.getDay()]} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
+function ago(ts) {
+  if (!ts) return '还没上过';
+  const diff = Date.now() - ts;
+  const day = 86400000;
+  if (diff < day) {
+    const h = Math.floor(diff / 3600000);
+    return h < 1 ? '刚上过' : h + ' 小时前';
+  }
+  const d = Math.floor(diff / day);
+  if (d === 1) return '昨天上过';
+  if (d < 7) return d + ' 天前';
+  if (d < 30) return Math.floor(d / 7) + ' 周前';
+  return Math.floor(d / 30) + ' 个月前';
+}
+
+function paint() {
+  const rows = $('list').querySelectorAll('.row');
+  rows.forEach((el, i) => el.classList.toggle('sel', i === SEL));
+}
+
+function go(c) {
+  if (!c) return;
+  if (!c.count) {
+    alert(`「${c.name}」还没有名单。\n先去后台把名单粘进去，才能开始点名。`);
+    location.href = '/admin';
+    return;
+  }
+  location.href = '/compose?courseId=' + encodeURIComponent(c.id);
+}
+
+function render() {
+  if (!COURSES.length) {
+    $('list').innerHTML = `<div class="blank">
+      <div class="t">还没有课程</div>
+      <div class="s">先去后台建一门课，把名单粘进去。</div>
+    </div>`;
+    $('tip').textContent = '';
+    return;
+  }
+  $('list').innerHTML = COURSES.map((c, i) => `
+    <div class="row ${i === SEL ? 'sel' : ''} ${c.count ? '' : 'empty'}" data-i="${i}">
+      <span class="k">${i + 1}</span>
+      <div class="mid">
+        <div class="nm">${esc(c.name)}</div>
+        <div class="meta ${c.count ? '' : 'warn'}">${c.count ? `${c.count} 人${c.term ? ' · ' + esc(c.term) : ''}` : '名单还没录入'}</div>
+      </div>
+      <div class="rt">${ago(c.lastAt)}</div>
+    </div>`).join('');
+
+  $('list').querySelectorAll('.row').forEach(el => {
+    const i = Number(el.dataset.i);
+    el.onmouseenter = () => { SEL = i; paint(); };
+    el.onclick = () => go(COURSES[i]);
+  });
+}
+
+async function boot() {
+  $('sub').textContent = fmtToday();
+  let all = null, sessions = [];
+  try {
+    all = await (await fetch('/api/all', { cache: 'no-store' })).json();
+  } catch (e) {
+    $('sub').textContent = '连不上本地服务，双击「课中签到.bat」重新启动';
+    return;
+  }
+  try {
+    const r = await (await fetch('/api/sessions', { cache: 'no-store' })).json();
+    sessions = r.sessions || [];
+  } catch (e) {}
+
+  ACTIVE = all.active || null;
+  if (ACTIVE) {
+    $('banner').classList.add('on');
+    $('banner').onclick = () => { location.href = '/live'; };
+  }
+
+  const lastAt = new Map();
+  sessions.forEach(s => {
+    if (!lastAt.has(s.courseId) || s.startedAt > lastAt.get(s.courseId)) lastAt.set(s.courseId, s.startedAt);
+  });
+
+  const count = new Map();
+  (all.students || []).forEach(s => count.set(s.courseId, (count.get(s.courseId) || 0) + 1));
+
+  COURSES = (all.courses || []).map(c => ({
+    id: c.id,
+    name: c.name,
+    term: c.term || '',
+    count: count.get(c.id) || 0,
+    lastAt: lastAt.get(c.id) || 0,
+    createdAt: c.createdAt || 0
+  })).sort((a, b) => (b.lastAt - a.lastAt) || (b.createdAt - a.createdAt));
+
+  SEL = 0;
+  render();
+}
+
+document.addEventListener('keydown', e => {
+  if (!COURSES.length) return;
+  if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
+    e.preventDefault(); SEL = Math.min(SEL + 1, COURSES.length - 1); paint();
+  } else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
+    e.preventDefault(); SEL = Math.max(SEL - 1, 0); paint();
+  } else if (e.key === 'Enter') {
+    e.preventDefault(); go(COURSES[SEL]);
+  } else if (/^[1-9]$/.test(e.key)) {
+    const i = Number(e.key) - 1;
+    if (COURSES[i]) { SEL = i; paint(); go(COURSES[i]); }
+  }
+});
+
+boot();
+</script>
+</body>
+</html>

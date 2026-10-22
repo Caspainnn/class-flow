@@ -1,0 +1,21 @@
+{
+  "name": "class-flow",
+  "version": "3.0.0",
+  "description": "ClassFlow 课中签到：动态码扫码点名 + 随堂一道题，答题即签到",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "keywords": [
+    "attendance",
+    "classroom",
+    "quiz",
+    "education"
+  ],
+  "author": "Caspainnn",
+  "license": "MIT",
+  "dependencies": {
+    "exceljs": "^4.4.0",
+    "qrcode": "^1.5.4"
+  }
+}

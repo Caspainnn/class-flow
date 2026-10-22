@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>后台 · 课中签到</title>
+<style>
+:root{--ink:#17191c;--ink2:#666b73;--ink3:#9aa0a8;--line:#e6e8ec;--blue:#185FA5;--ok:#1D9E75;--red:#A32D2D;--amber:#BA7517}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#f4f5f7;color:var(--ink);font-family:-apple-system,"Segoe UI","Microsoft YaHei",sans-serif;padding:22px 18px 60px}
+.wrap{max-width:1020px;margin:0 auto}
+.top{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+.back{width:34px;height:34px;border-radius:9px;border:1px solid var(--line);background:#fff;cursor:pointer;font-size:15px;color:var(--ink2);font-family:inherit}
+.back:hover{border-color:#b9bec6}
+h1{font-size:18px;font-weight:500}
+.sub{font-size:12px;color:var(--ink2);margin-top:3px}
+.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}
+.tab{font-family:inherit;font-size:13px;padding:8px 15px;border-radius:9px;border:1px solid var(--line);background:#fff;color:var(--ink2);cursor:pointer}
+.tab.on{background:var(--ink);border-color:var(--ink);color:#fff}
+.pane{display:none}.pane.on{display:block}
+.card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:18px 20px;margin-bottom:12px}
+.card h2{font-size:13px;font-weight:500;margin-bottom:14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.card h2 span{font-weight:400;color:var(--ink3);font-size:11.5px}
+.stats{display:flex;gap:30px;flex-wrap:wrap}
+.stat b{display:block;font-size:27px;font-weight:500;line-height:1.1;font-variant-numeric:tabular-nums}
+.stat span{font-size:11.5px;color:var(--ink3)}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th{text-align:left;font-weight:400;color:var(--ink3);font-size:11px;padding:0 6px 8px 0;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:8px 6px 8px 0;border-bottom:1px solid #f2f3f5;vertical-align:middle}
+td.mono{font-family:ui-monospace,Menlo,monospace;font-size:11.5px;color:var(--ink2)}
+tr:last-child td{border-bottom:none}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+.btn{font-family:inherit;font-size:12.5px;padding:7px 13px;border-radius:8px;border:1px solid var(--line);background:#fff;color:var(--ink);cursor:pointer;white-space:nowrap}
+.btn:hover{border-color:#b9bec6}
+.btn.pri{background:var(--ink);border-color:var(--ink);color:#fff}
+.btn.pri:hover{background:#2c2f33}
+.btn.mini{padding:4px 9px;font-size:11.5px}
+.btn.danger{color:var(--red);border-color:#f3d6d6}
+.btn.danger:hover{background:#fdf0ef}
+.btn.armed{background:#fdf0ef;border-color:#f0cfcf;color:var(--red)}
+.btn:disabled{color:#b9bec6;border-color:var(--line);cursor:not-allowed;background:#fafbfc}
+.row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px;align-items:flex-end}
+.col{display:flex;flex-direction:column;gap:5px;flex:1;min-width:130px}
+.col label{font-size:11px;color:var(--ink3)}
+input,select,textarea{font-family:inherit;font-size:13px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:#fbfcfd;outline:none;color:var(--ink);width:100%}
+input:focus,select:focus,textarea:focus{border-color:var(--blue);background:#fff}
+input[readonly]{background:#f4f5f7;color:var(--ink2)}
+textarea{min-height:96px;line-height:1.7;resize:vertical;font-family:ui-monospace,Menlo,monospace;font-size:12.5px}
+.empty{font-size:12.5px;color:var(--ink3);padding:16px 0;line-height:1.9}
+.tag{font-size:10.5px;padding:2px 7px;border-radius:5px;background:#f1f2f5;color:var(--ink2);white-space:nowrap}
+.tag.ok{background:#eaf7f1;color:#0F6E56}
+.tag.bad{background:#fdf0ef;color:var(--red)}
+.tag.warn{background:#fdf3e3;color:#8a5a12}
+.toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);background:#17191c;color:#fff;font-size:12.5px;
+  padding:9px 16px;border-radius:9px;opacity:0;transition:.2s;pointer-events:none;z-index:9;max-width:80vw}
+.toast.on{opacity:1}
+.hint{font-size:11.5px;color:var(--ink3);line-height:1.9;margin-top:8px}
+.hint b{color:var(--ink2);font-weight:500}
+.cur{font-size:12.5px;color:var(--ink2);display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.cur select{width:auto;min-width:200px}
+.scroll{max-height:380px;overflow:auto}
+.chart{width:100%;overflow-x:auto}
+svg{display:block}
+.legend{font-size:11px;color:var(--ink3);margin-top:6px}
+.divider{height:1px;background:var(--line);margin:16px 0}
+.filetable td{font-size:12px}
+.uplab{font-family:inherit;font-size:12.5px;padding:7px 13px;border-radius:8px;border:1px solid var(--line);background:#fff;cursor:pointer;color:var(--ink)}
+.uplab:hover{border-color:#b9bec6}
+@media (max-width:640px){.stats{gap:18px}td,th{padding-right:8px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <button class="back" id="back">←</button>
+    <div><h1>后台设置</h1><div class="sub" id="sub">—</div></div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab on" data-pane="dash">数据看板</button>
+    <button class="tab" data-pane="course">课程管理</button>
+    <button class="tab" data-pane="set">系统设置</button>
+  </div>
+
+  <!-- ========== 看板 ========== -->
+  <div class="pane on" id="pane-dash">
+    <div class="cur">
+      <span>课程</span><select id="dashCourse"></select>
+      <span class="tag" id="dashTag"></span>
+    </div>
+    <div class="card">
+      <h2>总览</h2>
+      <div class="stats">
+        <div class="stat"><b id="sRate">—</b><span>平均出勤率</span></div>
+        <div class="stat"><b id="sCount">—</b><span>点名次数</span></div>
+        <div class="stat"><b id="sStu">—</b><span>名单人数</span></div>
+        <div class="stat"><b id="sCorrect">—</b><span>平均答对率</span></div>
+      </div>
+    </div>
+    <div class="card">
+      <h2>出勤率趋势 <span>按点名时间从早到晚</span></h2>
+      <div class="chart" id="trend"></div>
+    </div>
+    <div class="card">
+      <h2>历次点名 <span>点「导出」得到 .xlsx，双击即开</span></h2>
+      <div id="dashList"></div>
+    </div>
+    <div class="card">
+      <h2>每人累计 <span>出勤率低的排前面，标红的需要留意</span></h2>
+      <div id="perStu" class="scroll"></div>
+    </div>
+  </div>
+
+  <!-- ========== 课程管理 ========== -->
+  <div class="pane" id="pane-course">
+    <div class="card">
+      <h2>课程 <span>改名后名单和记录都跟着走</span></h2>
+      <div id="courseList"></div>
+      <div class="divider"></div>
+      <div class="row">
+        <div class="col"><label>新课程名称</label><input id="newCourseName" placeholder="例如：线性代数"></div>
+        <div class="col" style="max-width:160px"><label>学期</label><input id="newCourseTerm" placeholder="2026 秋"></div>
+        <div class="col" style="flex:0 0 auto"><button class="btn pri" id="addCourse">添加课程</button></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>名单管理 <span id="rosterMeta">—</span></h2>
+      <div class="cur">
+        <span>当前课程</span><select id="rosterCourse"></select>
+        <span class="tag" id="rosterTag"></span>
+      </div>
+
+      <div class="row">
+        <div class="col" style="flex:1 1 100%">
+          <label>粘贴名单 · 一行一条，支持「学号,姓名」「学号 姓名」「学号 + Tab + 姓名」，全角逗号也认</label>
+          <textarea id="pasteBox" placeholder="2026110998,杨佳林
+2026110999,李晓明
+2026111000	王芳"></textarea>
+        </div>
+      </div>
+      <div class="row" style="margin-bottom:0">
+        <div class="col" style="flex:0 0 auto">
+          <input type="file" id="file" accept=".xlsx,.csv" style="display:none">
+          <button class="uplab" id="pickFile">上传 xlsx / csv</button>
+        </div>
+        <div class="col" style="flex:0 0 auto"><button class="btn pri" id="doImport">导入粘贴的名单</button></div>
+        <div class="col" style="flex:1"></div>
+        <div class="col" style="flex:0 0 auto"><button class="btn danger" id="clearRoster">清空本课名单</button></div>
+      </div>
+      <div class="hint">
+        上传的表格取<b>前两列</b>当「学号、姓名」，第一行如果是表头会自动跳过。<br>
+        <b>姓名必须和学生本人填写的一致</b>（生僻字、空格、简体繁体都算不一致），否则他签不上。
+      </div>
+
+      <div class="divider"></div>
+      <div class="row" style="margin-bottom:8px">
+        <div class="col" style="max-width:260px"><input id="searchStu" placeholder="搜索学号或姓名"></div>
+      </div>
+      <div id="stuList" class="scroll"></div>
+    </div>
+
+    <div class="card">
+      <h2>签到数据导出</h2>
+      <div class="row">
+        <div class="col" style="max-width:420px"><label>选某一次点名</label><select id="expSession"></select></div>
+        <div class="col" style="flex:0 0 auto"><button class="btn" id="expOne">导出这一次</button></div>
+        <div class="col" style="flex:0 0 auto"><button class="btn pri" id="expAll">导出整门课</button></div>
+      </div>
+      <div class="hint">
+        列顺序：学号、姓名、题目、提交答案、正确答案、是否正确、状态、签到时间。<br>
+        整门课导出是一张明细表，多一列「点名批次」，方便筛选。
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>数据存在哪 <span>本来就存本地，导出只是为了交给教务处</span></h2>
+      <div class="row" style="align-items:center">
+        <div class="col"><input id="dataPath" readonly></div>
+        <div class="col" style="flex:0 0 auto"><button class="btn" id="openFolder">打开文件夹</button></div>
+      </div>
+      <table class="filetable" id="fileList"></table>
+      <div class="hint">拷走整个 <b>data</b> 文件夹就是完整备份；删掉就全没了，注意别误删。</div>
+    </div>
+  </div>
+
+  <!-- ========== 设置 ========== -->
+  <div class="pane" id="pane-set">
+    <div class="card">
+      <h2>签到参数</h2>
+      <div class="row">
+        <div class="col"><label>二维码刷新间隔（毫秒）</label><input id="setRefresh" type="number" step="500" min="1000"></div>
+        <div class="col"><label>令牌宽限片数（片）</label><input id="setGrace" type="number" step="1" min="0"></div>
+      </div>
+      <div class="row">
+        <div class="col"><label>签到窗口（秒）</label><input id="setWindow" type="number" step="10" min="10"></div>
+        <div class="col"><label>迟到补签宽限（分钟）</label><input id="setLate" type="number" step="1" min="0"></div>
+      </div>
+      <div class="row">
+        <div class="col"><label>答题凭证有效期（秒）</label><input id="setTicket" type="number" step="10" min="20"></div>
+        <div class="col"><label>端口（改 bat 里的 PORT，重启生效）</label><input id="setPort" readonly></div>
+      </div>
+      <div class="hint" id="setHint"></div>
+      <div style="display:flex;justify-content:flex-end;margin-top:12px"><button class="btn pri" id="saveSet">保存设置</button></div>
+    </div>
+    <div class="card">
+      <h2>数据目录</h2>
+      <div class="hint" id="setDataPath">—</div>
+      <div class="hint">所有数据在 data 目录里的 JSON 文件，一天一节课大概几十 KB。</div>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const qs = new URLSearchParams(location.search);
+
+let D = { courses: [], students: [], settings: {} };
+let CID = qs.get('courseId') || '';
+let ST = null;
+
+function toast(t) {
+  $('toast').textContent = t;
+  $('toast').classList.add('on');
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => $('toast').classList.remove('on'), 2200);
+}
+
+async function api(url, body, method) {
+  const opt = { method: method || (body === undefined ? 'GET' : 'POST'), cache: 'no-store' };
+  if (body !== undefined) {
+    opt.headers = { 'Content-Type': 'application/json' };
+    opt.body = JSON.stringify(body);
+  }
+  let r, d;
+  try {
+    r = await fetch(url, opt);
+    d = await r.json().catch(() => ({}));
+  } catch (e) {
+    toast('服务没有响应，请重启「课中签到.bat」');
+    return null;
+  }
+  if (!r.ok) { toast(d.error || ('操作失败 ' + r.status)); return null; }
+  return d;
+}
+
+const fmtSize = n => n < 1024 ? n + ' B' : (n < 1048576 ? (n / 1024).toFixed(1) + ' KB' : (n / 1048576).toFixed(1) + ' MB');
+const fmtTime = ts => {
+  const d = new Date(ts), p = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+};
+
+/* ---------------- 装载 ---------------- */
+async function loadAll() {
+  const all = await api('/api/all');
+  if (!all) return;
+  D = all;
+  if (!CID || !D.courses.some(c => c.id === CID)) CID = (D.courses[0] || {}).id || '';
+
+  const stuN = id => D.students.filter(s => s.courseId === id).length;
+  $('sub').textContent = `${D.courses.length} 门课程 · ${D.students.length} 名学生 · 数据在 ${D.dataPath || 'data'}`;
+
+  const opts = D.courses.map(c => `<option value="${c.id}">${esc(c.name)}（${stuN(c.id)} 人）</option>`).join('')
+    || '<option value="">还没有课程</option>';
+  ['dashCourse', 'rosterCourse'].forEach(id => {
+    $(id).innerHTML = opts;
+    $(id).value = CID;
+    $(id).onchange = () => { CID = $(id).value; syncSelects(); loadStats(); renderCourse(); renderRoster(); renderExport(); };
+  });
+
+  renderCourse();
+  renderRoster();
+  renderSettings();
+  loadDataInfo();
+  syncSelects();
+  loadStats();
+}
+
+function syncSelects() {
+  $('dashCourse').value = CID;
+  $('rosterCourse').value = CID;
+  const c = D.courses.find(x => x.id === CID);
+  const n = D.students.filter(s => s.courseId === CID).length;
+  $('dashTag').textContent = c ? (c.term || '未填学期') : '';
+  $('rosterTag').textContent = `名单 ${n} 人`;
+  $('rosterMeta').textContent = c ? `· ${c.name}` : '';
+  $('rosterMeta').className = '';
+  const port = location.port || '3000';
+  $('setPort').value = port;
+  $('setDataPath').textContent = '数据目录：' + (D.dataPath || 'data');
+  $('dataPath').value = D.dataPath || '';
+}
+
+/* ---------------- 看板 ---------------- */
+async function loadStats() {
+  if (!CID) {
+    $('trend').innerHTML = '<div class="empty">先在「课程管理」加一门课</div>';
+    $('dashList').innerHTML = '';
+    $('perStu').innerHTML = '';
+    return;
+  }
+  ST = await api('/api/stats/course?courseId=' + encodeURIComponent(CID));
+  if (!ST) return;
+
+  $('sRate').textContent = ST.overall.rate + '%';
+  $('sCount').textContent = ST.overall.count;
+  $('sStu').textContent = ST.roster;
+  const cr = ST.sessions.filter(s => s.correctRate != null);
+  $('sCorrect').textContent = cr.length
+    ? Math.round(cr.reduce((a, x) => a + x.correctRate, 0) / cr.length) + '%'
+    : '—';
+
+  renderTrend(ST.sessions.slice().reverse());
+  renderSessionTable(ST.sessions);
+  renderPerStudent(ST.perStudent);
+  renderExport();
+}
+
+function renderTrend(list) {
+  if (!list.length) {
+    $('trend').innerHTML = '<div class="empty">这门课还没有点名记录。上完一节课、结束一次点名，这里就出图了。</div>';
+    return;
+  }
+  const bw = 34, gap = 18, step = bw + gap;
+  const padL = 34, padR = 12, padT = 22, padB = 40;
+  const H = 188;
+  const W = Math.max(360, padL + padR + list.length * step);
+  const ph = H - padT - padB;
+  const y = v => padT + ph - ph * (v / 100);
+
+  const grid = [0, 50, 100].map(v => `
+    <line x1="${padL}" y1="${y(v)}" x2="${W - padR}" y2="${y(v)}" stroke="#eceef1" stroke-width="1"/>
+    <text x="${padL - 7}" y="${y(v) + 3.5}" text-anchor="end" font-size="9.5" fill="#b9bec6">${v}</text>`).join('');
+
+  const bars = list.map((s, i) => {
+    const x = padL + i * step + gap / 2;
+    const bh = Math.max(2, ph * (s.rate / 100));
+    const col = s.rate >= 90 ? '#1D9E75' : s.rate >= 70 ? '#378ADD' : '#BA7517';
+    const d = new Date(s.startedAt);
+    const lab = `${d.getMonth() + 1}/${d.getDate()}`;
+    return `
+      <g>
+        <title>${fmtTime(s.startedAt)}　到课 ${s.present}/${s.total}（${s.rate}%）</title>
+        <rect x="${x}" y="${padT}" width="${bw}" height="${ph}" fill="#f7f8fa" rx="3"/>
+        <rect x="${x}" y="${y(s.rate)}" width="${bw}" height="${bh}" fill="${col}" rx="3"/>
+        <text x="${x + bw / 2}" y="${y(s.rate) - 6}" text-anchor="middle" font-size="10" fill="#666b73">${s.rate}%</text>
+        <text x="${x + bw / 2}" y="${H - padB + 16}" text-anchor="middle" font-size="9.5" fill="#9aa0a8">${lab}</text>
+        <text x="${x + bw / 2}" y="${H - padB + 29}" text-anchor="middle" font-size="9" fill="#c3c7cd">${s.present}/${s.total}</text>
+      </g>`;
+  }).join('');
+
+  $('trend').innerHTML = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">${grid}${bars}</svg>`
+    + '<div class="legend">柱子上是出勤率，下方是「到课/应到」。低于 70% 显示黄色。</div>';
+}
+
+function renderSessionTable(list) {
+  if (!list.length) { $('dashList').innerHTML = '<div class="empty">还没有点名记录</div>'; return; }
+  $('dashList').innerHTML = `<table>
+    <thead><tr><th>时间</th><th>题目</th><th class="num">到课</th><th class="num">迟到</th><th class="num">出勤率</th><th class="num">答对率</th><th></th></tr></thead>
+    <tbody>${list.map(s => {
+      const cls = s.rate >= 90 ? 'ok' : s.rate >= 70 ? '' : 'warn';
+      return `<tr>
+        <td class="mono">${fmtTime(s.startedAt)}</td>
+        <td title="${esc(s.question)}">${esc(s.question.slice(0, 26))}${s.question.length > 26 ? '…' : ''}</td>
+        <td class="num">${s.present}/${s.total}</td>
+        <td class="num">${s.late}</td>
+        <td class="num"><span class="tag ${cls}">${s.rate}%</span></td>
+        <td class="num">${s.correctRate == null ? '—' : s.correctRate + '%'}</td>
+        <td style="text-align:right"><a class="btn mini" href="/api/export.xlsx?sessionId=${s.id}">导出</a></td>
+      </tr>`;
+    }).join('')}</tbody></table>`;
+}
+
+function renderPerStudent(list) {
+  if (!list.length) { $('perStu').innerHTML = '<div class="empty">这门课还没有名单</div>'; return; }
+  $('perStu').innerHTML = `<table>
+    <thead><tr><th>学号</th><th>姓名</th><th class="num">出勤</th><th class="num">缺勤</th><th class="num">迟到</th><th class="num">出勤率</th><th class="num">答对率</th></tr></thead>
+    <tbody>${list.map(s => {
+      const bad = s.total > 0 && s.rate < 60;
+      return `<tr>
+        <td class="mono">${esc(s.id)}</td>
+        <td style="${bad ? 'color:#A32D2D' : ''}">${esc(s.name)}</td>
+        <td class="num">${s.attended}/${s.total}</td>
+        <td class="num" style="${s.absent ? 'color:#A32D2D' : ''}">${s.absent}</td>
+        <td class="num">${s.late}</td>
+        <td class="num"><span class="tag ${bad ? 'bad' : s.rate >= 90 ? 'ok' : ''}">${s.total ? s.rate + '%' : '—'}</span></td>
+        <td class="num">${s.correctRate == null ? '—' : s.correctRate + '%'}</td>
+      </tr>`;
+    }).join('')}</tbody></table>`;
+}
+
+/* ---------------- 课程 ---------------- */
+function renderCourse() {
+  const stuN = id => D.students.filter(s => s.courseId === id).length;
+  if (!D.courses.length) {
+    $('courseList').innerHTML = '<div class="empty">还没有课程，下面加一门</div>';
+    return;
+  }
+  $('courseList').innerHTML = `<table>
+    <thead><tr><th>名称</th><th style="width:150px">学期</th><th class="num" style="width:70px">名单</th><th style="width:150px"></th></tr></thead>
+    <tbody>${D.courses.map(c => `<tr>
+      <td><input data-name="${c.id}" value="${esc(c.name)}"></td>
+      <td><input data-term="${c.id}" value="${esc(c.term || '')}" placeholder="2026 秋"></td>
+      <td class="num">${stuN(c.id)} 人</td>
+      <td style="text-align:right;white-space:nowrap">
+        <button class="btn mini" data-save="${c.id}">保存</button>
+        <button class="btn mini danger" data-del="${c.id}">删除</button>
+      </td>
+    </tr>`).join('')}</tbody></table>`;
+
+  $('courseList').querySelectorAll('[data-save]').forEach(el => {
+    el.onclick = async () => {
+      const id = el.dataset.save;
+      const name = $('courseList').querySelector(`[data-name="${id}"]`).value.trim();
+      const term = $('courseList').querySelector(`[data-term="${id}"]`).value.trim();
+      if (!name) return toast('课程名不能为空');
+      if (await api('/api/courses/' + id, { name, term }, 'PUT')) { toast('已保存'); loadAll(); }
+    };
+  });
+
+  $('courseList').querySelectorAll('[data-del]').forEach(el => {
+    el.onclick = async () => {
+      if (!el.classList.contains('armed')) {
+        el.classList.add('armed');
+        el.textContent = '确认删除';
+        setTimeout(() => { el.classList.remove('armed'); el.textContent = '删除'; }, 4000);
+        return;
+      }
+      const id = el.dataset.del;
+      const n1 = stuN(id);
+      const st = await api('/api/stats/course?courseId=' + encodeURIComponent(id));
+      const n2 = st ? st.overall.count : 0;
+      if (n2 > 0 && !el.dataset.warned) {
+        el.dataset.warned = '1';
+        el.textContent = `会删掉 ${n2} 次记录，再点`;
+        setTimeout(() => { el.textContent = '删除'; el.classList.remove('armed'); delete el.dataset.warned; }, 5000);
+        return;
+      }
+      if (await api('/api/courses/' + id, undefined, 'DELETE')) {
+        toast(`已删除，连带 ${n1} 条名单、${n2} 次记录`);
+        if (CID === id) CID = '';
+        loadAll();
+      }
+    };
+  });
+}
+
+$('addCourse').onclick = async () => {
+  const name = $('newCourseName').value.trim();
+  if (!name) return toast('填个课程名');
+  const c = await api('/api/courses', { name, term: $('newCourseTerm').value.trim() });
+  if (c) {
+    $('newCourseName').value = '';
+    $('newCourseTerm').value = '';
+    CID = c.id;
+    toast('已添加，接着导入名单');
+    loadAll();
+  }
+};
+
+/* ---------------- 名单 ---------------- */
+let STU_FILTER = '';
+
+function renderRoster() {
+  const list = D.students.filter(s => s.courseId === CID);
+  const kw = STU_FILTER.trim().toLowerCase();
+  const show = kw ? list.filter(s => s.id.includes(kw) || s.name.toLowerCase().includes(kw)) : list;
+  if (!list.length) {
+    $('stuList').innerHTML = '<div class="empty">这门课还没有名单。粘上面那个框，或者上传 xlsx / csv。</div>';
+    return;
+  }
+  $('stuList').innerHTML = `<table>
+    <thead><tr><th>学号</th><th>姓名</th><th></th></tr></thead>
+    <tbody>${show.map(s => `<tr>
+      <td class="mono">${esc(s.id)}</td><td>${esc(s.name)}</td>
+      <td style="text-align:right"><button class="btn mini danger" data-ds="${esc(s.id)}">移除</button></td>
+    </tr>`).join('') || '<tr><td colspan="3" class="empty">没有匹配的</td></tr>'}</tbody></table>`
+    + (kw ? `<div class="hint">显示 ${show.length} / 共 ${list.length} 人</div>` : '');
+  $('stuList').querySelectorAll('[data-ds]').forEach(el => {
+    el.onclick = async () => {
+      if (await api(`/api/students/${encodeURIComponent(el.dataset.ds)}?courseId=${encodeURIComponent(CID)}`, undefined, 'DELETE')) {
+        toast('已移除');
+        loadAll();
+      }
+    };
+  });
+}
+
+$('searchStu').oninput = () => { STU_FILTER = $('searchStu').value; renderRoster(); };
+
+$('doImport').onclick = async () => {
+  const text = $('pasteBox').value;
+  if (!text.trim()) return toast('先把名单粘进来');
+  if (!CID) return toast('先选一门课程');
+  const d = await api('/api/students/import', { courseId: CID, text });
+  if (d) {
+    $('pasteBox').value = '';
+    toast(`新增 ${d.ok} 人，跳过 ${d.skipped} 行，现在共 ${d.total} 人`
+      + (d.bad && d.bad.length ? '｜格式不对：' + d.bad.slice(0, 2).join(' / ') : ''));
+    loadAll();
+  }
+};
+
+$('pickFile').onclick = () => $('file').click();
+
+$('file').onchange = async () => {
+  const f = $('file').files[0];
+  if (!f) return;
+  if (!CID) return toast('先选一门课程');
+  if (!/\.(xlsx|csv)$/i.test(f.name)) return toast('只支持 .xlsx 或 .csv');
+  if (f.size > 20 * 1024 * 1024) return toast('文件太大了（上限 20MB）');
+  $('pickFile').textContent = '正在解析…';
+  try {
+    const buf = await f.arrayBuffer();
+    let bin = '';
+    const bytes = new Uint8Array(buf);
+    for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+    const d = await api('/api/students/upload', {
+      courseId: CID,
+      fileName: f.name,
+      fileBase64: btoa(bin)
+    });
+    if (d) {
+      toast(`从「${f.name}」读到 ${d.rows} 行，新增 ${d.ok} 人，现在共 ${d.total} 人`);
+      loadAll();
+    }
+  } catch (e) {
+    toast('读取文件失败：' + e.message);
+  } finally {
+    $('pickFile').textContent = '上传 xlsx / csv';
+    $('file').value = '';
+  }
+};
+
+$('clearRoster').onclick = async () => {
+  if (!CID) return;
+  const btn = $('clearRoster');
+  if (!btn.classList.contains('armed')) {
+    btn.classList.add('armed');
+    btn.textContent = '再点一次清空';
+    setTimeout(() => { btn.classList.remove('armed'); btn.textContent = '清空本课名单'; }, 4000);
+    return;
+  }
+  if (await api('/api/students/clear', { courseId: CID })) {
+    btn.classList.remove('armed');
+    btn.textContent = '清空本课名单';
+    toast('已清空（历史签到记录没动）');
+    loadAll();
+  }
+};
+
+/* ---------------- 导出 ---------------- */
+function renderExport() {
+  const list = (ST && ST.course && ST.course.id === CID) ? ST.sessions : [];
+  $('expSession').innerHTML = list.length
+    ? list.map(s => `<option value="${s.id}">${fmtTime(s.startedAt)} · ${esc(s.question.slice(0, 18))} · ${s.present}/${s.total}</option>`).join('')
+    : '<option value="">这门课还没有点名记录</option>';
+}
+
+$('expOne').onclick = () => {
+  const id = $('expSession').value;
+  if (!id) return toast('先选一次点名');
+  location.href = '/api/export.xlsx?sessionId=' + encodeURIComponent(id);
+};
+
+$('expAll').onclick = () => {
+  if (!CID) return toast('先选一门课程');
+  const list = ST && ST.sessions ? ST.sessions : [];
+  if (!list.length) return toast('这门课还没有点名记录');
+  location.href = '/api/export.xlsx?courseId=' + encodeURIComponent(CID);
+};
+
+/* ---------------- 数据位置 ---------------- */
+async function loadDataInfo() {
+  const d = await api('/api/data-info');
+  if (!d) return;
+  $('dataPath').value = d.path;
+  $('fileList').innerHTML = `<thead><tr><th>文件</th><th class="num">大小</th><th class="num">最后修改</th></tr></thead>
+    <tbody>${d.files.map(f => `<tr>
+      <td class="mono">${esc(f.name)} ${f.legacy ? '<span class="tag">v2 遗留，没用了</span>' : ''}</td>
+      <td class="num">${fmtSize(f.size)}</td>
+      <td class="num mono">${fmtTime(f.mtime)}</td>
+    </tr>`).join('')}</tbody>`;
+}
+
+$('openFolder').onclick = async () => {
+  const d = await api('/api/open-folder', {});
+  if (d) toast('已打开 ' + d.path);
+};
+
+/* ---------------- 设置 ---------------- */
+function renderSettings() {
+  const s = D.settings || {};
+  $('setRefresh').value = s.codeRefreshMs || 3000;
+  $('setGrace').value = s.tokenGrace == null ? 3 : s.tokenGrace;
+  $('setWindow').value = Math.round((s.windowMs || 90000) / 1000);
+  $('setLate').value = Math.round((s.lateGraceMs || 600000) / 60000);
+  $('setTicket').value = Math.round((s.ticketTtlMs || 120000) / 1000);
+  hint();
+}
+
+function hint() {
+  const r = Number($('setRefresh').value) || 3000;
+  const g = Number($('setGrace').value) || 0;
+  $('setHint').textContent =
+    `当前设置下：二维码每 ${r / 1000} 秒换一次，实际有效 ${(r * (g + 1)) / 1000} 秒（最后 ${g} 片仍可用）。`
+    + ` 签到窗口 ${$('setWindow').value} 秒，超时后 ${$('setLate').value} 分钟内算迟到。`;
+}
+['setRefresh', 'setGrace', 'setWindow', 'setLate', 'setTicket'].forEach(id => { $(id).oninput = hint; });
+
+$('saveSet').onclick = async () => {
+  const d = await api('/api/settings', {
+    codeRefreshMs: Number($('setRefresh').value),
+    tokenGrace: Number($('setGrace').value),
+    windowMs: Number($('setWindow').value) * 1000,
+    lateGraceMs: Number($('setLate').value) * 60000,
+    ticketTtlMs: Number($('setTicket').value) * 1000
+  }, 'PUT');
+  if (d) { toast('已保存，下一场点名生效'); D.settings = d; hint(); }
+};
+
+/* ---------------- 交互 ---------------- */
+document.querySelectorAll('.tab').forEach(t => {
+  t.onclick = () => {
+    document.querySelectorAll('.tab').forEach(x => x.classList.toggle('on', x === t));
+    document.querySelectorAll('.pane').forEach(p => p.classList.toggle('on', p.id === 'pane-' + t.dataset.pane));
+    if (t.dataset.pane === 'dash') loadStats();
+    if (t.dataset.pane === 'course') loadDataInfo();
+  };
+});
+
+$('back').onclick = () => location.href = '/';
+
+/* 从 compose 的「去补名单」进来时直接落到课程管理 */
+(function initTab() {
+  const t = qs.get('tab');
+  if (t) {
+    const btn = document.querySelector(`.tab[data-pane="${t}"]`);
+    if (btn) btn.click();
+  }
+})();
+
+loadAll().then(() => { renderExport(); });
+</script>
+</body>
+</html>

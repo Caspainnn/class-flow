@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>出题 · 课中签到</title>
+<style>
+:root{--ink:#1F1D1A;--ink2:#5F5E5A;--ink3:#8A867E;--ink4:#B8B4AC;
+  --line:#E2DED6;--line2:#ECE8E0;--fill:#F5F3EE;--accent:#B5502E;--ok:#1D9E75}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#F7F6F3;color:var(--ink);min-height:100vh;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei","PingFang SC",sans-serif;
+  display:flex;align-items:center;justify-content:center;padding:24px}
+.sheet{width:100%;max-width:444px;background:#fff;border-radius:14px;padding:16px 16px 13px;
+  border:0.5px solid var(--line);box-shadow:0 1px 3px rgba(31,29,26,.04)}
+
+.hd{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:12px}
+.hd .t{font-size:15px;font-weight:500}
+.hd .c{font-size:11px;color:var(--ink3);cursor:pointer;flex:none}
+.hd .c:hover{color:var(--ink)}
+
+.box{border:1px solid var(--line);border-radius:10px;padding:12px 13px;transition:border-color .15s}
+.box:focus-within{border-color:var(--ink4)}
+#qt{width:100%;border:none;outline:none;resize:none;font-family:inherit;font-size:16px;line-height:1.5;
+  background:transparent;color:var(--ink);overflow:hidden;min-height:24px;display:block;padding:0}
+#qt::placeholder{color:var(--ink4)}
+
+.sep{height:1px;background:var(--line2);margin:12px 0 10px}
+
+.orow{display:flex;align-items:center;gap:9px;padding:2px 0}
+.orow .k{width:19px;height:19px;flex:none;border-radius:50%;border:1px solid var(--line);background:#fff;
+  color:var(--ink4);font-size:11px;font-family:ui-monospace,Menlo,monospace;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;transition:.15s;padding:0}
+.orow .k:hover{border-color:var(--ink3);color:var(--ink2)}
+.orow.ok .k{background:var(--ink);border-color:var(--ink);color:#fff}
+.orow input{flex:1;min-width:0;border:none;outline:none;background:transparent;font-family:inherit;
+  font-size:14px;line-height:1.5;padding:5px 0;color:var(--ink)}
+.orow input::placeholder{color:var(--ink4)}
+
+.ft{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:12px}
+.ft .ans{font-size:12px;color:var(--ink3)}
+.ft .ans b{color:var(--ink);font-weight:500}
+.go{font-family:inherit;font-size:13px;font-weight:500;padding:8px 16px;border:none;border-radius:9px;
+  background:var(--ink);color:#fff;cursor:pointer;transition:.15s;white-space:nowrap}
+.go:disabled{background:#E6E2DA;color:#B0ACA4;cursor:not-allowed}
+.go:not(:disabled):hover{background:#332F2A}
+
+.bar{display:flex;align-items:center;justify-content:space-between;gap:10px;
+  border-top:0.5px solid var(--line2);margin-top:11px;padding-top:10px}
+.prev{font-size:12px;color:var(--ink3);background:none;border:none;font-family:inherit;cursor:pointer;
+  padding:4px 0;max-width:78%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:left}
+.prev:hover{color:var(--ink)}
+.prev:disabled{color:var(--ink4);cursor:default}
+.bar .esc{font-size:11px;color:var(--ink4);flex:none}
+
+.err{display:none;background:#FBEDE9;color:#93401F;font-size:12.5px;line-height:1.6;
+  padding:9px 11px;border-radius:9px;margin-top:10px}
+.err.on{display:block}
+</style>
+</head>
+<body>
+<div class="sheet">
+  <div class="hd">
+    <span class="t">出一道题</span>
+    <span class="c" id="course">—</span>
+  </div>
+
+  <div class="box">
+    <textarea id="qt" rows="1" placeholder="题干，比如：下列哪个极限存在"></textarea>
+    <div class="sep"></div>
+    <div id="opts"></div>
+  </div>
+
+  <div class="ft">
+    <div class="ans" id="ans">正确答案 <b>A</b> · 点字母可改</div>
+    <button class="go" id="go" type="button" disabled>开始点名</button>
+  </div>
+
+  <div class="err" id="err"></div>
+
+  <div class="bar">
+    <button class="prev" id="prev" type="button" disabled>没有可复用的题</button>
+    <span class="esc">Esc 取消</span>
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const LETTER = 'ABCDEF';
+
+const courseId = new URLSearchParams(location.search).get('courseId') || '';
+let COURSE = null;
+let RECENT = [];
+let RECENT_I = 0;
+let CORRECT = 0;
+let N = 4;
+
+function buildOpts(keep) {
+  const prev = keep ? texts() : [];
+  $('opts').innerHTML = Array.from({ length: N }, (_, i) => `
+    <div class="orow ${i === CORRECT ? 'ok' : ''}" data-i="${i}">
+      <button class="k" type="button" data-i="${i}">${LETTER[i]}</button>
+      <input class="ot" data-i="${i}" placeholder="${i === 0 ? '第一个选项' : ''}" autocomplete="off">
+    </div>`).join('');
+
+  const inputs = [...$('opts').querySelectorAll('.ot')];
+  if (prev.length) inputs.forEach((inp, i) => { if (prev[i] != null) inp.value = prev[i]; });
+
+  $('opts').querySelectorAll('.k').forEach(b => {
+    b.onclick = () => { CORRECT = Number(b.dataset.i); paintOpts(); };
+  });
+
+  inputs.forEach(inp => {
+    inp.oninput = () => { sync(); };
+    inp.onkeydown = e => {
+      if (e.key !== 'Enter') return;
+      e.preventDefault();
+      const i = Number(inp.dataset.i);
+      if (i === inputs.length - 1) {
+        // 最后一行回车上一个新选项，最多 6 个
+        if (N < 6 && inp.value.trim()) {
+          N++;
+          buildOpts(true);
+          const next = $('opts').querySelectorAll('.ot')[i + 1];
+          if (next) next.focus();
+        }
+      } else {
+        inputs[i + 1].focus();
+      }
+    };
+  });
+
+  sync();
+}
+
+function paintOpts() {
+  $('opts').querySelectorAll('.orow').forEach(el => {
+    el.classList.toggle('ok', Number(el.dataset.i) === CORRECT);
+  });
+  $('ans').innerHTML = `正确答案 <b>${LETTER[CORRECT]}</b> · 点字母可改`;
+}
+
+function texts() {
+  return [...$('opts').querySelectorAll('.ot')].map(i => i.value.trim());
+}
+
+function sync() {
+  const filled = texts().filter(Boolean);
+  $('go').disabled = !($('qt').value.trim() && filled.length >= 2);
+}
+
+function grow() {
+  const t = $('qt');
+  t.style.height = 'auto';
+  t.style.height = t.scrollHeight + 'px';
+}
+
+function showErr(msg) {
+  $('err').textContent = msg;
+  $('err').classList.add('on');
+}
+
+function hideErr() {
+  $('err').classList.remove('on');
+}
+
+function fill(item) {
+  $('qt').value = item.text || '';
+  const opts = (item.options || []).slice(0, 6);
+  N = Math.max(4, opts.length);
+  CORRECT = item.correct || 0;
+  buildOpts();
+  $('opts').querySelectorAll('.ot').forEach((inp, i) => { inp.value = opts[i] || ''; });
+  paintOpts();
+  grow();
+  sync();
+  hideErr();
+  $('qt').focus();
+}
+
+async function start() {
+  hideErr();
+  const text = $('qt').value.trim();
+  const raw = texts();
+  const kept = [];
+  let correct = 0;
+  raw.forEach((t, i) => {
+    if (!t) return;
+    if (i === CORRECT) correct = kept.length;
+    kept.push(t);
+  });
+
+  if (!text) return showErr('题干还没填。');
+  if (kept.length < 2) return showErr('至少要有两个选项。');
+
+  $('go').disabled = true;
+  $('go').textContent = '正在开始…';
+  try {
+    const r = await fetch('/api/session/start', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ courseId, question: { text, options: kept, correct } })
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || '没能开始');
+    location.href = '/live';
+  } catch (e) {
+    $('go').disabled = false;
+    $('go').textContent = '开始点名';
+    showErr(e.message);
+    sync();
+  }
+}
+
+async function boot() {
+  try {
+    const all = await (await fetch('/api/all', { cache: 'no-store' })).json();
+    const cid = courseId || all.settings?.activeCourseId || (all.courses[0] && all.courses[0].id);
+    COURSE = (all.courses || []).find(c => c.id === cid) || null;
+    if (!COURSE) {
+      $('course').textContent = '';
+      showErr('没找到课程，回主页重新选一门。');
+      $('go').disabled = true;
+      return;
+    }
+    const n = (all.students || []).filter(s => s.courseId === COURSE.id).length;
+    $('course').textContent = `${COURSE.name} · ${n} 人`;
+    $('course').onclick = () => { location.href = '/'; };
+
+    RECENT = (COURSE.recentQuestions || []).filter(q => q && q.text);
+    if (RECENT.length) {
+      $('prev').disabled = false;
+      $('prev').textContent = '↩ 上一题：' + RECENT[0].text;
+    }
+  } catch (e) {
+    showErr('连不上本地服务，双击「课中签到.bat」重新启动。');
+  }
+  buildOpts();
+  paintOpts();
+  grow();
+  sync();
+}
+
+$('qt').oninput = () => { grow(); sync(); };
+$('qt').onkeydown = e => {
+  if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); if (!$('go').disabled) start(); }
+};
+$('go').onclick = start;
+
+$('prev').onclick = () => {
+  if (!RECENT.length) return;
+  const item = RECENT[RECENT_I % RECENT.length];
+  RECENT_I++;
+  fill(item);
+  const nextOne = RECENT[RECENT_I % RECENT.length];
+  $('prev').textContent = RECENT.length > 1
+    ? '↩ 再往前：' + nextOne.text
+    : '↩ 上一题：' + item.text;
+};
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') location.href = '/';
+  if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+    e.preventDefault();
+    if (!$('go').disabled) start();
+  }
+});
+
+boot();
+</script>
+</body>
+</html>

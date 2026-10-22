@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Inclass · 课中签到</title>
+<style>
+:root{
+  --bg:#141416; --bg2:#1b1b1e; --line:#2e2e33;
+  --tx:#EDEDE9; --tx2:#9a9a95; --tx3:#66665f;
+  --blue:#378ADD; --blue-d:#0C447C; --blue-l:#85B7EB;
+  --amber:#EF9F27; --amber-d:#633806; --amber-l:#FAC775;
+  --paper:#ffffff; --paper2:#f4f5f7; --ink:#1a1c1e; --ink2:#656a72; --ink3:#9aa0a8;
+  --ok:#1D9E75;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  background:var(--bg); color:var(--tx);
+  font-family:-apple-system,"Segoe UI","Microsoft YaHei","PingFang SC",sans-serif;
+  font-size:14px; line-height:1.55; overflow:hidden;
+}
+.app{height:100%;display:flex;flex-direction:column}
+
+header{
+  height:52px;flex:0 0 52px;display:flex;align-items:center;gap:14px;
+  padding:0 20px;border-bottom:1px solid var(--line);background:var(--bg2);
+}
+.brand{font-size:14px;font-weight:500;letter-spacing:.2px}
+.brand em{color:var(--tx3);font-style:normal;font-weight:400;margin-left:8px;font-size:12px}
+.spacer{flex:1}
+.dbtn{
+  background:transparent;border:1px solid var(--line);color:var(--tx2);
+  font-size:12px;padding:5px 11px;border-radius:7px;cursor:pointer;
+  font-family:inherit;transition:.15s;
+}
+.dbtn:hover{border-color:#4a4a50;color:var(--tx)}
+.dbtn.on{background:var(--blue-d);border-color:var(--blue-l);color:var(--blue-l)}
+
+main{
+  flex:1;display:grid;grid-template-columns:minmax(0,1fr) 372px;
+  gap:18px;padding:18px 20px;overflow:hidden;
+}
+
+/* ---------- 投影画面 ---------- */
+.stage{
+  background:var(--paper);color:var(--ink);border-radius:16px;
+  padding:22px 26px;display:flex;flex-direction:column;gap:16px;
+  position:relative;overflow:hidden;min-width:0;
+}
+.stage-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}
+.course{font-size:17px;font-weight:500;letter-spacing:.2px}
+.meta{font-size:12px;color:var(--ink2);margin-top:3px}
+.pill{
+  display:inline-flex;align-items:center;gap:6px;font-size:12px;
+  padding:4px 10px;border-radius:20px;background:#eaf7f1;color:#0F6E56;
+  white-space:nowrap;
+}
+.dot{width:6px;height:6px;border-radius:50%;background:#1D9E75}
+
+.stage-body{display:grid;grid-template-columns:212px minmax(0,1fr);gap:26px;align-items:center}
+
+.qr-wrap{display:flex;flex-direction:column;align-items:center;gap:8px}
+.qr-box{
+  width:212px;height:212px;border-radius:14px;background:#fff;
+  border:1px solid #e4e6ea;display:flex;align-items:center;justify-content:center;
+  position:relative;transition:.25s;
+}
+.qr-box canvas{width:188px;height:188px;display:block;transition:.2s}
+.qr-cap{font-size:11px;color:var(--ink3)}
+.codeline{display:flex;align-items:center;gap:8px;margin-top:2px}
+.codeline .lbl{font-size:11px;color:var(--ink3)}
+.codeline .num{
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+  font-size:20px;font-weight:500;letter-spacing:5px;color:var(--blue-d);
+}
+.closed-veil{
+  position:absolute;inset:0;background:rgba(255,255,255,.93);border-radius:14px;
+  display:none;flex-direction:column;align-items:center;justify-content:center;
+  gap:6px;text-align:center;padding:16px;
+}
+.closed-veil.show{display:flex}
+.closed-veil .t{font-size:13px;font-weight:500}
+.closed-veil .s{font-size:11px;color:var(--ink2);line-height:1.5}
+
+.metrics{display:flex;flex-direction:column;gap:14px;min-width:0}
+.mline{display:flex;align-items:baseline;gap:10px}
+.bignum{font-size:52px;font-weight:500;line-height:1;letter-spacing:-1px}
+.slash{font-size:22px;color:var(--ink3);font-weight:400}
+.total{font-size:22px;color:var(--ink2);font-weight:400}
+.mlabel{font-size:12px;color:var(--ink2);margin-top:2px}
+.tags{display:flex;flex-wrap:wrap;gap:8px}
+.tag{
+  font-size:12px;padding:3px 9px;border-radius:6px;background:var(--paper2);
+  color:var(--ink2);
+}
+.tag.warn{background:#fdf3e3;color:#8a5a12}
+.tag.bad{background:#fdecec;color:#a03030}
+
+.qblock{background:var(--paper2);border-radius:12px;padding:14px 16px}
+.qtag{font-size:11px;color:var(--ink3);letter-spacing:.5px;margin-bottom:6px}
+.qtext{font-size:14px;font-weight:500;margin-bottom:10px}
+.opt{display:grid;grid-template-columns:20px 1fr 84px 26px;gap:10px;align-items:center;padding:3px 0}
+.opt .k{font-size:11px;color:var(--ink3);font-family:ui-monospace,monospace}
+.opt .t{font-size:13px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.track{height:6px;background:#e3e5e9;border-radius:3px;overflow:hidden}
+.track i{display:block;height:100%;background:var(--blue);border-radius:3px;width:0;transition:width .5s ease}
+.opt .n{font-size:11px;color:var(--ink3);text-align:right;font-variant-numeric:tabular-nums}
+
+.stage-foot{display:flex;align-items:center;gap:10px;margin-top:auto;padding-top:4px}
+.count{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--ink2);min-width:0}
+.cbar{width:120px;height:4px;background:#e6e8ec;border-radius:2px;overflow:hidden}
+.cbar i{display:block;height:100%;background:var(--blue);width:100%;transition:width 1s linear}
+.fbtn{
+  margin-left:auto;font-family:inherit;font-size:12px;cursor:pointer;
+  padding:7px 14px;border-radius:8px;border:1px solid #dfe2e7;
+  background:#fff;color:var(--ink);transition:.15s;white-space:nowrap;
+}
+.fbtn:hover{border-color:#b9bec6;background:#fafbfc}
+.fbtn.pri{background:var(--ink);border-color:var(--ink);color:#fff}
+.fbtn.pri:hover{background:#333}
+
+/* ---------- 手机 ---------- */
+.phone-wrap{display:flex;align-items:center;justify-content:center;min-height:0}
+.phone{
+  width:320px;height:100%;max-height:648px;background:#0b0b0d;
+  border-radius:40px;padding:9px;box-shadow:0 0 0 1px #2a2a2e;
+  display:flex;flex-direction:column;
+}
+.screen{
+  flex:1;background:#fff;border-radius:32px;color:var(--ink);
+  padding:26px 20px 20px;display:flex;flex-direction:column;gap:14px;overflow:hidden;
+}
+.sbar{display:flex;justify-content:space-between;font-size:10px;color:var(--ink3);padding:0 4px;margin-top:-8px}
+.steptag{font-size:10px;color:var(--ink3);letter-spacing:1px}
+.stitle{font-size:17px;font-weight:500;line-height:1.4}
+.ssub{font-size:12px;color:var(--ink2);line-height:1.6}
+.field{display:flex;flex-direction:column;gap:5px;margin-top:4px}
+.field label{font-size:11px;color:var(--ink3)}
+.field input{
+  font-family:inherit;font-size:15px;padding:10px 12px;border-radius:9px;
+  border:1px solid #e2e5ea;background:#fbfcfd;color:var(--ink);outline:none;width:100%;
+}
+.field input:focus{border-color:var(--blue);background:#fff}
+.code-input{
+  text-align:center;letter-spacing:9px;font-size:20px;font-weight:500;
+  font-family:ui-monospace,monospace;padding:12px 14px 12px 22px;
+  width:100%;border:1px solid #e2e5ea;background:#fbfcfd;border-radius:10px;
+  color:var(--ink);outline:none;
+}
+.code-input:focus{border-color:var(--blue);background:#fff;letter-spacing:9px}
+.pbtn{
+  font-family:inherit;font-size:14px;font-weight:500;padding:12px;border-radius:10px;
+  border:none;background:var(--ink);color:#fff;cursor:pointer;transition:.15s;width:100%;
+}
+.pbtn:hover{background:#333}
+.pbtn:disabled{background:#dfe2e7;color:#a8adb5;cursor:not-allowed}
+.pbtn.ghost{background:transparent;color:var(--ink2);font-weight:400;font-size:12px;padding:8px}
+
+.popt{
+  display:flex;gap:10px;align-items:flex-start;padding:11px 12px;border-radius:10px;
+  border:1px solid #e6e8ec;cursor:pointer;transition:.15s;background:#fff;
+}
+.popt:hover{border-color:#c9ced6}
+.popt.sel{border-color:var(--ink);background:#f7f8fa}
+.popt .pk{
+  font-size:11px;font-family:ui-monospace,monospace;width:17px;height:17px;
+  border-radius:50%;background:#eef0f3;color:var(--ink2);display:flex;align-items:center;
+  justify-content:center;flex:0 0 17px;margin-top:1px;
+}
+.popt.sel .pk{background:var(--ink);color:#fff}
+.popt .pt{font-size:13px;line-height:1.45}
+
+.err{font-size:11px;color:#c0392b;display:none;margin-top:-6px}
+.err.show{display:block}
+
+.done{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;flex:1;text-align:center}
+.check{
+  width:56px;height:56px;border-radius:50%;background:#eaf7f1;color:var(--ok);
+  display:flex;align-items:center;justify-content:center;font-size:26px;margin-bottom:4px;
+}
+.done .t{font-size:18px;font-weight:500}
+.done .s{font-size:12px;color:var(--ink2);line-height:1.7}
+.done .badge{
+  margin-top:10px;font-size:11px;color:var(--ink2);background:var(--paper2);
+  padding:6px 12px;border-radius:20px;
+}
+
+/* ---------- 弹层 ---------- */
+.modal{
+  position:absolute;inset:0;background:rgba(20,22,26,.55);border-radius:16px;
+  display:none;align-items:center;justify-content:center;padding:24px;z-index:20;
+}
+.modal.show{display:flex}
+.sheet{
+  background:#fff;border-radius:14px;padding:22px;width:100%;max-width:380px;
+  color:var(--ink);
+}
+.sheet h3{font-size:15px;font-weight:500;margin-bottom:4px}
+.sheet p.s{font-size:12px;color:var(--ink2);margin-bottom:14px;line-height:1.6}
+.pickrow{
+  display:flex;align-items:center;justify-content:space-between;gap:10px;
+  padding:9px 0;border-bottom:1px solid #f0f1f4;font-size:13px;
+}
+.pickrow:last-of-type{border-bottom:none}
+.pickrow .nm{display:flex;align-items:center;gap:8px}
+.pickrow .no{font-size:11px;color:var(--ink3);font-family:ui-monospace,monospace}
+.mini{
+  font-size:11px;padding:4px 10px;border-radius:6px;border:1px solid #e2e5ea;
+  background:#fff;cursor:pointer;font-family:inherit;color:var(--ink2);white-space:nowrap;
+}
+.mini:hover{border-color:#b9bec6;color:var(--ink)}
+.sheet-foot{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
+
+.toast{
+  position:fixed;left:50%;bottom:26px;transform:translate(-50%,14px);
+  background:#EDEDE9;color:#1a1c1e;font-size:12.5px;padding:9px 16px;border-radius:9px;
+  opacity:0;pointer-events:none;transition:.25s;z-index:60;
+}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+
+@media (max-width:1080px){
+  main{grid-template-columns:1fr;overflow:auto}
+  .phone{max-height:560px}
+  .stage-body{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header>
+    <div class="brand">Inclass<em>课中签到 · 演示</em></div>
+    <div class="spacer"></div>
+    <button class="dbtn" id="speedBtn">速度 ×1</button>
+    <button class="dbtn" id="resetBtn">重置</button>
+  </header>
+
+  <main>
+    <section class="stage">
+      <div class="stage-head">
+        <div>
+          <div class="course">高等数学（上）</div>
+          <div class="meta">第 12 周 · 周三 3–4 节 · 教三 201</div>
+        </div>
+        <div class="pill"><span class="dot"></span><span id="statusText">签到进行中</span></div>
+      </div>
+
+      <div class="stage-body">
+        <div class="qr-wrap">
+          <div class="qr-box">
+            <canvas id="qr" width="376" height="376"></canvas>
+            <div class="closed-veil" id="veil">
+              <div class="t">签到已截止</div>
+              <div class="s">迟到同学请在手机上走<br>「补签」入口</div>
+            </div>
+          </div>
+          <div class="codeline">
+            <span class="lbl">课堂码</span>
+            <span class="num" id="code">7391</span>
+          </div>
+          <div class="qr-cap">每 15 秒自动刷新</div>
+        </div>
+
+        <div class="metrics">
+          <div>
+            <div class="mline">
+              <span class="bignum" id="present">42</span>
+              <span class="slash">/</span>
+              <span class="total">47</span>
+            </div>
+            <div class="mlabel">已到课</div>
+          </div>
+          <div class="tags">
+            <span class="tag warn" id="tagAbsent">缺勤 4</span>
+            <span class="tag" id="tagLate">迟到 0</span>
+            <span class="tag bad" id="tagRisk">存疑 1</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="qblock">
+        <div class="qtag">上节课回顾 · 全班作答中</div>
+        <div class="qtext">f(x) = |x| 在 x = 0 处……</div>
+        <div id="opts"></div>
+      </div>
+
+      <div class="stage-foot">
+        <div class="count">
+          <span>窗口剩余</span>
+          <span class="cbar"><i id="cbarFill"></i></span>
+          <span id="remainLabel">90s</span>
+        </div>
+        <button class="fbtn" id="leaveBtn">标记请假</button>
+        <button class="fbtn" id="spotBtn">抽 3 人确认</button>
+        <button class="fbtn pri" id="exportBtn">导出考勤</button>
+      </div>
+
+      <div class="modal" id="modal">
+        <div class="sheet" id="sheet"></div>
+      </div>
+    </section>
+
+    <aside class="phone-wrap">
+      <div class="phone">
+        <div class="screen">
+          <div class="sbar"><span>9:41</span><span>5G ▮</span></div>
+          <div id="pscreen" style="flex:1;display:flex;flex-direction:column;gap:14px"></div>
+        </div>
+      </div>
+    </aside>
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const TOTAL = 47;
+const CODE_CYCLE = 15;
+
+const state = {
+  speed: 1,
+  remain: 90,
+  present: 42,
+  answered: 38,
+  dist: [18, 17, 1, 2],
+  code: '7391',
+  codeLeft: CODE_CYCLE,
+  studentStep: 1,
+  myPick: null,
+  manual: false,
+  signed: false,
+  absent: [
+    { name: '陈亦然', sid: '2023010417', note: '连续缺勤 2 次' },
+    { name: '林　嘉', sid: '2023010532', note: '连续缺勤 2 次' },
+    { name: '周晓东', sid: '2023010608', note: '' },
+    { name: '吴　敏', sid: '2023010711', note: '待核销请假' }
+  ]
+};
+
+const OPTIONS = ['连续且可导', '连续但不可导', '不连续', '可导但不连续'];
+const KEYS = ['A', 'B', 'C', 'D'];
+const CORRECT = 1;
+
+const $ = id => document.getElementById(id);
+
+/* ---------- QR ---------- */
+function drawQR(seed) {
+  const c = $('qr'), ctx = c.getContext('2d');
+  const N = 29, size = c.width, cell = size / N;
+  ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, size, size);
+
+  let s = 0;
+  for (const ch of String(seed)) s = (s * 31 + ch.charCodeAt(0)) >>> 0;
+  const rnd = () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; };
+
+  const inFinder = (x, y) => {
+    const near = (a, b) => a >= b && a <= b + 7;
+    return (near(x, 0) && near(y, 0)) || (near(x, N - 8) && near(y, 0)) || (near(x, 0) && near(y, N - 8));
+  };
+
+  ctx.fillStyle = '#15171a';
+  for (let y = 0; y < N; y++) {
+    for (let x = 0; x < N; x++) {
+      if (inFinder(x, y)) continue;
+      if (rnd() > 0.52) ctx.fillRect(x * cell, y * cell, cell, cell);
+    }
+  }
+  const finder = (ox, oy) => {
+    ctx.fillStyle = '#15171a'; ctx.fillRect(ox * cell, oy * cell, 7 * cell, 7 * cell);
+    ctx.fillStyle = '#fff';    ctx.fillRect((ox + 1) * cell, (oy + 1) * cell, 5 * cell, 5 * cell);
+    ctx.fillStyle = '#15171a'; ctx.fillRect((ox + 2) * cell, (oy + 2) * cell, 3 * cell, 3 * cell);
+  };
+  finder(0, 0); finder(N - 7, 0); finder(0, N - 7);
+}
+
+function rollCode() {
+  state.code = String(Math.floor(1000 + Math.random() * 9000));
+  $('code').textContent = state.code;
+  drawQR(state.code + state.codeLeft);
+}
+
+/* ---------- 投影渲染 ---------- */
+function renderOpts() {
+  const max = Math.max(...state.dist, 1);
+  $('opts').innerHTML = OPTIONS.map((t, i) => `
+    <div class="opt">
+      <span class="k">${KEYS[i]}</span>
+      <span class="t">${t}</span>
+      <span class="track"><i style="width:${state.dist[i] / max * 100}%"></i></span>
+      <span class="n">${state.dist[i]}</span>
+    </div>`).join('');
+}
+
+function renderMetrics() {
+  $('present').textContent = state.present;
+  $('tagAbsent').textContent = `缺勤 ${state.absent.length}`;
+  $('tagRisk').textContent = `存疑 1`;
+}
+
+/* ---------- 学生端 ---------- */
+function renderPhone() {
+  const box = $('pscreen');
+
+  if (state.studentStep === 1) {
+    box.innerHTML = `
+      <div class="steptag">首次使用 · 第 12 周</div>
+      <div class="stitle">绑定学号</div>
+      <div class="ssub">只做一次。以后进教室扫码即可签到，不再输入。</div>
+      <div class="field">
+        <label>学号</label>
+        <input id="sid" value="2023010903" autocomplete="off">
+      </div>
+      <div class="field">
+        <label>姓名</label>
+        <input id="sname" value="李沐" autocomplete="off">
+      </div>
+      <div style="flex:1"></div>
+      <button class="pbtn" id="go2">扫码进入课堂</button>
+      <div style="font-size:11px;color:#9aa0a8;text-align:center;line-height:1.6">扫码之后只有一件事<br>回答一道题</div>`;
+    $('go2').onclick = () => { state.studentStep = 2; renderPhone(); };
+    return;
+  }
+
+  if (state.studentStep === 2) {
+    const manual = state.manual;
+    box.innerHTML = `
+      <div class="steptag">第 2 步 / 共 2 步</div>
+      <div class="stitle">答完这题，就算签到</div>
+      <div class="ssub">提交后不可修改。答错没关系，老师会讲。</div>
+      ${manual ? `<div style="display:flex;flex-direction:column;gap:6px">
+        <input class="code-input" id="cin" maxlength="4" inputmode="numeric" placeholder="––––" autocomplete="off">
+        <div class="err" id="cerr">码不对，看讲台上最新的数字</div>
+      </div>` : ``}
+      <div class="qtag">上节课回顾</div>
+      <div class="qtext" style="font-size:13.5px;margin-bottom:2px">f(x) = |x| 在 x = 0 处……</div>
+      <div style="display:flex;flex-direction:column;gap:7px">
+        ${OPTIONS.map((t, i) => `
+          <div class="popt" data-i="${i}">
+            <span class="pk">${KEYS[i]}</span>
+            <span class="pt">${t}</span>
+          </div>`).join('')}
+      </div>
+      <div style="flex:1"></div>
+      <button class="pbtn" id="submit" disabled>提交并签到</button>
+      ${manual ? `` : `<div id="fb" style="text-align:center;font-size:11px;color:#9aa0a8;cursor:pointer;text-decoration:underline;padding-top:2px">扫不出来？改为输入 4 位码</div>`}`;
+    const cin = manual ? $('cin') : null;
+    const btn = $('submit');
+    if (cin) cin.focus();
+    const sync = () => {
+      const okCode = !manual || (cin && cin.value.length === 4);
+      btn.disabled = !(okCode && state.myPick !== null);
+    };
+    if (cin) cin.oninput = () => { $('cerr').classList.remove('show'); sync(); };
+    box.querySelectorAll('.popt').forEach(el => {
+      el.onclick = () => {
+        state.myPick = +el.dataset.i;
+        box.querySelectorAll('.popt').forEach(o => o.classList.toggle('sel', o === el));
+        sync();
+      };
+    });
+    if (!manual) $('fb').onclick = () => { state.manual = true; renderPhone(); };
+    btn.onclick = () => {
+      if (manual && cin.value !== state.code) {
+        $('cerr').textContent = state.remain <= 0 ? '签到已截止' : '码不对，看讲台上最新的数字';
+        $('cerr').classList.add('show');
+        return;
+      }
+      commitSign();
+    };
+    return;
+  }
+
+  const right = state.myPick === CORRECT;
+  box.innerHTML = `
+    <div class="done">
+      <div class="check">✓</div>
+      <div class="t">已签到</div>
+      <div class="s">第 ${state.present} 位到课<br>${new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}</div>
+      <div class="badge">回顾题 ${right ? '答对了 · +1 参与分' : '答错了 · 老师已收到'}</div>
+    </div>
+    <div style="background:#f4f5f7;border-radius:12px;padding:12px 14px">
+      <div style="font-size:11px;color:#9aa0a8;margin-bottom:4px">本节课</div>
+      <div style="font-size:12.5px;color:#1a1c1e;line-height:1.7">互动面板已打开：提问 · 随堂测 · 课件</div>
+    </div>`;
+}
+
+function commitSign() {
+  state.signed = true;
+  state.present += 1;
+  state.answered += 1;
+  state.dist[state.myPick] += 1;
+  state.studentStep = 3;
+  renderMetrics();
+  renderOpts();
+  renderPhone();
+  toast('李沐 已签到 · 到课 43/47');
+}
+
+/* ---------- 教师操作 ---------- */
+function openSheet(html) {
+  $('sheet').innerHTML = html;
+  $('modal').classList.add('show');
+}
+function closeSheet() { $('modal').classList.remove('show'); }
+
+$('spotBtn').onclick = () => {
+  const pool = ['孙浩然', '郑雨欣', '黄子睿', '马思远', '何静怡', '徐嘉禾', '杨博文'];
+  const picked = pool.sort(() => Math.random() - .5).slice(0, 3);
+  openSheet(`
+    <h3>现场确认</h3>
+    <p class="s">这 3 位已在手机上收到确认请求，请抬头看一眼是否在座位上。</p>
+    ${picked.map((n, i) => `
+      <div class="pickrow">
+        <span class="nm"><span class="no">0${i + 1}</span>${n}</span>
+        <span style="font-size:11px;color:#1D9E75">已确认</span>
+      </div>`).join('')}
+    <div class="sheet-foot"><button class="mini" onclick="closeSheet()">关闭</button></div>`);
+};
+
+$('leaveBtn').onclick = () => {
+  openSheet(`
+    <h3>缺勤 ${state.absent.length} 人</h3>
+    <p class="s">一键核销请假，或者直接记缺勤。学期末导出时会一并带上。</p>
+    ${state.absent.map((a, i) => `
+      <div class="pickrow">
+        <span class="nm"><span class="no">${a.sid.slice(-4)}</span>${a.name}
+          ${a.note ? `<span style="font-size:10.5px;color:#c0392b">${a.note}</span>` : ''}
+        </span>
+        <button class="mini" data-i="${i}">核销请假</button>
+      </div>`).join('')}
+    <div class="sheet-foot"><button class="mini" onclick="closeSheet()">关闭</button></div>`);
+  $('sheet').querySelectorAll('.mini[data-i]').forEach(b => {
+    b.onclick = () => {
+      const i = +b.dataset.i;
+      state.absent.splice(i, 1);
+      renderMetrics();
+      closeSheet();
+      toast('已核销 1 人请假');
+    };
+  });
+};
+
+$('exportBtn').onclick = () => {
+  toast('已生成 attendance_第12周.csv · 47 条记录');
+};
+
+let toastTimer;
+function toast(msg) {
+  const el = $('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2400);
+}
+
+/* ---------- 计时 ---------- */
+let tick = null;
+function startTimer() {
+  clearInterval(tick);
+  tick = setInterval(() => {
+    if (state.remain > 0) {
+      state.remain = Math.max(0, state.remain - state.speed);
+      $('remainLabel').textContent = state.remain + 's';
+      $('cbarFill').style.width = (state.remain / 90 * 100) + '%';
+      if (state.remain === 0) closeWindow();
+    }
+    state.codeLeft -= state.speed;
+    if (state.codeLeft <= 0) {
+      state.codeLeft = CODE_CYCLE;
+      if (state.remain > 0) rollCode();
+    }
+  }, 1000);
+}
+
+function closeWindow() {
+  $('veil').classList.add('show');
+  $('qr').style.opacity = .12;
+  $('statusText').textContent = '签到已截止';
+  $('statusText').parentElement.style.background = '#f2f3f5';
+  $('statusText').parentElement.style.color = '#656a72';
+  $('statusText').parentElement.querySelector('.dot').style.background = '#b9bec6';
+  $('cbarFill').style.background = '#c9ced6';
+}
+
+function reset() {
+  state.remain = 90;
+  state.present = 42;
+  state.answered = 38;
+  state.dist = [18, 17, 1, 2];
+  state.codeLeft = CODE_CYCLE;
+  state.studentStep = 1;
+  state.myPick = null;
+  state.manual = false;
+  state.signed = false;
+  state.absent = [
+    { name: '陈亦然', sid: '2023010417', note: '连续缺勤 2 次' },
+    { name: '林　嘉', sid: '2023010532', note: '连续缺勤 2 次' },
+    { name: '周晓东', sid: '2023010608', note: '' },
+    { name: '吴　敏', sid: '2023010711', note: '待核销请假' }
+  ];
+  $('veil').classList.remove('show');
+  $('qr').style.opacity = 1;
+  $('cbarFill').style.width = '100%';
+  $('cbarFill').style.background = 'var(--blue)';
+  $('remainLabel').textContent = '90s';
+  $('statusText').textContent = '签到进行中';
+  const pill = $('statusText').parentElement;
+  pill.style.background = '#eaf7f1'; pill.style.color = '#0F6E56';
+  pill.querySelector('.dot').style.background = '#1D9E75';
+  renderMetrics();
+  renderOpts();
+  renderPhone();
+  rollCode();
+  closeSheet();
+}
+
+$('resetBtn').onclick = () => { reset(); toast('演示已重置'); };
+$('speedBtn').onclick = e => {
+  state.speed = state.speed === 1 ? 10 : 1;
+  e.target.textContent = '速度 ×' + state.speed;
+  e.target.classList.toggle('on', state.speed === 10);
+};
+
+/* ---------- init ---------- */
+renderMetrics();
+renderOpts();
+renderPhone();
+rollCode();
+startTimer();
+</script>
+</body>
+</html>
