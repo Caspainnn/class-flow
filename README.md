@@ -48,6 +48,7 @@ Windows 用户也可以直接双击根目录的 `课中签到.bat`，效果一�
 ```text
 帮我在这台 Windows 电脑上装好 ClassFlow（课中签到）。我是一线教师，不懂命令行，
 每一步做完告诉我结果就行。按下面的顺序做，遇到问题先自己排查，实在不行再问我。
+github链接：https://github.com/Caspainnn/class-flow/
 
 1. 环境
    - 运行 node -v，需要 18 及以上。没有就装：winget install OpenJS.NodeJS.LTS；
@@ -78,7 +79,7 @@ Windows 用户也可以直接双击根目录的 `课中签到.bat`，效果一�
 
 6. 做成双击就能用
    - pip install pyinstaller
-   - 在 D:\ClassFlow 下执行 tools\build.bat，产出 课中签到.exe
+   - 在 当前根目录 下执行 tools\build.bat，产出 课中签到.exe
    - 再执行 python tools\make-shortcut.py 生成桌面快捷方式
    - 关掉第 4 步那个终端，双击桌面图标，确认服务能起来、浏览器能打开。
 
@@ -90,7 +91,7 @@ Windows 用户也可以直接双击根目录的 `课中签到.bat`，效果一�
 
 注意：
 - data 目录里是我的真实名单，不要上传到任何地方，也不要提交到 git。
-- 不要把项目放进 C:\Program Files 或 OneDrive 同步目录。
+- 不要把项目放进 C盘 或 OneDrive 同步目录。
 - 改任何代码前先备份，改完告诉我改了哪几个文件。
 ```
 
