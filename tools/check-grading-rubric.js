@@ -1,0 +1,11 @@
+'use strict';
+const assert=require('node:assert/strict'),ExcelJS=require('../server/node_modules/exceljs');
+const rubric=require('../server/lib/rubric');
+(async()=>{const qs=[{text:'概念题',points:30,rubric:'定义准确20分\n举例正确10分'},{text:'计算题',points:70,rubric:'过程40分，答案30分'}];
+const buf=await rubric.template(ExcelJS,qs);const parsed=await rubric.parse(ExcelJS,buf,100);assert.deepEqual(parsed,qs);assert.match(rubric.describe(qs),/定义准确20分/);
+const wb=new ExcelJS.Workbook();await wb.xlsx.load(buf);wb.worksheets[0].getCell('D2').value='';
+const invalid=await wb.xlsx.writeBuffer();await assert.rejects(()=>rubric.parse(ExcelJS,invalid,100),/第2行.*评分标准/);
+await assert.rejects(()=>rubric.parse(ExcelJS,buf,200),/合计/);
+const legacy=[{text:'旧题',points:200,rubric:'旧题标准'}];assert.equal((await rubric.parse(ExcelJS,await rubric.template(ExcelJS,legacy),200))[0].points,200);
+console.log('PASS rubric: XLSX roundtrip, multiline standards, row errors, total validation, legacy total, prompt text');
+})().catch(e=>{console.error(e);process.exitCode=1});

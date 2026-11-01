@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>作业管理 · 一堂课</title>
+<link rel="stylesheet" href="/shell.css">
+<style>
+.hw-head,.hw-bar,.hw-actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.hw-head{justify-content:space-between;margin-bottom:22px}.hw-head h1{overflow-wrap:anywhere}.hw-sub,.hw-hint{color:var(--ink2);font-size:13px;line-height:1.75}.hw-sub{margin-top:6px}.hw-bar{margin-bottom:18px}.hw-bar select{width:280px;max-width:100%}.hw-card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:20px;margin-bottom:16px;min-width:0}.hw-card h2{font-size:18px;font-weight:700;margin:0 0 16px}.hw-card h3{font-size:16px;margin:0 0 10px}.hw-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink);font:inherit;padding:8px 14px;min-height:38px;text-decoration:none;cursor:pointer}.hw-btn:hover{background:#f4f6f8}.hw-btn.hw-primary{background:var(--ink);border-color:var(--ink);color:#fff;font-weight:600}.hw-btn:disabled{opacity:.5;cursor:default}.hw-link{color:var(--blue);text-decoration:none;cursor:pointer}.hw-link:hover{text-decoration:underline}.hw-tag{display:inline-block;padding:3px 9px;border-radius:6px;background:#fff3df;color:#8a5a12;font-size:12px}.hw-tag.hw-done{background:#eaf7f1;color:#0f6e56}.hw-table{width:100%;border-collapse:collapse;table-layout:fixed}.hw-table th{background:#f4f5f7;color:var(--ink2);font-weight:500;text-align:left}.hw-table th,.hw-table td{padding:13px 14px;border-bottom:1px solid var(--line);overflow-wrap:anywhere;vertical-align:middle}.hw-table th:first-child{width:29%}.hw-table th:nth-child(2){width:15%}.hw-table th:nth-child(3){width:15%}.hw-table th:nth-child(4){width:15%}.hw-table td:last-child{font-size:13px}.hw-table tr:last-child td{border-bottom:0}.hw-row-actions{display:flex;gap:8px 16px;flex-wrap:wrap}.hw-note{margin:16px 0 0;color:var(--ink2);font-size:13px}.hw-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}.hw-field{display:flex;flex-direction:column;gap:6px;min-width:0}.hw-field>label,.hw-label{font-size:13px;font-weight:500;color:#525964}.hw-field input,.hw-field select,.hw-field textarea,.hw-q input,.hw-bar select{font:inherit;border:1px solid var(--line);border-radius:8px;padding:8px 10px;width:100%;min-width:0;background:#fff;color:var(--ink)}.hw-field input[readonly]{background:#f4f5f7;color:var(--ink2)}.hw-field textarea{resize:vertical;line-height:1.75}.hw-edit-head{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:16px}.hw-edit-head h2{margin:0}.hw-scores{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:24px}.hw-summary{border-left:1px solid var(--line);padding-left:24px;min-width:0}.hw-stats{display:flex;flex-wrap:wrap;gap:16px;margin:14px 0}.hw-stats b{color:var(--blue);font-size:26px;margin-right:4px}.hw-stats span{font-size:13px}.hw-breadcrumb{font-size:13px;color:var(--ink2);margin-bottom:14px;overflow-wrap:anywhere}.hw-message{padding:10px 12px;border-radius:8px;background:#eef4fb;white-space:pre-wrap;overflow-wrap:anywhere;font-size:13px;margin-top:12px}.hw-message.hw-error{background:#fff0ee;color:var(--red)}.hw-message:empty{display:none}.hw-empty{padding:26px 8px;text-align:center;color:var(--ink2)}.hw-danger{color:var(--red)}.hw-delete{background:#fff6f4;border:1px solid #efd2cc;border-radius:8px;padding:12px;margin-top:14px}.hw-q{display:grid;grid-template-columns:42px minmax(0,1fr) 84px 36px;gap:8px;align-items:center;margin-bottom:10px}.hw-q .hw-btn{padding:4px}.hw-radio{display:flex;gap:20px;flex-wrap:wrap;margin:12px 0 18px}.hw-radio label{display:flex;align-items:center;gap:6px;cursor:pointer}.hw-bottom{margin-top:18px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}.hw-question-options{margin-top:18px}.hw-question-options .hw-grid{grid-template-columns:1fr 1fr}.hw-question-options .hw-field:last-child{grid-column:1/-1}.hw-count{font-size:13px;color:var(--ink2)}.hw-mobile-nav{display:none}[hidden]{display:none!important}
+@media(max-width:860px){.hw-mobile-nav{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:16px;font-size:13px}}
+@media(max-width:700px){.hw-grid,.hw-scores,.hw-question-options .hw-grid{grid-template-columns:minmax(0,1fr)}.hw-question-options .hw-field:last-child{grid-column:auto}.hw-summary{border-left:0;border-top:1px solid var(--line);padding:16px 0 0}.hw-card{padding:16px}.hw-table,.hw-table tbody,.hw-table tr,.hw-table td{display:block;width:100%}.hw-table thead{display:none}.hw-table tr{padding:12px 0;border-bottom:1px solid var(--line)}.hw-table tr:last-child{border-bottom:0}.hw-table td{padding:5px 0;border:0;display:grid;grid-template-columns:76px minmax(0,1fr);gap:8px}.hw-table td:before{content:attr(data-label);font-size:12px;color:var(--ink2);padding-top:2px}.hw-table td:first-child{font-weight:600}.hw-head{margin-bottom:18px}.hw-bar select{width:100%}.hw-q{grid-template-columns:32px minmax(0,1fr) 64px 32px;gap:6px}.hw-q input{padding:8px 6px}.hw-btn{padding:8px 12px}}
+.hw-bar select{width:280px}.hw-create-columns{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:24px}.hw-create-columns>section{min-width:0}.hw-create-settings{border-left:1px solid var(--line);padding-left:24px}.hw-create-columns .hw-hint{margin:0 0 12px}.hw-create-columns .hw-grid{gap:12px}.hw-head .hw-sub{margin-bottom:0}@media(max-width:700px){.hw-bar select{width:100%}.hw-create-columns{grid-template-columns:minmax(0,1fr);gap:18px}.hw-create-settings{border-left:0;border-top:1px solid var(--line);padding:16px 0 0}}
+
+.hw-modal{border:0;border-radius:14px;padding:0;width:min(480px,calc(100vw - 32px));max-height:calc(100dvh - 40px);overflow:auto;background:#fff;color:var(--ink);box-shadow:0 18px 70px #14243c30}.hw-modal::backdrop{background:rgba(21,31,46,.35);backdrop-filter:blur(2px)}.hw-modal-head{display:flex;justify-content:space-between;align-items:center;padding:21px 24px 17px;border-bottom:1px solid var(--line)}.hw-modal-head h2{font-size:20px;margin:0;line-height:1.4}.hw-modal-close{background:none;border:0;padding:5px 7px;border-radius:6px;font-size:16px;color:var(--ink2);cursor:pointer}.hw-modal-close:hover{background:#f0f3f7}.hw-modal form{padding:20px 24px 23px}.hw-modal .hw-grid{display:grid;grid-template-columns:1fr;gap:16px}.hw-modal .hw-field label{font-size:13px;margin-bottom:7px}.hw-modal input,.hw-modal select{font:inherit;font-size:14px;min-height:40px;width:100%;max-width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink);box-sizing:border-box}.hw-modal .hw-hint{font-size:12px;line-height:1.8;margin:15px 0 0;color:var(--ink2)}.hw-modal-actions{display:flex;justify-content:flex-end;gap:10px;padding-top:20px;margin-top:16px;border-top:1px solid var(--line)}.hw-modal .hw-btn{font-size:13px;padding:9px 15px;cursor:pointer}.hw-modal :focus-visible{outline:2px solid var(--blue);outline-offset:3px}.hw-modal button:disabled{opacity:.5;cursor:default}@media(max-width:560px){.hw-modal-head{padding:18px 20px 15px}.hw-modal form{padding:18px 20px 20px}}
+
+</style>
+<link rel="icon" type="image/svg+xml" href="/assets/logo.svg?v=20261026">
+</head>
+<body class="shelled" data-active="hw-list">
+<div class="app"><aside class="sh-side" id="shSide"></aside><main class="sh-main"><div class="wrap">
+<nav class="hw-mobile-nav" aria-label="快捷导航"><a class="hw-link" href="/">工作台</a><a class="hw-link" href="/homework">作业列表</a><a class="hw-link" href="/grading">自动批改</a><a class="hw-link" href="/xueqing?tab=prac">练习分析</a></nav>
+<div id="hwRoot" aria-live="polite"><div class="hw-empty">正在加载作业…</div></div>
+<dialog id="hwCreateDialog" class="hw-modal" aria-labelledby="hwModalTitle"></dialog></div></main></div>
+<script src="/shell.js"></script>
+<script>
+'use strict';
+const $ = id => document.getElementById(id);
+const root = $('hwRoot');
+let courses = [], selectedCourse = '', detail = null, listRequest = 0, scoreSavedInput = null, scoreHasErrors = false, createPending = false, createOpener = null;
+const esc = value => String(value == null ? '' : value).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const detailURL = id => '/homework?id=' + encodeURIComponent(id);
+const gradingURL = id => '/grading?id=' + encodeURIComponent(id);
+const analysisURL = hw => '/xueqing?tab=prac&courseId=' + encodeURIComponent(hw.courseId) + '&homeworkId=' + encodeURIComponent(hw.id);
+const endpoint = id => '/api/homework/' + encodeURIComponent(id);
+const isPublished = hw => hw.published !== false;
+const dueInputType = due => !due || /^\d{4}-\d{2}-\d{2}$/.test(String(due)) ? 'date' : 'text';
+function statusText(hw) {
+  if (hw.mode === 'manual') return isPublished(hw) ? '已录分' : '待处理';
+  return ({collect:'收作业中',ready:'待批改',running:'批改中',done:'待复核',archived:'已归档',draft:'待批改',published:'已归档'})[hw.status] || (isPublished(hw) ? '已归档' : '待批改');
+}
+function scoreText(scores) {
+  return Object.entries(scores || {}).filter(([,entry]) => entry != null).map(([id, entry]) => entry.st === 'no' ? id + ' 未交' : id + ' ' + entry.score + (entry.st === 'late' ? ' 补' : '')).join('\n');
+}
+async function api(url, method = 'GET', body) {
+  const response = await fetch(url, {method, ...(body === undefined ? {} : {headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})});
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok || data.ok === false) throw new Error(data.error || '请求失败（' + response.status + '），请稍后重试。');
+  return data;
+}
+function message(id, text, error = false) { const el = $(id); el.textContent = text; el.classList.toggle('hw-error', error); }
+function options(current, all = false) { return (all ? '<option value="">全部课程</option>' : '<option value="">请选择课程</option>') + courses.map(c => '<option value="' + esc(c.id) + '"' + (String(c.id) === String(current) ? ' selected' : '') + '>' + esc(c.name) + '</option>').join(''); }
+function counts(hw) { return '<div class="hw-stats"><span><b>' + esc(hw.total || 0) + '</b>名学生</span><span>已录 <b>' + esc(hw.submitted || 0) + '</b>人</span><span>未交 <b>' + Math.max(0,(Number(hw.total)||0)-(Number(hw.submitted)||0)) + '</b>人</span></div>'; }
+function analysisLink(hw) { return isPublished(hw) ? '<a class="hw-link" href="' + esc(analysisURL(hw)) + '">查看作业分析 ↗</a>' : '<span class="hw-hint">录入成绩或完成批改归档后可查看分析</span>'; }
+function showFailure(error) {
+  root.innerHTML = '<div class="hw-head"><h1>作业管理</h1><a class="hw-link" href="/homework">返回作业列表</a></div><div class="hw-card"><h2>暂时无法加载</h2><p class="hw-danger">' + esc(error.message) + '</p><button class="hw-btn" id="hwRetry">重新加载</button></div>';
+  $('hwRetry').addEventListener('click', init);
+}
+async function renderList() {
+  root.innerHTML = '<header class="hw-head"><div><h1>作业管理</h1><div class="hw-sub">统一维护作业、批改与成绩。</div></div><button class="hw-btn hw-primary" type="button" id="hwNew">新建作业</button></header><div class="hw-bar"><label for="hwCourseFilter">课程</label><select id="hwCourseFilter">' + options(selectedCourse,true) + '</select></div><section class="hw-card"><h2>作业列表</h2><div id="hwList"><div class="hw-empty">正在加载作业…</div></div><p class="hw-note">已有作业统一在这里维护，学情分析中查看统计结果。</p></section>';
+  $('hwCourseFilter').addEventListener('change', () => { selectedCourse = $('hwCourseFilter').value; const query = selectedCourse ? '?courseId=' + encodeURIComponent(selectedCourse) : ''; history.replaceState(null,'','/homework' + query); loadList(); });
+  $('hwNew').addEventListener('click',renderNew);
+  await loadList();
+}
+async function loadList() {
+  const request = ++listRequest;
+  $('hwList').innerHTML = '<div class="hw-empty">正在加载作业…</div>';
+  try {
+    const data = await api('/api/homework' + (selectedCourse ? '?courseId=' + encodeURIComponent(selectedCourse) : ''));
+    if (request !== listRequest) return;
+    const items = data.items || [];
+    $('hwList').innerHTML = items.length ? '<table class="hw-table"><thead><tr><th>作业名称</th><th>状态</th><th>成绩录入</th><th>操作</th></tr></thead><tbody>' + items.map(hw => '<tr><td data-label="作业名称"><div><a class="hw-link" href="' + esc(detailURL(hw.id)) + '">' + esc(hw.name) + '</a>' + (!selectedCourse ? '<div class="hw-hint">' + esc(hw.courseName) + '</div>' : '') + '</div></td><td data-label="状态"><div><span class="hw-tag' + (isPublished(hw) ? ' hw-done' : '') + '">' + esc(statusText(hw)) + '</span></div></td><td data-label="成绩录入">' + esc(hw.submitted || 0) + ' / ' + esc(hw.total || 0) + '</td><td data-label="操作"><div class="hw-row-actions">' + (hw.mode === 'file' && hw.batchId ? '<a class="hw-link" href="' + esc(gradingURL(hw.batchId)) + '">继续批改</a>' : '') + '<a class="hw-link" href="' + esc(detailURL(hw.id)) + '">' + '查看作业' + '</a>' + (isPublished(hw) ? '<a class="hw-link" href="' + esc(analysisURL(hw)) + '">查看分析</a>' : '') + '</div></td></tr>').join('') + '</tbody></table>' : '<div class="hw-empty">' + (selectedCourse ? '这门课程还没有作业。' : '还没有作业。') + '<br><button class="hw-btn" type="button" id="hwNewEmpty">新建第一份作业</button></div>';
+    if($('hwNewEmpty'))$('hwNewEmpty').addEventListener('click',renderNew);
+  } catch (error) { if(request === listRequest) { $('hwList').innerHTML = '<div class="hw-message hw-error">' + esc(error.message) + '</div><div class="hw-bottom"><button class="hw-btn" id="hwListRetry">重试</button></div>'; $('hwListRetry').addEventListener('click',loadList); } }
+}
+function renderNew(){
+ const dialog=$('hwCreateDialog');if(dialog.open||createPending)return;createOpener=document.activeElement;
+ dialog.innerHTML='<div class="hw-modal-head"><h2 id="hwModalTitle">新建作业</h2><button type="button" class="hw-modal-close" id="hwCreateClose" aria-label="关闭新建作业">✕</button></div><form id="hwCreateForm"><div class="hw-grid"><div class="hw-field"><label for="hwCourse">课程</label><select id="hwCourse" required>'+options(selectedCourse)+'</select></div><div class="hw-field"><label for="hwName">作业名称</label><input id="hwName" maxlength="200" required autofocus placeholder="例如：第三章练习"></div><div class="hw-field"><label for="hwDue">截止日期（可选）</label><input type="date" id="hwDue"></div></div><p class="hw-hint">创建后可选择收取并批改作业，或直接录入成绩。</p><div id="hwCreateMessage" class="hw-message" role="status"></div><div class="hw-modal-actions"><button class="hw-btn" type="button" id="hwCreateCancel">取消</button><button class="hw-btn hw-primary" type="submit" id="hwCreate">创建作业</button></div></form>';
+ if(!courses.length){message('hwCreateMessage','还没有课程，请先到课程管理添加课程。',true);$('hwCreate').disabled=true}
+ $('hwCreateForm').addEventListener('submit',createHomework);
+ const close=()=>{if(!createPending)dialog.close()};$('hwCreateClose').addEventListener('click',close);$('hwCreateCancel').addEventListener('click',close);
+ dialog.oncancel=event=>{if(createPending)event.preventDefault()};dialog.onclose=()=>{if(createOpener&&createOpener.isConnected)createOpener.focus()};dialog.showModal();
+}
+function createBusy(value){createPending=value;$('hwCreateForm').querySelectorAll('input,select,button').forEach(el=>el.disabled=value);$('hwCreateClose').disabled=value;$('hwCreate').disabled=value||!courses.length}
+async function createHomework(event){
+ event.preventDefault();if(createPending)return;const body={courseId:$('hwCourse').value,name:$('hwName').value.trim(),due:$('hwDue').value};
+ if(!body.name)return message('hwCreateMessage','请填写作业名称。',true);
+ createBusy(true);message('hwCreateMessage','正在创建…');
+ try{const result=await api('/api/homework','POST',body);location.href=detailURL(result.id)}catch(error){message('hwCreateMessage',error.message,true);createBusy(false)}
+}
+function workActions(hw){return '<section class="hw-card"><h2>作业处理</h2><p class="hw-hint">按本次需要选择处理方式，题目和评分标准在自动批改中配置。</p><div class="hw-actions"><button type="button" class="hw-btn hw-primary" id="hwEnableGrading">收取并批改作业 →</button><a class="hw-btn" href="#hwScoresForm" id="hwDirectScores">直接录入成绩</a></div><div class="hw-message" id="hwWorkMessage" role="status"></div></section>'}
+async function enableGrading(){
+ if($('hwName').value.trim()!==detail.name||$('hwDue').value!==(detail.due||''))return message('hwWorkMessage','请先保存修改的基本信息。',true);
+ if(scoreHasErrors||$('hwScores').value!==(scoreSavedInput===null?scoreText(detail.scores):scoreSavedInput))return message('hwWorkMessage','成绩有未保存的修改，请先保存成绩。',true);
+ const button=$('hwEnableGrading');button.disabled=true;message('hwWorkMessage','正在打开自动批改…');
+ try{const result=detail.batchId?{batchId:detail.batchId}:await api(endpoint(detail.id)+'/grading','POST',{});location.href=gradingURL(result.batchId)}catch(e){message('hwWorkMessage',e.message,true);button.disabled=false}
+}
+async function renderDetail(id) {
+  const data = await api(endpoint(id)); detail = data.homework;
+  if (!detail) throw new Error('作业不存在，或已被删除。');
+  const hw = detail;
+  scoreSavedInput=scoreText(hw.scores);scoreHasErrors=false;
+  root.innerHTML = '<div class="hw-breadcrumb"><a class="hw-link" href="/homework">作业管理</a> / <span id="hwBreadcrumbName">' + esc(hw.name) + '</span></div><header class="hw-head"><div><h1 id="hwTitle">' + esc(hw.name) + '</h1><div class="hw-sub"><span id="hwMetadata">' + esc(hw.courseName) + ' · ' + esc(hw.due ? '截止 ' + hw.due : '未设置截止日期') + '</span></div></div><div id="hwAnalysisLink">' + analysisLink(hw) + '</div></header><section class="hw-card"><form id="hwInfoForm"><div class="hw-edit-head"><h2>基本信息</h2><div class="hw-actions"><button type="submit" class="hw-btn" id="hwSaveInfo">保存信息</button><button type="button" class="hw-btn hw-danger" id="hwDelete">删除作业</button></div></div><div class="hw-grid"><div class="hw-field"><label for="hwCourseReadonly">课程</label><input id="hwCourseReadonly" readonly value="' + esc(hw.courseName) + '"></div><div class="hw-field"><label for="hwName">作业名称</label><input id="hwName" required maxlength="200" value="' + esc(hw.name) + '"></div><div class="hw-field"><label for="hwDue">截止日期（可选）</label><input type="' + dueInputType(hw.due) + '" id="hwDue" value="' + esc(hw.due || '') + '"></div></div><div class="hw-message" id="hwInfoMessage" role="status"></div></form><div id="hwDeletePanel" class="hw-delete" hidden><p>确定删除这份作业？作业及关联批改批次将从管理和分析中移除，原始上传文件会保留。</p><div class="hw-actions"><button type="button" class="hw-btn hw-danger" id="hwConfirmDelete">确认删除作业</button><button type="button" class="hw-btn" id="hwCancelDelete">取消</button></div><div id="hwDeleteMessage" class="hw-message" role="status"></div></div></section>' + workActions(hw) + '<section class="hw-card"><h2>成绩维护</h2><div class="hw-scores"><form id="hwScoresForm"><h3>批量录入成绩</h3><p class="hw-hint" id="hwScoreHelp">每行填写“学号 分数”；补交加“补”，未交写“未交”。成绩统一为百分制（0–100）。删除文本行不会清除已有成绩，请用“学号 未交”明确标记。</p><div class="hw-field"><label for="hwScores">学号与成绩</label><textarea id="hwScores" rows="6" spellcheck="false" aria-describedby="hwScoreHelp" placeholder="20260001 85&#10;20260002 90 补&#10;20260003 未交">' + esc(scoreText(hw.scores)) + '</textarea></div><div class="hw-bottom"><button type="submit" class="hw-btn hw-primary" id="hwSaveScores">保存成绩</button><span class="hw-hint">保存后更新作业分析。</span></div><div id="hwScoreMessage" class="hw-message" role="status"></div></form><aside class="hw-summary"><h3>作业情况</h3><div id="hwCounts">' + counts(hw) + '</div><p class="hw-hint">' + '手动维护的成绩及补交状态会保留，后续启用批改也不会被默认覆盖。' + '</p><div id="hwPublishedHint" class="hw-hint">' + (isPublished(hw) ? '成绩已计入学情分析。' : '当前作业尚未发布，不计入缺交与低分预警。') + '</div></aside></div></section>';
+  $('hwInfoForm').addEventListener('submit',saveInfo);
+  $('hwScoresForm').addEventListener('submit',saveScores);
+  $('hwEnableGrading').addEventListener('click',enableGrading);
+  $('hwDirectScores').addEventListener('click',event=>{event.preventDefault();$('hwScoresForm').scrollIntoView({behavior:'smooth',block:'start'});$('hwScores').focus({preventScroll:true})});
+  $('hwDelete').addEventListener('click',() => { $('hwDeletePanel').hidden = false; $('hwConfirmDelete').focus(); });
+  $('hwCancelDelete').addEventListener('click',() => { $('hwDeletePanel').hidden = true; $('hwDelete').focus(); });
+  $('hwConfirmDelete').addEventListener('click',deleteHomework);
+}
+async function saveInfo(event) {
+  event.preventDefault(); const name = $('hwName').value.trim(), due = $('hwDue').value;
+  if (!name) return message('hwInfoMessage','请填写作业名称。',true);
+  $('hwSaveInfo').disabled = true;
+  try { await api(endpoint(detail.id),'PUT',{name,due}); detail.name = name; detail.due = due; $('hwTitle').textContent = name; $('hwBreadcrumbName').textContent = name; $('hwMetadata').textContent = detail.courseName + ' · ' + (due ? '截止 ' + due : '未设置截止日期'); message('hwInfoMessage','基本信息已保存。'); }
+  catch(error) { message('hwInfoMessage',error.message,true); }
+  finally { $('hwSaveInfo').disabled = false; }
+}
+async function saveScores(event) {
+  event.preventDefault(); const text = $('hwScores').value;
+  if (!text.trim()) return message('hwScoreMessage','请先输入成绩。清除某位学生的记录请填写“学号 未交”。',true);
+  $('hwSaveScores').disabled = true; message('hwScoreMessage','正在保存…');
+  try {
+    const result = await api(endpoint(detail.id) + '/scores','POST',{text});
+    const bad = Array.isArray(result.bad) ? result.bad : [];
+    scoreHasErrors=bad.length>0;if(!scoreHasErrors)scoreSavedInput=text;
+    message('hwScoreMessage','已保存 ' + (result.n || 0) + ' 条成绩。' + (bad.length ? '\n以下条目未保存，请核对本课程学号及 0–100 分数后重新保存：\n' + bad.map(line => typeof line === 'string' ? line : JSON.stringify(line)).join('\n') : '\n成绩已更新，可查看作业分析。'),bad.length > 0);
+    // Refresh only the summary; retain all pasted text and failed-line feedback.
+    try { const data = await api(endpoint(detail.id)); detail = data.homework; $('hwCounts').innerHTML = counts(detail); $('hwAnalysisLink').innerHTML = analysisLink(detail); $('hwPublishedHint').textContent = isPublished(detail) ? '成绩已计入学情分析。' : '当前作业尚未发布，不计入缺交与低分预警。'; if ($('hwFileStatus')) $('hwFileStatus').textContent = statusText(detail); }
+    catch(error) { const prior = $('hwScoreMessage').textContent; message('hwScoreMessage',prior + '\n成绩已保存，但统计刷新失败：' + error.message,true); }
+  } catch(error) {message('hwScoreMessage',error.message,true);}
+  finally {$('hwSaveScores').disabled = false;}
+}
+async function deleteHomework() {
+  $('hwConfirmDelete').disabled = true;
+  try { await api(endpoint(detail.id),'DELETE',{confirm:true}); location.href = '/homework' + (detail.courseId ? '?courseId=' + encodeURIComponent(detail.courseId) : ''); }
+  catch(error) { message('hwDeleteMessage',error.message,true); $('hwConfirmDelete').disabled = false; }
+}
+async function init() {
+  root.innerHTML = '<div class="hw-empty">正在加载作业…</div>';
+  try {
+    const params = new URLSearchParams(location.search);
+    const id = params.get('id');
+    if (id && /[\uFFFD\u0000-\u001f]/.test(id)) throw new Error('作业链接无效，请从作业列表重新打开。');
+    selectedCourse = params.get('courseId') || '';
+    if (id) return await renderDetail(id);
+    const data = await api('/api/all'); courses = data.courses || [];
+    await renderList();
+    if(params.get('new')==='1'){history.replaceState(null,'','/homework'+(selectedCourse?'?courseId='+encodeURIComponent(selectedCourse):''));renderNew()}
+  } catch(error) {showFailure(error);}
+}
+if (typeof window !== 'undefined') window.appCanNavigate = () => {
+  if(createPending){message('hwCreateMessage','正在创建，请稍候。',true);return false;}
+  const scores=$('hwScores');
+  if(scores&&detail&&(scoreHasErrors||scores.value!==(scoreSavedInput===null?scoreText(detail.scores):scoreSavedInput))){message('hwScoreMessage','成绩有未保存修改，请先保存。',true);return false;}
+  return true;
+};
+init();
+</script>
+</body>
+</html>

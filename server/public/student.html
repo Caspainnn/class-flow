@@ -74,6 +74,7 @@ h1{font-size:18px;font-weight:500;line-height:1.55;margin-bottom:16px}
 
 .view{display:none}.view.on{display:block}
 </style>
+<link rel="icon" type="image/svg+xml" href="/assets/logo.svg?v=20261026">
 </head>
 <body>
 <div class="card">
@@ -213,17 +214,23 @@ function buildForm(q, late) {
   $('formErr').classList.remove('on');
   $('formErr').textContent = '';
   $('submit').textContent = '提交并签到';
-  PICK = null;
-  $('qtext').textContent = q.text;
+  const multiple = q.type === 'multiple';
+  PICK = multiple ? [] : null;
+  $('qtext').textContent = (multiple ? '【多选题】' : '【单选题】') + q.text;
   $('opts').innerHTML = q.options.map((t, i) => `
-    <div class="opt" data-i="${i}">
+    <button type="button" class="opt" data-i="${i}" aria-pressed="false" style="width:100%;text-align:left;font:inherit">
       <span class="k">${'ABCDEF'[i]}</span>
       <span class="t">${esc(t)}</span>
-    </div>`).join('');
+    </button>`).join('');
   $('opts').querySelectorAll('.opt').forEach(el => {
     el.onclick = () => {
-      PICK = Number(el.dataset.i);
-      $('opts').querySelectorAll('.opt').forEach(o => o.classList.toggle('sel', o === el));
+      const index = Number(el.dataset.i);
+      PICK = multiple ? (PICK.includes(index) ? PICK.filter(i => i !== index) : [...PICK,index]) : index;
+      $('opts').querySelectorAll('.opt').forEach(o => {
+        const selected = multiple ? PICK.includes(Number(o.dataset.i)) : o === el;
+        o.classList.toggle('sel', selected);
+        o.setAttribute('aria-pressed', String(selected));
+      });
       sync();
     };
   });
@@ -259,7 +266,7 @@ function sync() {
   const { sid, name } = currentWho();
   const okSid = /^\d{6,}$/.test(sid);
   const okName = name.length >= 2;
-  $('submit').disabled = !(okSid && okName && PICK !== null);
+  $('submit').disabled = !(okSid && okName && (Array.isArray(PICK) ? PICK.length > 0 : PICK !== null));
 }
 
 function tick() {

@@ -1,0 +1,237 @@
+/* 应用外壳 · 侧边导航（工作台 / 课前 / 课中 / 课后 / 设置） */
+:root{
+  --ink:#17191c;--ink2:#666b73;--ink3:#9aa0a8;--line:#e6e8ec;--line2:#f2f3f5;
+  --bg:#f4f5f7;--blue:#185FA5;--ok:#1D9E75;--red:#A32D2D;--amber:#BA7517;
+}
+/* Shared workflow navigation: circles, connecting rules and a consistent back control. */
+.sh-main .flow-navigation{display:flex;align-items:center;gap:24px;margin:25px 0 24px;min-width:0}
+.sh-main .flow-steps{display:flex;align-items:center;gap:0;flex:1;min-width:0;margin:0;padding:0;border:0;background:transparent;border-radius:0;max-width:none}
+.sh-main .flow-steps .flow-step{display:flex;align-items:center;gap:10px;flex:1;min-width:0;border:0;border-radius:0;background:none;padding:0;color:#8998a9;box-shadow:none;font-family:inherit;font-size:14px;line-height:1.5;font-weight:500;white-space:nowrap;text-decoration:none}
+.sh-main .flow-steps .flow-step:last-child{flex:none}
+.sh-main .flow-steps .flow-step:not(:last-child):after{content:"";height:1px;background:#dbe3ed;flex:1;min-width:12px;margin:0 22px}
+.sh-main .flow-steps .flow-step:hover{background:none;color:#536f8d;border:0}
+.sh-main .flow-steps .flow-number{display:grid;place-items:center;width:34px;height:34px;flex:none;font-size:12px;font-style:normal;font-weight:500;color:#8d9bab;background:#e7ecf3;border:0;border-radius:50%;box-shadow:none}
+.sh-main .flow-steps .flow-step.active,.sh-main .flow-steps .flow-step.on{color:#17191c;font-weight:650;background:none;border:0}
+.sh-main .flow-steps .flow-step.active .flow-number,.sh-main .flow-steps .flow-step.on .flow-number{color:white;background:#185fa5;box-shadow:0 0 0 4px #e0ebf7}
+.sh-main .flow-steps .flow-step.complete .flow-number,.sh-main .flow-steps .flow-step.done .flow-number{color:#185fa5;background:#e2edf8}
+.sh-main .flow-back{flex:none;font-family:inherit;font-size:12px;padding:7px 12px;border:1px solid #dce4ed;border-radius:7px;background:#fff;color:#526b84;cursor:pointer;white-space:nowrap}
+.sh-main .flow-back:disabled{opacity:.4;cursor:default}
+.sh-main .flow-footer{display:flex;justify-content:flex-start;margin-top:20px;gap:12px}.sh-main .flow-footer .flow-back{margin-left:0}
+@media(max-width:700px){.sh-main .flow-navigation{gap:14px;flex-wrap:wrap;margin:22px 0}.sh-main .flow-steps{flex-basis:100%}.sh-main .flow-steps .flow-step{font-size:11px;gap:6px}.sh-main .flow-steps .flow-number{width:27px;height:27px;font-size:10px}.sh-main .flow-steps .flow-step:not(:last-child):after{margin:0 9px;min-width:5px}.sh-main .flow-back{margin-left:auto;padding:5px 10px;font-size:11px}}
+@media(max-width:420px){.sh-main .flow-steps .flow-step{font-size:10px;gap:4px;white-space:normal}.sh-main .flow-steps .flow-number{width:24px;height:24px}.sh-main .flow-steps .flow-step:not(:last-child):after{margin:0 5px;min-width:2px}}
+*{box-sizing:border-box}
+html,body{height:100%}
+body.shelled{margin:0;background:var(--bg);color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei","PingFang SC",sans-serif;font-size:13px}
+body.shelled .app{display:flex;height:100vh;overflow:hidden}
+
+/* 侧栏 */
+.sh-side{width:212px;flex:none;background:#fff;border-right:1px solid var(--line);
+  display:flex;flex-direction:column;padding:16px 10px 10px}
+.sh-brand{display:flex;align-items:center;gap:8px;padding:2px 8px 12px;text-decoration:none;color:inherit}
+.sh-logo{width:28px;height:28px;display:block;flex:none;object-fit:contain;background:transparent}
+.sh-brand .t{font-size:13.5px;font-weight:500}
+.sh-brand .v{font-size:10px;color:var(--ink3);margin-left:auto}
+.sh-nav{flex:1;overflow:auto;margin:0 -4px;padding:0 4px 6px}
+.sh-grp{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--ink3);padding:12px 10px 6px}
+.sh-grp b{font-weight:500;color:var(--ink2)}
+.sh-grp .ln{flex:1;height:1px;background:var(--line2)}
+.sh-nav a{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:8px;
+  color:var(--ink2);text-decoration:none;font-size:12.5px;margin-bottom:1px;cursor:pointer}
+.sh-nav a:hover{background:#f4f6f8;color:var(--ink)}
+.sh-nav a.on{background:#eef2f7;color:var(--blue);font-weight:500}
+.sh-nav a .ico{width:14px;text-align:center;font-size:11.5px;flex:none;opacity:.75}
+.sh-nav a .n{margin-left:auto;font-size:10.5px;color:var(--red)}
+.sh-nav a .soon{margin-left:auto;font-size:10px;color:var(--ink3);border:1px dashed var(--line);border-radius:4px;padding:0 4px}
+.sh-nav a.sub{padding-left:30px;font-size:12px;margin-top:0;line-height:1.5}
+.sh-nav a.off{opacity:.45;pointer-events:none}
+.sh-ft{border-top:1px solid var(--line2);padding:9px 10px 2px;font-size:11px;color:var(--ink3);
+  display:flex;align-items:center;gap:6px}
+.sh-ft i{width:6px;height:6px;border-radius:50%;background:var(--ok);display:inline-block}
+
+/* 内容区 */
+.sh-main{flex:1;overflow:auto;padding:24px 26px 48px}
+
+/* 老页面接入外壳时的兼容 */
+body.shelled{padding:0}
+body.shelled .wrap{max-width:none;margin:0}
+body.workspace-embedded .sh-side{display:none!important}
+body.workspace-embedded .sh-main{width:100%}
+@media (min-width:861px){body.shelled .tabs{display:none}}
+@media (max-width:860px){
+  .sh-side{display:none}
+  .sh-main{padding:16px}
+}
+
+/* 右侧工作区：保留侧栏所有尺寸、字号与导航样式。 */
+.sh-main{min-width:0;padding:24px 28px 32px;font-size:14px;line-height:1.55}
+body.shelled .sh-main .wrap{padding:0;max-width:1440px;margin:0 auto}
+.sh-main h1,.sh-main .head h1{font-size:26px;font-weight:700;line-height:1.25;letter-spacing:-.5px;margin:0}
+.sh-main .head,.sh-main .top{margin-bottom:18px;gap:14px;flex-wrap:wrap}
+.sh-main .sub,.sh-main .head .sub{font-size:13px;line-height:1.6;color:#666b73;margin-top:5px}
+.sh-main .card{border-color:#e1e5eb;border-radius:12px;padding:18px 20px;margin-bottom:16px;min-width:0}
+.sh-main .card h2{font-size:18px;font-weight:700;line-height:1.4;margin:0 0 14px;gap:10px}
+.sh-main h3{font-size:16px;font-weight:700;line-height:1.5;margin:0 0 12px}
+.sh-main .card h2 span{font-size:12px;color:#666b73;font-weight:400;letter-spacing:0}
+.sh-main .card h2 .more{font-size:13px;font-weight:500}
+.sh-main .btn{font-size:14px;padding:8px 14px;line-height:1.45;min-height:38px}
+.sh-main .btn.mini{font-size:12px;padding:5px 10px;min-height:30px}
+.sh-main .btn.pri{font-weight:600}
+.sh-main .btn.armed{background:#fdf0ef;border-color:#f0cfcf;color:var(--red)}
+.sh-main :is(input:not([type=checkbox]):not([type=radio]):not([type=file]),select,textarea){font-size:14px;min-height:38px;max-width:100%;line-height:1.5}
+.sh-main :is(.col,.fld){min-width:0}
+.sh-main :is(.col,.fld)>label{font-size:13px;font-weight:500;color:#525964}
+.sh-main .hint,.sh-main .note,.sh-main .empty{font-size:13px;color:#666b73;line-height:1.75}
+.sh-main .empty{padding:12px 0}
+.sh-main th{font-size:12px;font-weight:600;color:#666b73}
+.sh-main td{font-size:13px}
+.sh-main .tag{font-size:11px}
+.sh-main :is(a,button,input,select,textarea,summary):focus-visible{outline:2px solid var(--blue);outline-offset:3px}
+.sh-main .text-link{font:inherit;font-size:13px;font-weight:500;color:var(--blue);background:none;border:0;padding:4px 0;cursor:pointer;margin-left:auto}
+
+/* 工作台：摘要紧凑排列，最近点名与待办放在同一首屏。 */
+.sh-main .home-columns{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:16px;align-items:start;margin-bottom:16px}
+.sh-main .home-primary{min-width:0}
+.sh-main .home-primary .card{margin-bottom:0}
+.sh-main .home-primary #lastCard{border-top-left-radius:0;border-top-right-radius:0;border-top:0}
+.sh-main .home-primary .home-todos{border-bottom-left-radius:0;border-bottom-right-radius:0;padding-bottom:12px}
+.sh-main .home-courses{align-self:stretch;margin-bottom:0}
+body[data-active=home] .sh-main .stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0;background:#fff;border:1px solid #e1e5eb;border-radius:12px;margin-bottom:16px;padding:14px 0}
+body[data-active=home] .sh-main .stat{border:0;border-right:1px solid #e6e8ec;border-radius:0;padding:0 20px;background:none}
+body[data-active=home] .sh-main .stat:last-child{border-right:0}
+body[data-active=home] .sh-main .stat b{font-size:28px;font-weight:700;color:var(--blue)}
+body[data-active=home] .sh-main .stat span{font-size:12px;color:#666b73;margin-top:3px}
+.sh-main .todo{font-size:14px;padding:10px 0}
+.sh-main .todo .go{font-size:13px}
+.sh-main .crow{padding:10px 0;gap:10px;border-bottom:1px solid #f2f3f5;border-radius:0}
+.sh-main .crow:last-child{border-bottom:0}
+.sh-main .crow .nm{font-size:14px;font-weight:600}
+.sh-main .crow .meta,.sh-main .crow .rt{font-size:12px;color:#666b73}
+.sh-main #courses{max-height:300px;overflow:auto}
+.sh-main .grid3{grid-template-columns:repeat(3,minmax(0,1fr));gap:0 20px}
+.sh-main .fn{border:0;border-bottom:1px solid #edf0f3;border-radius:0;padding:10px 0;min-width:0}
+.sh-main .fn:hover{background:#f8fafc;box-shadow:none}
+.sh-main .fn .fi{color:var(--blue);background:#edf4fb}
+.sh-main .fn .ft{font-size:14px;font-weight:600}
+.sh-main .fn .fd{font-size:12px;color:#666b73}
+.sh-main #last{padding:10px 12px;background:#f6f8fb;border-radius:8px}
+
+/* 数据看板：图表和关注区并列，空态不再占整屏。 */
+.sh-main .analysis-grid.on{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(260px,1fr);gap:16px;align-items:start}
+.sh-main .analysis-grid>.card{margin:0}
+.sh-main .overview-card{grid-column:1/-1;padding-top:14px;padding-bottom:14px}
+.sh-main .recent-chart{grid-column:1;grid-row:2;padding-top:16px;padding-bottom:16px}
+.sh-main .attention-card{grid-column:2;grid-row:2}
+.sh-main .trend-card{grid-column:1;grid-row:3;padding-top:16px;padding-bottom:16px}
+.sh-main .reading-card{grid-column:2;grid-row:3}
+.sh-main #ovStats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0}
+.sh-main #ovStats .stat{display:flex;align-items:center;gap:12px;padding:0 20px;border-right:1px solid #e6e8ec}
+.sh-main #ovStats .stat:first-child{padding-left:0}
+.sh-main #ovStats .stat:last-child{border:0}
+.sh-main #ovStats .stat span{font-size:13px;color:#525964}
+.sh-main #ovStats svg{width:62px;height:62px;margin:0;flex:none}
+.sh-main .legend{font-size:12px;color:#666b73;gap:12px}
+.sh-main .attention-list{overflow:auto;max-height:230px}
+.sh-main .attention-list table{min-width:360px}
+.sh-main .chart svg{min-width:480px}
+.sh-main .chart .empty{padding:20px 0}
+.sh-main .reading-card .hint{margin-top:0}
+.sh-main .top>.cur{margin:0 0 0 auto;flex-wrap:nowrap}
+.sh-main .top>.cur select{max-width:260px;min-width:160px}
+
+/* 设置：沿用原表单和保存动作，只改变分组与排布。 */
+.sh-main .settings-grid.on{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:16px;align-items:start}
+.sh-main .settings-grid>.card{margin:0}
+.sh-main .settings-grid #data{grid-column:1/-1}
+.sh-main .settings-grid .row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-bottom:14px}
+.sh-main .rule-group{border:0;border-top:1px solid #e6e8ec;min-width:0;margin:0 0 12px;padding:12px 0 0}
+.sh-main .rule-group legend{font-size:14px;font-weight:700;padding-right:12px}
+.sh-main .rule-group .row{grid-template-columns:repeat(3,minmax(0,1fr));margin-bottom:0}
+.sh-main #setHint{padding:12px;background:#f0f5fb;border-radius:8px;margin-top:16px}
+.sh-main #setDataPath{overflow-wrap:anywhere;color:#525964}
+
+/* 批改：历史折叠为摘要，填写与评分结构放在同一屏。 */
+.sh-main .batch-history{padding:0 18px}
+.sh-main .batch-history summary{font-size:16px;font-weight:700;padding:12px 0;cursor:pointer}
+.sh-main .batch-history summary span{font-size:13px;font-weight:400;color:#666b73;margin-left:12px}
+.sh-main .batch-history[open] summary{border-bottom:1px solid #e6e8ec;margin-bottom:8px}
+.sh-main .batch-history #batches{max-height:240px;overflow:auto}
+.sh-main .batch-history #batches>.empty{padding:14px 0}
+.sh-main .batch-columns{display:grid;grid-template-columns:minmax(0,1fr);gap:24px}
+.sh-main .batch-questions{border-top:1px solid #e6e8ec;padding-top:22px;min-width:0}
+.sh-main .batch-basics .row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2fr);gap:12px}
+.sh-main .batch-basics .row:first-of-type{grid-template-columns:minmax(0,1fr) minmax(0,2fr) 110px}
+.sh-main .batch-basics .fld{width:auto!important;min-width:0}
+.sh-main .batch-questions .hint{margin:-6px 0 12px}
+.sh-main .batch-questions .qrow{background:transparent;border:0;border-bottom:1px solid #e6e8ec;border-radius:0;padding:10px 0;margin:0;gap:8px}
+.sh-main .batch-questions .qrow input[type=text]{border:1px solid #e6e8ec;padding:8px;min-width:0}
+.sh-main .batch-questions .qn{width:30px;color:#666b73}
+.sh-main .batch-questions .pt{width:76px}
+.sh-main .batch-questions .del{color:#666b73}
+.sh-main .batch-questions #qlist{margin-bottom:14px}
+.sh-main .batch-create{display:flex;justify-content:flex-end;margin-top:18px;padding-top:16px;border-top:1px solid #e6e8ec}
+/* 评分步骤是工作流程，不是与左侧重复的导航。 */
+.sh-main .grading-context{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:16px 0}
+.sh-main .grading-context label{font-size:14px;font-weight:600}
+.sh-main .grading-context select{width:auto;min-width:230px;max-width:420px;flex:1}
+.sh-main .grading-context .btn{margin-left:auto}
+.sh-main .hw-toggle{margin-left:0;text-align:left}
+.sh-main #hwBody .text-link{white-space:normal}
+.sh-main #hwBody .seg{min-width:120px}
+.sh-main #workspaceMessage[hidden]{display:none}
+.sh-main .grading-summary{background:#edf3fa;border:1px solid #dce6f1;border-radius:8px;padding:9px 14px;margin-bottom:16px;color:#525964;font-size:13px}
+.sh-main .grading-summary[hidden]{display:none}
+.sh-main .wsplit{gap:20px}
+.sh-main .wside{flex-basis:210px}
+.sh-main .witem .wt{font-size:14px;font-weight:600}
+.sh-main .witem .wd{font-size:12px;color:#666b73}
+
+@media (max-width:1150px){
+  .sh-main{padding:20px}
+  .sh-main .batch-columns{gap:18px}
+  .sh-main .settings-grid.on{grid-template-columns:1fr}
+  .sh-main .settings-grid #data{grid-column:auto}
+  .sh-main .crow{flex-wrap:wrap}
+}
+@media (max-width:900px){
+  .sh-main .analysis-grid.on{grid-template-columns:minmax(0,1fr)}
+  .sh-main .analysis-grid>.card{grid-column:1;grid-row:auto}
+  .sh-main .overview-card{order:0}
+  .sh-main .attention-card{order:1}
+  .sh-main .recent-chart{order:2}
+  .sh-main .trend-card{order:3}
+  .sh-main .reading-card{order:4}
+}
+@media (max-width:700px){
+  .sh-main{padding:16px}
+  .sh-main h1,.sh-main .head h1{font-size:24px}
+  .sh-main .card{padding:16px}
+  .sh-main .home-columns,.sh-main .batch-columns{grid-template-columns:minmax(0,1fr)}
+  .sh-main .batch-questions{border-left:0;border-top:1px solid #e6e8ec;padding:18px 0 0}
+  .sh-main .grid3{grid-template-columns:repeat(2,minmax(0,1fr));gap:0 12px}
+  body[data-active=home] .sh-main .stats{grid-template-columns:repeat(2,minmax(0,1fr));row-gap:16px}
+  body[data-active=home] .sh-main .stat:nth-child(2){border:0}
+  .sh-main #ovStats{grid-template-columns:1fr;gap:12px}
+  .sh-main #ovStats .stat{padding:0 0 12px;border-right:0;border-bottom:1px solid #e6e8ec}
+  .sh-main .settings-grid .row,.sh-main .rule-group .row{grid-template-columns:minmax(0,1fr)}
+  .sh-main .batch-basics .row,.sh-main .batch-basics .row:first-of-type{grid-template-columns:minmax(0,1fr)}
+  .sh-main .wsplit{flex-direction:column}
+  .sh-main .wside{position:static;flex:none;width:100%}
+  .sh-main .batch-history summary span{display:block;margin-left:16px}
+  .sh-main .batch-questions .pt{width:68px}
+  .sh-main .grading-context select{min-width:0;width:100%;flex-basis:100%}
+  .sh-main .grading-context .btn{margin-left:0}
+  .sh-main #hwBody .seg{min-width:90px}
+}
+/* Feedback semantics: docs/ui-feedback-standard.md */
+.btn.danger,.ppt button.danger,.ppt-modal button.danger{color:#b42318;border:1px solid #d92d20;background:#fff}
+.btn.danger:hover,.ppt button.danger:hover,.ppt-modal button.danger:hover{color:#912018;border-color:#b42318;background:#fff1f0}
+.feedback-dialog{box-sizing:border-box;width:calc(100% - 32px);max-width:500px;padding:26px;border:1px solid #dce2e9;border-radius:14px;background:#fff;color:#253449;box-shadow:0 24px 80px #172f4a26;font:14px/1.8 system-ui,"Microsoft YaHei",sans-serif}
+.feedback-dialog::backdrop{background:#18263866}
+.feedback-dialog h2{font-size:19px;margin:0 0 12px}
+.feedback-dialog p{margin:12px 0;color:#526174}
+.feedback-dialog [role="alert"]{padding:10px 12px;border:1px solid #f1b5b0;border-radius:8px;background:#fff1f0;color:#b42318}
+.feedback-actions{display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap;margin-top:24px}
+.feedback-dialog :focus-visible,.btn.danger:focus-visible{outline:2px solid #185fa5;outline-offset:3px}
+
+.ppt-nav-indicator{margin-left:auto;display:grid;place-items:center;flex:none;width:16px;height:16px;border-radius:50%;font-size:10px;line-height:1;background:#e5f4ef;color:#137b58}.ppt-nav-indicator.failed{background:#feeceb;color:#b42318;font-weight:700}#pptNotifications{position:fixed;right:22px;bottom:22px;z-index:1200;display:grid;gap:12px;max-width:340px;width:calc(100vw - 44px);pointer-events:none}.ppt-task-notification{position:relative;background:#fff;border:1px solid #dfe7ef;border-left:4px solid #1d9e75;border-radius:9px;box-shadow:0 6px 28px #193b6020;padding:16px 38px 16px 18px;pointer-events:auto;font-size:13px;color:#233b50}.ppt-task-notification.failed{border-left-color:#d92d20}.ppt-task-notification p{margin:8px 0;font-size:12px;color:#6d8092;overflow-wrap:anywhere}.ppt-task-notification a{color:#185fa5;text-decoration:none;font-size:12px}.ppt-notification-close{position:absolute;right:9px;top:7px;border:0;background:transparent;font-size:21px;color:#788b9f;cursor:pointer}.ppt-notification-close:focus-visible{outline:2px solid #185fa5}

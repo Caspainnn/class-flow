@@ -1,0 +1,43 @@
+'use strict';
+const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),{EventEmitter}=require('node:events'),{PassThrough}=require('node:stream');
+const {createService}=require('../server/lesson-plan/service'),doc=require('../server/lesson-plan/document');
+const root=path.resolve('.tmp-lesson-service-'+process.pid);fs.mkdirSync(root,{recursive:true});
+let launchCount=0,child;
+const settings={workbuddy:{enabled:true,path:process.execPath}};
+const launch=()=>{launchCount++;child=new EventEmitter();child.stdout=new PassThrough();child.stderr=new PassThrough();child.kill=()=>{};return child;};
+function completed(schema,minutes){const p=structuredClone(schema);for(const s of p.sections)for(const b of s.blocks)if(b.type==='text')b.text='虚构教学内容';else b.rows=b.headers.join('/')==='项目/内容'?b.rows.map(r=>[r[0],'待教师填写']):[b.headers.map(h=>h==='时间'?String(minutes):h==='实际记录'?'伪造实际':'核对内容')];return p;}
+async function settle(){for(let i=0;i<30;i++)await new Promise(r=>setTimeout(r,10));}
+(async()=>{
+ const service=createService({root,getSettings:()=>settings,getCourses:()=>[],launch});
+ assert.equal(typeof service.savePlan,'function','must implement versioned native Word publishing');
+ let t=service.create({title:'隔离虚构课',audience:'虚构对象',minutes:10,content:'加法'});
+ const old=structuredClone(t);t=service.update(t.id,{...t,title:'新标题',revision:t.revision});
+ assert.throws(()=>service.update(t.id,{...old,title:'覆盖新稿'}),/更新|修订|冲突/);
+ t=await service.savePlan(t.id,{revision:t.revision,plan:completed(t.template.schema,10)});
+ assert.equal(t.versions.length,1);assert.ok(fs.statSync(service.file(t.id,t.versions[0].file)).size>500);
+ const immutable=fs.readFileSync(service.file(t.id,t.versions[0].file));
+ let draft=service.create({title:'章节编辑隔离验证',audience:'虚构对象',minutes:10,content:'加法'});draft=await service.savePlan(draft.id,{revision:draft.revision,plan:completed(draft.template.schema,10)});
+ const original=structuredClone(draft.versions[0]),word=fs.readFileSync(service.file(draft.id,original.file)),staleDraft=draft.revision;
+ const goal=structuredClone(draft.plan.sections[1]);goal.blocks[0].text='修改后的教学目标';draft=service.saveSection(draft.id,{revision:draft.revision,index:1,section:goal});assert.equal(draft.versions.length,1);assert.equal(draft.sectionRevisions[1],1);assert.deepEqual(draft.versions[0],original);assert.ok(word.equals(fs.readFileSync(service.file(draft.id,original.file))));
+ assert.throws(()=>service.saveSection(draft.id,{revision:staleDraft,index:1,section:goal}),/更新|修订/);
+ const process=structuredClone(draft.plan.sections[5]);process.blocks[0].rows[0][1]='8';draft=service.saveSection(draft.id,{revision:draft.revision,index:5,section:process});assert.equal(draft.versions.length,1,'partial time edits may be saved as draft');await assert.rejects(()=>service.saveVersion(draft.id,{revision:draft.revision}),/时间/);assert.equal(service.get(draft.id).plan.sections[1].blocks[0].text,'修改后的教学目标');
+ await assert.rejects(()=>service.saveVersion(draft.id,{revision:draft.revision,name:' '}),/\u7248\u672c\u540d\u79f0/);await assert.rejects(()=>service.saveVersion(draft.id,{revision:draft.revision,name:'a\nb'}),/\u7248\u672c\u540d\u79f0/);
+ const persisted=createService({root,getSettings:()=>settings});assert.equal(persisted.get(draft.id).plan.sections[5].blocks[0].rows[0][1],'8');process.blocks[0].rows[0][1]='10';draft=service.saveSection(draft.id,{revision:draft.revision,index:5,section:process});draft=await service.saveVersion(draft.id,{revision:draft.revision,name:'\u6559\u7814\u7ec4\u5b9a\u7a3f'});assert.equal(draft.versions.length,2);assert.equal(draft.versions[1].name,'\u6559\u7814\u7ec4\u5b9a\u7a3f');assert.match(service.downloadName(draft.id,draft.versions[1].file),/\u6559\u7814\u7ec4\u5b9a\u7a3f-v2\.docx$/);assert.equal(draft.versions[1].plan.sections[1].blocks[0].text,'修改后的教学目标');assert.ok(word.equals(fs.readFileSync(service.file(draft.id,original.file))));draft=await service.saveVersion(draft.id,{revision:draft.revision});assert.equal(draft.versions.length,2,'no duplicate Word checkpoint without changes');
+ t=await service.restore(t.id,{revision:t.revision,version:1});assert.equal(t.versions.length,2);assert.ok(immutable.equals(fs.readFileSync(service.file(t.id,t.versions[0].file))));
+ const legacy=service.get(draft.id);delete legacy.versions.at(-1).wordLayoutRevision;fs.writeFileSync(path.join(root,draft.id,'task.json'),JSON.stringify(legacy));draft=await service.saveVersion(draft.id,{revision:legacy.revision,name:'版式升级'});assert.equal(draft.versions.length,3,'layout upgrade may publish without changing authored content');assert.equal(draft.versions.at(-1).wordLayoutRevision,doc.WORD_LAYOUT_REVISION);const afterLayout=await service.saveVersion(draft.id,{revision:draft.revision});assert.equal(afterLayout.versions.length,3,'layout upgrade publishes only once');
+ assert.throws(()=>service.file(t.id,'../task.json'),/路径|文件/);
+ assert.throws(()=>service.download(t.id,'task.json'),/文件/);
+ t=service.start(t.id,{revision:t.revision});assert.equal(t.status,'running');assert.equal(launchCount,1);
+ assert.throws(()=>service.update(t.id,{...t,title:'运行中覆盖'}),/正在/);
+ const runId=t.run.id;t=service.cancel(t.id,{runId});assert.equal(t.status,'cancelled');
+ fs.writeFileSync(path.join(root,t.id,'runs',runId,'plan.json'),JSON.stringify(completed(t.template.schema,10)));
+ child.emit('close',0);await settle();assert.equal(service.get(t.id).versions.length,2);assert.equal(service.get(t.id).status,'cancelled');
+ t=service.get(t.id);t=service.start(t.id,{revision:t.revision});
+ fs.writeFileSync(path.join(root,t.id,'runs',t.run.id,'plan.json'),JSON.stringify(completed(t.template.schema,10)));
+ child.emit('close',0);await settle();t=service.get(t.id);assert.equal(t.status,'complete');assert.equal(t.versions.length,3);
+ assert.equal(t.plan.sections[8].blocks[0].rows[0][2],'');
+ t=service.start(t.id,{revision:t.revision});child.emit('close',0);await settle();t=service.get(t.id);assert.equal(t.status,'failed');assert.match(t.error,/交付/);assert.equal(t.versions.length,3);
+ t=service.start(t.id,{revision:t.revision});const restarted=createService({root,getSettings:()=>settings,getCourses:()=>[]});assert.equal(restarted.get(t.id).status,'failed');
+ service.cancel(t.id,{runId:t.run.id});child.emit('close',0);
+ console.log('lesson service: conflict, immutable versions, safe downloads, cancellation race, real file requirement, restart PASS');
+})().catch(e=>{console.error(e);process.exitCode=1;}).finally(()=>{if(!root.startsWith(path.resolve('.')+path.sep)||!path.basename(root).startsWith('.tmp-lesson-service-'))throw Error('refusing cleanup outside isolated test root');fs.rmSync(root,{recursive:true,force:true});});

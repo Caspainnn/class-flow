@@ -1,0 +1,21 @@
+{
+  "versions": 2,
+  "changedSections": [
+    1
+  ],
+  "originalVersionUnchanged": true,
+  "realDataFilesChecked": 91,
+  "realDataFilesChanged": 0,
+  "browserVerified": [
+    "read-first",
+    "single-section",
+    "explicit-edit",
+    "unsaved-section-switch-guard",
+    "save-to-read",
+    "invalid-time-preserves-input",
+    "discard-restores-time",
+    "historical-read-only",
+    "desktop-sidebar",
+    "narrow-section-picker"
+  ]
+}

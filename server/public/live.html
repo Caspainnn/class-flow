@@ -90,6 +90,7 @@ footer{display:flex;align-items:center;gap:2vw;padding-top:1.6vh;border-top:1px 
 .bp{flex:0 0 auto;width:4em;text-align:right;font-size:clamp(11px,1.9vh,22px);
   color:var(--ink3);font-variant-numeric:tabular-nums}
 </style>
+<link rel="icon" type="image/svg+xml" href="/assets/logo.svg?v=20261026">
 </head>
 <body>
 
@@ -282,7 +283,7 @@ function renderResult(s) {
   $('bars').innerHTML = s.question.options.map((t, i) => {
     const n = s.dist[i] || 0;
     const pct = answered ? Math.round(n / answered * 100) : 0;
-    const ok = i === s.question.correct;
+    const ok = [].concat(s.question.correct).includes(i);
     return `<div class="brow ${ok ? 'ok' : ''}">
       <span class="bk">${LETTER[i]}</span>
       <span class="bt" title="${esc(t)}">${esc(t)}</span>
@@ -292,7 +293,7 @@ function renderResult(s) {
     </div>`;
   }).join('');
 
-  $('rtip').textContent = `正确答案 ${LETTER[s.question.correct]}`;
+  $('rtip').textContent = `正确答案 ${[].concat(s.question.correct).map(i=>LETTER[i]).join('、')}`;
   $('rNext').style.display = '';
   $('rNext').disabled = false;
   $('rNext').textContent = '再出一道题';

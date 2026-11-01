@@ -1,0 +1,16 @@
+'use strict';
+const assert=require('node:assert/strict');
+const {createProgress}=require('../server/lesson-plan/progress');
+let now=1000;const p=createProgress({startedAt:now,now:()=>now});
+const line=v=>JSON.stringify(v)+'\n';
+p.consume(line({type:'system',subtype:'init'}));
+const partial=line({type:'assistant',message:{content:[{type:'tool_use',name:'Read',input:{file_path:'input.json'}}]}});
+p.consume(partial.slice(0,23));now+=500;p.consume(partial.slice(23));assert.equal(p.snapshot(true).stage,'reading');
+p.consume(line({type:'system',subtype:'init'}));assert.equal(p.snapshot(true).stage,'reading','repeated CLI init must not regress an observed reading stage');
+p.consume(line({type:'assistant',message:{content:[{type:'text',text:'正在安排教学环节。'},{type:'thinking',thinking:'secret private thinking'}]}}));
+p.consume(line({type:'stream_event',event:{type:'content_block_delta',delta:{type:'text_delta',text:'下面整理评价证据。'}}}));
+p.consume(line({type:'stream_event',event:{type:'content_block_delta',delta:{type:'thinking_delta',thinking:'never expose'}}}));
+p.consume(line({type:'assistant',message:{content:[{type:'tool_use',name:'Write',input:{file_path:'plan.json',content:'do not expose tool payload'}}]}}));
+const view=p.snapshot(true);assert.equal(view.stage,'authoring');assert.match(JSON.stringify(view),/教学环节|评价证据/);assert.doesNotMatch(JSON.stringify(view),/secret|never expose|do not expose/);
+p.mark('repairing','正在自动修正教案格式（1/1）');assert.equal(p.snapshot(true).stage,'repairing');
+console.log('lesson progress: fragmented real stream, tool stages, public intermediate text, thinking/tool payload exclusion PASS');

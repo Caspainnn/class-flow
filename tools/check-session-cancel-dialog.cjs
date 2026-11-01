@@ -1,0 +1,31 @@
+'use strict';
+// Exercise the actual dialog handlers without starting a server or touching teaching data.
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
+const source=fs.readFileSync('server/public/session.html','utf8');
+const handlers=source.slice(source.indexOf('function renderCancelMessage(){'),source.indexOf("$('#attendancePrev').onclick="));
+const elements=new Map();
+const get=key=>{if(!elements.has(key))elements.set(key,{hidden:true,open:false,disabled:false,textContent:'',focus(){this.focused=true;},showModal(){this.open=true;},close(){this.open=false;}});return elements.get(key);};
+let calls=0,resolveRequest;
+const context=vm.createContext({$:get,clearInterval(){},toast(){},showStage(){},api:async(u,body,method,onError)=>{calls++;return new Promise(resolve=>{resolveRequest=value=>{if(!value)onError('Request failed');resolve(value);};});},refreshState:async()=>{}});
+vm.runInContext('let STATE={id:"one",present:0},cancelTargetId=null,ending=false,poll=null,timer=null;'+handlers,context);
+const run=code=>vm.runInContext(code,context);
+(async()=>{
+  run('requestCancelSession()');
+  assert.equal(get('#cancelSessionPanel').open,true);
+  assert.equal(get('#keepSessionBtn').focused,true);
+  get('#keepSessionBtn').onclick();assert.equal(get('#cancelSessionPanel').open,false);assert.equal(calls,0);
+  run('requestCancelSession();STATE.present=1;renderCancelMessage()');
+  assert.equal(get('#confirmCancelSessionBtn').disabled,true);
+  await get('#confirmCancelSessionBtn').onclick();assert.equal(calls,0);
+  run('STATE.present=0;renderCancelMessage()');
+  const pending=get('#confirmCancelSessionBtn').onclick();
+  assert.equal(get('#keepSessionBtn').disabled,true);
+  let prevented=false;get('#cancelSessionPanel').oncancel({preventDefault(){prevented=true;}});assert.equal(prevented,true);
+  await get('#confirmCancelSessionBtn').onclick();assert.equal(calls,1);
+  resolveRequest(null);await pending;
+  assert.equal(get('#cancelSessionPanel').open,true);assert.equal(get('#cancelSessionError').hidden,false);
+  assert.equal(get('#confirmCancelSessionBtn').disabled,false);
+  const retry=get('#confirmCancelSessionBtn').onclick();resolveRequest({ok:true});await retry;
+  assert.equal(get('#cancelSessionPanel').open,false);assert.equal(get('#startBtn').focused,true);
+  console.log('PASS: safe focus, dismiss, live submission guard, duplicate guard, pending Escape, persistent failure and successful retry');
+})().catch(error=>{console.error(error);process.exitCode=1;});

@@ -1,0 +1,23 @@
+'use strict';
+const fs=require('node:fs'),os=require('node:os'),path=require('node:path'),assert=require('node:assert/strict'),{EventEmitter}=require('node:events');
+const {createService}=require('../server/ppt/service');
+const root=fs.mkdtempSync(path.join(os.tmpdir(),'inclass-ppt-run-')),skill=path.join(root,'skill');fs.mkdirSync(skill);fs.writeFileSync(path.join(skill,'SKILL.md'),'test');
+const settings={workbuddy:{enabled:true,path:__filename},ppt:{skillPath:skill,pythonPath:'python',timeoutMs:60000,reasoningEffort:'low'}};
+let launches=[];const launch=(exe,args,options)=>{const child=new EventEmitter();child.stdout=new EventEmitter();child.stderr=new EventEmitter();launches.push({child,args,options});return child;};
+const service=createService({root:path.join(root,'tasks'),getSettings:()=>settings,getCourses:()=>[],launch});
+const create=()=>service.create({title:'Test',audience:'Test',minutes:5,content:'Test'}),tick=()=>new Promise(r=>setImmediate(r));
+(async()=>{
+ let t=create();service.start(t.id,'outline');assert.throws(()=>service.start(t.id,'outline'));
+ let run=launches.at(-1);fs.writeFileSync(path.join(run.options.cwd,'outline.json'),JSON.stringify({objective:'Test',pages:[{title:'Test',minutes:5,description:'Test page'}]}));run.child.emit('close',0);await tick();
+ assert.equal(service.get(t.id).status,'outline');assert.ok(run.args.includes('--allowedTools'));assert.ok(!run.args.includes('--dangerously-skip-permissions'));assert.equal(run.args[run.args.indexOf('--effort')+1],'low');
+ service.start(t.id,'deck');await tick();run=launches.at(-1);service.cancel(t.id);run.child.emit('close',0);await tick();assert.equal(service.get(t.id).status,'cancelled');assert.equal(service.get(t.id).versions.length,0);
+ service.start(t.id,'deck');await tick();run=launches.at(-1);run.child.emit('close',0);await tick();assert.equal(service.get(t.id).status,'failed');assert.equal(service.get(t.id).versions.length,0);assert.match(service.get(t.id).error,/\u4ea4\u4ed8|\u7ea6\u5b9a|\u4e0d\u5b58\u5728/);
+ const calls=launches.length;await assert.rejects(service.recover(t.id));assert.equal(launches.length,calls);
+ t=create();service.start(t.id,'outline');run=launches.at(-1);run.child.stdout.emit('data',Buffer.from('```json\n{"objective":"Test","pages":[{"title":"Test","minutes":5,"description":"Test page"}]}\n```'));run.child.emit('close',0);await tick();assert.equal(service.get(t.id).status,'outline');
+ t=create();service.start(t.id,'outline');run=launches.at(-1);run.child.emit('error',new Error('offline'));await tick();assert.equal(service.get(t.id).status,'failed');
+ t=create();service.outline(t.id,{pages:[{title:'Test',minutes:5,description:'Test page'}]});service.start(t.id,'html');await tick();run=launches.at(-1);run.child.stdout.emit('data',Buffer.from(JSON.stringify({type:'result',is_error:true,errors_info:[{category:'empty_model_response'}]})+'\n'));run.child.emit('close',0);await tick();assert.equal(service.get(t.id).errorCode,'model_empty_response');assert.ok(!service.get(t.id).error.includes('文件不存在'));
+ t=create();service.outline(t.id,{objective:'Test',pages:[{title:'Test',minutes:5,description:'Test page'}]});service.start(t.id,'deck');await tick();run=launches.at(-1);
+ run.child.stdout.emit('data',Buffer.from(JSON.stringify({type:'user',message:{content:[{type:'tool_result',is_error:true,content:'Error: Permission to use Bash has been denied because approval is unavailable.'}]}})+'\n'));
+ run.child.emit('close',0);await tick();assert.equal(service.get(t.id).status,'failed');assert.equal(service.get(t.id).errorCode,'script_permission_denied');
+ console.log('PASS: actual outline, scoped tool arguments, duplicate guard, cancel wins late output, no fake completion, structured outline fallback, launch failure');
+})().finally(()=>fs.rmSync(root,{recursive:true,force:true})).catch(e=>{console.error(e);process.exitCode=1;});

@@ -4,6 +4,8 @@ node_modules/
 # 运行时数据：含本机签名密钥（data/.secret）和真实名单，绝不能上传
 data/
 logs/
+# 本机教学备份、恢复暂存与回滚原目录，同样包含真实教学数据
+.inclass-backups-*/
 
 # 打包产物
 *.exe
@@ -24,6 +26,29 @@ desktop.ini
 .workbuddy/
 .tmp_shots/
 .tmp*
+.local-ppt-skills/
+.local-ppt-python/
+.local-*/
+projects/
+__pycache__/
+*.pyc
+.env
+.env.*
+!.env.example
+
+# 本机验证截图、外部教学材料与原型使用的原始课件截图不随源码公开
+docs/**/*.png
+docs/**/*.jpg
+docs/**/*.jpeg
+docs/**/*.pdf
+docs/**/*.zip
+docs/**/*.docx
+docs/**/*.pptx
+docs/**/*.xlsx
+docs/自动批改测试包/
+prototype/assets/
+/WorkBuddy*.pdf
+*.log
 
 # 发行包产物
 dist/

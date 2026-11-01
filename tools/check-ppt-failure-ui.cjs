@@ -1,0 +1,11 @@
+'use strict';
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
+const source=fs.readFileSync('server/ppt/public/ppt.js','utf8');
+const context=vm.createContext({outlineViewing:false,htmlData:()=>null,outlineEditing:()=>false,esc:value=>String(value),current:{status:'failed',run:{phase:'deck'},error:'制作脚本的执行权限被拦截',outline:{},versions:[],feedback:[]}});
+vm.runInContext(source.slice(source.indexOf('function teacherMessage('),source.indexOf('function frame('))+source.slice(source.indexOf('function feedbackPage(){'),source.indexOf('function unmountUpload()')),context);
+const html=vm.runInContext('feedbackPage()',context);
+assert.ok(!html.includes('data-action="recover"'));
+assert.ok(html.includes('data-action="retry"')&&html.includes('data-action="manual"'));
+assert.match(html,/<div class="status-secondary-actions"><button class="text-button" data-action="edit-outline">/);
+assert.ok(html.includes('制作脚本的执行权限被拦截'));
+console.log('PASS: recovery button removed, primary actions retained, outline action separated, permission reason visible');

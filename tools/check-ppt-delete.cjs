@@ -1,0 +1,12 @@
+'use strict';
+const fs=require('node:fs'),path=require('node:path'),os=require('node:os'),assert=require('node:assert/strict'),{EventEmitter}=require('node:events');
+const {createService}=require('../server/ppt/service');
+const root=fs.mkdtempSync(path.join(os.tmpdir(),'inclass-ppt-delete-')),skill=path.join(root,'skill');fs.mkdirSync(skill);fs.writeFileSync(path.join(skill,'SKILL.md'),'isolated test');
+let child;const settings={workbuddy:{enabled:true,path:__filename},ppt:{skillPath:skill,timeoutMs:60000}};
+const launch=()=>{child=new EventEmitter();child.stdout=new EventEmitter();child.stderr=new EventEmitter();return child;};
+(async()=>{const service=createService({root:path.join(root,'tasks'),getSettings:()=>settings,getCourses:()=>[],launch});const create=()=>service.create({title:'合成删除测试',audience:'隔离测试',minutes:20,content:'合成内容'});
+const task=create(),source=fs.readFileSync(path.join(__dirname,'fixtures/ppt-service.pptx'));await service.importPpt(task.id,{name:'test.pptx',base64:source.toString('base64')});const item=await service.templates.add({name:'template.pptx',base64:source.toString('base64')});const version=service.get(task.id).versions[0],snapshot=service.file(task.id,version.file);assert.equal(service.remove(task.id).deleted,true);assert.equal(service.list().length,0);assert.throws(()=>service.get(task.id),e=>e.status===404);assert.throws(()=>service.update(task.id,task),e=>e.status===404);assert.ok(fs.readFileSync(snapshot).equals(source));assert.equal(service.templates.get(item.id).id,item.id);
+const reloaded=createService({root:path.join(root,'tasks'),getSettings:()=>settings,getCourses:()=>[],launch});assert.equal(reloaded.list().length,0);assert.throws(()=>reloaded.remove(task.id),e=>e.status===404);
+const running=create();service.start(running.id,'outline');assert.throws(()=>service.remove(running.id),e=>e.status===409);assert.equal(service.get(running.id).status,'running');service.cancel(running.id);service.remove(running.id);child.emit('close',0);await new Promise(r=>setImmediate(r));assert.equal(service.list().length,0);assert.throws(()=>service.get(running.id),e=>e.status===404);
+console.log('PASS: persisted removal, hidden list/detail/update, template and version files preserved, running deletion denied, cancel and late exit cannot revive removed task');
+})().catch(e=>{console.error(e);process.exitCode=1;}).finally(()=>fs.rmSync(root,{recursive:true,force:true}));

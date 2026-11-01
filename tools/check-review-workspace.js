@@ -1,0 +1,46 @@
+'use strict';
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
+const JSZip=require('../server/node_modules/jszip'),preview=require('../server/lib/submission-preview');
+const html=fs.readFileSync('server/grade/public/grading.html','utf8');
+const script=html.match(/<script>\s*'use strict';([\s\S]*?)<\/script>/)[1];
+const code=script.slice(0,script.indexOf('(async function init()'));
+function setup(){
+ const nodes={};const node=id=>nodes[id]||(nodes[id]={value:'',disabled:false,innerHTML:'',textContent:'',style:{},classList:{add(){},remove(){},toggle(){}},addEventListener(){}});
+ const ctx=vm.createContext({document:{getElementById:node,querySelectorAll:()=>[]},location:{search:''},history:{replaceState(){}},setTimeout(){},clearTimeout(){},setInterval(){},clearInterval(){},console});
+ vm.runInContext(code,ctx);
+ vm.runInContext(`CUR='batch'; ROSTER=[{id:'a',name:'甲'},{id:'b',name:'乙'}];reviewState={id:'batch',files:[{sid:'a',orig:'a.md'},{sid:'b',orig:'b.md'}],questions:[{points:100}],results:{a:{total:80},b:{total:90}}};reviewSid='a';renderReview=()=>{};toast=()=>{};`,ctx);
+ return {ctx,node};
+}
+(async()=>{
+ assert.equal((await preview('x.md',Buffer.from('<script>raw</script>'))).text,'<script>raw</script>');
+ const zip=new JSZip();zip.file('word/document.xml','<w:document><w:p><w:r><w:t>学生 &amp; 答案 &lt;b&gt;</w:t></w:r></w:p><w:p><w:r><w:t>第二段</w:t></w:r></w:p></w:document>');
+ const data=await preview('x.docx',await zip.generateAsync({type:'nodebuffer'}));assert.equal(data.text,'学生 & 答案 <b>\n第二段');
+ await assert.rejects(()=>preview('x.doc',Buffer.from('legacy')),/下载/);
+ const {ctx,node}=setup();
+ assert.equal(vm.runInContext('reviewMode',ctx),'overview');
+ vm.runInContext('openDetailedReview(1)',ctx);assert.equal(vm.runInContext('reviewMode',ctx),'detail');assert.equal(vm.runInContext('reviewSid',ctx),'b');
+ vm.runInContext("reviewDirty=true;switchReviewMode('overview')",ctx);assert.equal(vm.runInContext('reviewMode',ctx),'detail','dirty score blocks mode switching');
+ vm.runInContext("reviewDirty=false;switchReviewMode('overview')",ctx);assert.equal(vm.runInContext('reviewMode',ctx),'overview');assert.equal(vm.runInContext('reviewSid',ctx),'b','mode switch retains selected student');
+ vm.runInContext("reviewSid='a'",ctx);
+ vm.runInContext('reviewDirty=true;moveReview(1)',ctx);assert.equal(vm.runInContext('reviewSid',ctx),'a','unsaved edits block student switching');
+ vm.runInContext('reviewDirty=false;moveReview(1)',ctx);assert.equal(vm.runInContext('reviewSid',ctx),'b');
+ vm.runInContext('moveReview(1)',ctx);assert.equal(vm.runInContext('reviewSid',ctx),'b','last boundary');
+ vm.runInContext('moveReview(-1)',ctx);assert.equal(vm.runInContext('reviewSid',ctx),'a');
+ node('reviewTotal').value='70';node('reviewReason').value='核对原文';
+ ctx.posts=[];vm.runInContext(`batchAction=async fn=>fn(CUR);api=async(url,opt)=>{posts.push(JSON.parse(opt.body));return {ok:true}};loadGrades=async()=>{};reviewDirty=true`,ctx);
+ await vm.runInContext('saveReview(true)',ctx);assert.equal(ctx.posts[0].sid,'a');assert.equal(ctx.posts[0].total,'70');assert.equal(vm.runInContext('reviewSid',ctx),'b');assert.equal(vm.runInContext('reviewDirty',ctx),false);
+ node('reviewTotal').value='999';await vm.runInContext('saveReview(false)',ctx);assert.equal(ctx.posts.length,1,'reject invalid score');
+ node('reviewTotal').value='60';vm.runInContext(`reviewDirty=true;api=async()=>{throw Error('failed')};batchAction=async fn=>{try{await fn(CUR)}catch{}}`,ctx);
+ await vm.runInContext('saveReview(true)',ctx);assert.equal(vm.runInContext('reviewSid',ctx),'b');assert.equal(vm.runInContext('reviewDirty',ctx),true);assert.equal(node('reviewTotal').value,'60');
+ const pending=setup();let resolvePreview;pending.ctx.waiting=new Promise(resolve=>resolvePreview=resolve);pending.node('reviewFile').value='0';vm.runInContext('api=async()=>waiting',pending.ctx);
+ const work=vm.runInContext('loadReviewOriginal()',pending.ctx);vm.runInContext("reviewSid='b'",pending.ctx);pending.node('reviewDocument').textContent='乙的原件';resolvePreview({text:'甲的旧响应'});await work;assert.equal(pending.node('reviewDocument').textContent,'乙的原件');assert.equal(pending.node('reviewDocument').innerHTML,'');
+ node('questionScoreDialog').showModal=()=>node('questionScoreDialog').open=true;
+ vm.runInContext("reviewState.results.b.items=[{score:10,max:100,note:'扣分依据 <script>bad</script>'}];reviewState.questions=[{text:'题目',rubric:'评分标准'}];openQuestionScores()",ctx);
+ assert.equal(node('questionScoreDialog').open,true);
+ assert.match(node('questionScoreTitle').textContent,/乙/);
+ assert.match(node('questionScoreBody').innerHTML,/10 \/ 100/);
+ assert.match(node('questionScoreBody').innerHTML,/&lt;script&gt;/);
+ assert.match(node('questionScoreBody').innerHTML,/评分标准/);
+ assert.equal(vm.runInContext('reviewDirty',ctx),true,'opening scoring dialog preserves draft');
+ console.log('PASS: preview, switching, save protection, save-and-next, failure drafts and per-question scoring dialog');
+})().catch(e=>{console.error(e);process.exitCode=1});

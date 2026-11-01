@@ -1,0 +1,1063 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>作业批改 · 原型</title>
+<style>
+:root{--ink:#17191c;--ink2:#666b73;--ink3:#9aa0a8;--line:#e6e8ec;--line2:#f2f3f5;
+  --bg:#f4f5f7;--blue:#185FA5;--ok:#1D9E75;--red:#A32D2D;--amber:#BA7517}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-size:13px;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei","PingFang SC",sans-serif}
+.app{display:flex;height:100vh;overflow:hidden}
+
+/* ============ 侧栏（与 shell.css 同款） ============ */
+.side{width:212px;flex:none;background:#fff;border-right:1px solid var(--line);
+  display:flex;flex-direction:column;padding:16px 10px 10px}
+.brand{display:flex;align-items:center;gap:8px;padding:2px 8px 12px}
+.logo{width:24px;height:24px;border-radius:7px;background:var(--ink);color:#fff;font-size:12px;
+  display:flex;align-items:center;justify-content:center;flex:none}
+.brand .t{font-size:13.5px;font-weight:500}
+.brand .v{font-size:10px;color:var(--ink3);margin-left:auto}
+.nav{flex:1;overflow:auto;margin:0 -4px;padding:0 4px 6px}
+.grp{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--ink3);padding:12px 10px 6px}
+.grp b{font-weight:500;color:var(--ink2)}
+.grp .ln{flex:1;height:1px;background:var(--line2)}
+.nav a{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:8px;
+  color:var(--ink2);text-decoration:none;font-size:12.5px;margin-bottom:1px;cursor:pointer}
+.nav a:hover{background:#f4f6f8;color:var(--ink)}
+.nav a.on{background:#eef2f7;color:var(--blue);font-weight:500}
+.nav a .ico{width:14px;text-align:center;font-size:11.5px;flex:none;opacity:.75}
+.nav a .n{margin-left:auto;font-size:10.5px;color:var(--red)}
+.nav a .soon{margin-left:auto;font-size:10px;color:var(--ink3);border:1px dashed var(--line);border-radius:4px;padding:0 4px}
+.nav a.sub{padding-left:30px;font-size:12px}
+.nav a.off{opacity:.45;pointer-events:none}
+.ft{border-top:1px solid var(--line2);margin-top:4px;padding:9px 10px;font-size:11px;color:var(--ink2);
+  display:flex;align-items:center;gap:6px;cursor:pointer;border-radius:8px}
+.ft:hover{background:#f4f6f8;color:var(--ink)}
+.ft i{width:6px;height:6px;border-radius:50%;background:var(--ok);display:inline-block;flex:none;
+  box-shadow:0 0 0 3px rgba(29,158,117,.14)}
+.ft.off{color:#8a5a12}
+.ft.off i{background:var(--amber);box-shadow:0 0 0 3px rgba(186,117,23,.14)}
+.ft .g{margin-left:auto;font-size:10px;color:var(--ink3)}
+
+/* 连接设置弹层 */
+.mask{position:fixed;inset:0;background:rgba(23,25,28,.34);display:none;align-items:center;justify-content:center;
+  z-index:60;padding:20px}
+.mask.on{display:flex}
+.md{background:#fff;border-radius:16px;width:100%;max-width:540px;max-height:88vh;overflow:auto;
+  box-shadow:0 20px 60px rgba(0,0,0,.2)}
+.md .mh{display:flex;align-items:center;gap:10px;padding:18px 20px 0}
+.md .mh h3{font-size:14px;font-weight:500;margin:0}
+.md .mh .x{margin-left:auto;border:none;background:none;font-size:16px;color:var(--ink3);cursor:pointer;font-family:inherit}
+.md .mb{padding:14px 20px 20px}
+.md .mf{padding:0 20px 18px;display:flex;gap:8px;align-items:center}
+.wstate{display:flex;align-items:center;gap:9px;background:#f7f9fb;border:1px solid var(--line);
+  border-radius:10px;padding:12px 14px;margin-bottom:14px;font-size:12.5px}
+.wstate i{width:8px;height:8px;border-radius:50%;background:var(--ok);flex:none;
+  box-shadow:0 0 0 3px rgba(29,158,117,.14)}
+.wstate.off i{background:var(--amber);box-shadow:0 0 0 3px rgba(186,117,23,.14)}
+.wstate b{font-weight:500}
+.wstate .s{margin-left:auto;font-size:11px;color:var(--ink3)}
+.pathbox{font-family:ui-monospace,Menlo,monospace;font-size:11.5px;color:var(--ink2);background:#f7f8fa;
+  border:1px solid var(--line);border-radius:8px;padding:9px 11px;word-break:break-all;line-height:1.7}
+.note{font-size:11.5px;color:var(--ink3);line-height:1.9;margin-top:12px;padding-top:12px;border-top:1px solid var(--line2)}
+.note b{color:var(--ink2);font-weight:500}
+
+/* 两种批改方式 */
+.ways{display:flex;gap:12px;flex-wrap:wrap}
+.way{flex:1;min-width:270px;border:1px solid var(--line);border-radius:12px;padding:15px 16px;cursor:pointer;transition:.15s}
+.way:hover{border-color:#d3d9e0;background:#fbfcfd}
+.way.on{border-color:#b8c6d6;background:#f7f9fb;box-shadow:0 0 0 3px #eef2f7}
+.way .wt{font-size:13px;font-weight:500;display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.way .wd{font-size:11.5px;color:var(--ink3);line-height:1.85;margin-top:7px}
+.way .wd b{color:var(--ink2);font-weight:500}
+.way.dis{opacity:.55;cursor:not-allowed}
+
+/* WorkBuddy 设置：左右分栏 */
+.wsplit{display:flex;gap:14px;align-items:flex-start}
+.wside{flex:0 0 240px;position:sticky;top:0;padding:10px}
+.witem{padding:11px 12px;border-radius:9px;cursor:pointer}
+.witem:hover{background:#f4f6f8}
+.witem.on{background:#eef2f7}
+.witem .wt{font-size:13px;font-weight:500;display:flex;align-items:center;gap:7px}
+.witem .wd{font-size:11px;color:var(--ink3);margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.witem .tag{margin-left:auto}
+.wsec{display:none}
+.wsec.on{display:block}
+.wsec>*>.card:last-child{margin-bottom:0}
+
+/* 提示词预览 */.pbox{background:#fafbfc;border:1px solid var(--line);border-radius:9px;padding:12px 14px;
+  font-family:ui-monospace,Menlo,monospace;font-size:11.5px;line-height:1.9;color:var(--ink2);
+  white-space:pre-wrap;word-break:break-all;max-height:180px;overflow:auto}
+
+/* 设置弹层分区 */
+.sec{margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid var(--line2)}
+.sec:last-child{border-bottom:none}
+.sec .st{font-size:12px;font-weight:500;margin-bottom:4px;display:flex;align-items:center;gap:8px}
+.sec .st .soon{font-size:10px;color:var(--ink3);border:1px dashed var(--line);border-radius:4px;padding:0 4px;font-weight:400}
+.sec .sd{font-size:11.5px;color:var(--ink3);line-height:1.8;margin-bottom:10px}
+
+/* 目录预览 */
+.tree{font-family:ui-monospace,Menlo,monospace;font-size:11.5px;line-height:2;color:var(--ink2);
+  background:#fafbfc;border:1px solid var(--line2);border-radius:9px;padding:11px 13px;margin-top:10px;
+  max-height:150px;overflow:auto;white-space:pre}
+.tree em{font-style:normal;color:var(--ink3)}
+.tree .k{color:var(--blue)}
+
+/* ============ 主区 ============ */
+.main{flex:1;overflow:auto;padding:24px 26px 60px}
+.head{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;margin-bottom:18px}
+h1{font-size:19px;font-weight:500;margin:0}
+.sub{font-size:12px;color:var(--ink2);margin-top:4px}
+.demo{font-size:10.5px;padding:2px 7px;border-radius:5px;background:#fdf3e3;color:#8a5a12;margin-left:6px;vertical-align:1px}
+.head .rt{margin-left:auto;display:flex;gap:8px;align-items:center}
+
+/* 步骤条 */
+.steps{display:flex;align-items:center;gap:0;background:#fff;border:1px solid var(--line);
+  border-radius:14px;padding:14px 18px;margin-bottom:14px;overflow-x:auto}
+.st{display:flex;align-items:center;gap:9px;cursor:pointer;flex:none;user-select:none}
+.st .no{width:23px;height:23px;border-radius:50%;border:1px solid var(--line);background:#fff;
+  color:var(--ink3);font-size:11.5px;display:flex;align-items:center;justify-content:center;flex:none;transition:.15s}
+.st .tx{font-size:12.5px;color:var(--ink3);white-space:nowrap}
+.st .tx em{display:block;font-style:normal;font-size:10.5px;color:var(--ink3);margin-top:2px}
+.st.done .no{background:#eaf7f1;border-color:#bfe5d6;color:#0F6E56}
+.st.done .tx{color:var(--ink2)}
+.st.on .no{background:var(--ink);border-color:var(--ink);color:#fff}
+.st.on .tx{color:var(--ink);font-weight:500}
+.st.on .tx em{color:var(--blue)}
+.st .bar{width:36px;height:1px;background:var(--line);margin:0 12px;flex:none}
+
+.pane{display:none}.pane.on{display:block}
+.card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:18px 20px;margin-bottom:12px}
+.card h2{font-size:13px;font-weight:500;margin:0 0 14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.card h2 span{font-weight:400;color:var(--ink3);font-size:11.5px}
+.card h2 .rt{margin-left:auto;display:flex;gap:8px;align-items:center}
+
+/* 表单 */
+.row{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+.fld{display:flex;flex-direction:column;gap:6px}
+.fld.g1{flex:1;min-width:180px}
+.fld.g2{flex:2;min-width:240px}
+.fld>label{font-size:11.5px;color:var(--ink3)}
+input[type=text],input[type=number],select,textarea{font-family:inherit;font-size:12.5px;color:var(--ink);
+  padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:#fff;outline:none;width:100%}
+input:focus,select:focus,textarea:focus{border-color:#b8c6d6;box-shadow:0 0 0 3px #eef2f7}
+textarea{resize:vertical;min-height:62px;line-height:1.7}
+
+/* 分值拆解 */
+.qlist{display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
+.qrow{display:flex;align-items:center;gap:10px;background:#fafbfc;border:1px solid var(--line2);border-radius:9px;padding:9px 11px}
+.qrow .qn{font-size:11px;color:var(--ink3);width:38px;flex:none}
+.qrow input[type=text]{flex:1;border:none;background:transparent;padding:2px 0;font-size:12.5px}
+.qrow input[type=text]:focus{box-shadow:none}
+.qrow .pt{width:86px;flex:none;display:flex;align-items:center;gap:5px}
+.qrow .pt input{padding:5px 8px;text-align:right;font-variant-numeric:tabular-nums}
+.qrow .pt i{font-style:normal;font-size:11px;color:var(--ink3)}
+.qrow .del{border:none;background:none;color:var(--ink3);cursor:pointer;font-size:14px;padding:2px 4px;font-family:inherit}
+.qrow .del:hover{color:var(--red)}
+.qsum{font-size:11.5px;color:var(--ink2);display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+.qsum b{font-weight:500;color:var(--ink);font-variant-numeric:tabular-nums;font-size:14px}
+
+/* 上传区 */
+.drop{border:1.5px dashed #d3d9e0;border-radius:11px;background:#fafbfc;padding:22px 18px;text-align:center;cursor:pointer}
+.drop:hover{border-color:#b8c6d6;background:#f7f9fb}
+.drop .ic{font-size:19px;color:var(--ink3);line-height:1}
+.drop .t{font-size:12.5px;color:var(--ink2);margin-top:8px}
+.drop .t b{color:var(--blue);font-weight:400}
+.drop .h{font-size:11px;color:var(--ink3);margin-top:6px;line-height:1.7}
+.upfile{display:flex;align-items:center;gap:10px;margin-top:10px;padding:10px 12px;border:1px solid var(--line);
+  border-radius:9px;background:#fff}
+.upfile .fi{width:26px;height:30px;border-radius:5px;background:#edf3fa;color:var(--blue);font-size:9.5px;
+  display:flex;align-items:center;justify-content:center;flex:none}
+.upfile .fn{font-size:12.5px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.upfile .fs{font-size:11px;color:var(--ink3);flex:none}
+.upfile .x{border:none;background:none;color:var(--ink3);cursor:pointer;font-size:13px;font-family:inherit}
+
+/* 选项 */
+.opts{display:flex;flex-direction:column;gap:9px}
+.opt{display:flex;align-items:flex-start;gap:9px;font-size:12.5px;color:var(--ink2);line-height:1.6}
+.opt input{margin:3px 0 0;accent-color:var(--blue);flex:none}
+.opt b{color:var(--ink);font-weight:500}
+.segs{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.segs button{font-family:inherit;font-size:12px;padding:6px 13px;border:none;background:#fff;color:var(--ink2);
+  cursor:pointer;border-right:1px solid var(--line)}
+.segs button:last-child{border-right:none}
+.segs button.on{background:#eef2f7;color:var(--blue);font-weight:500}
+
+/* 统计 */
+.stats{display:flex;gap:34px;flex-wrap:wrap;align-items:flex-end}
+.stat b{display:block;font-size:26px;font-weight:500;line-height:1.15;font-variant-numeric:tabular-nums}
+.stat span{font-size:11.5px;color:var(--ink3)}
+
+/* 表格 */
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th{text-align:left;font-weight:400;color:var(--ink3);font-size:11px;padding:0 8px 8px 0;
+  border-bottom:1px solid var(--line);white-space:nowrap;background:#fff;position:sticky;top:0;z-index:2}
+td{padding:9px 8px 9px 0;border-bottom:1px solid var(--line2);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+th.num,td.num{text-align:right;font-variant-numeric:tabular-nums}
+td.mono,th.mono{font-family:ui-monospace,Menlo,monospace;font-size:11.5px;color:var(--ink2);font-variant-numeric:tabular-nums}
+.tbwrap{overflow:auto;max-height:520px;margin:0 -4px;padding:0 4px}
+.rec{cursor:pointer}
+.rec:hover td{background:#f8f9fb}
+.rec td:first-child{border-left:3px solid transparent;padding-left:9px}
+.rec.g td:first-child{border-left-color:#bfe5d6}
+.rec.r td:first-child{border-left-color:#f0cfcf}
+.rec.y td:first-child{border-left-color:#ecd3a3}
+.sc{font-size:14px;font-weight:500;font-variant-numeric:tabular-nums}
+.sc.g{color:#0F6E56}.sc.r{color:var(--red)}.sc.y{color:#8a5a12}.sc.n{color:var(--ink3);font-size:12px;font-weight:400}
+.tag{font-size:10.5px;padding:2px 7px;border-radius:5px;background:#f1f2f5;color:var(--ink2);white-space:nowrap;display:inline-block}
+.tag.ok{background:#eaf7f1;color:#0F6E56}
+.tag.bad{background:#fdf0ef;color:var(--red)}
+.tag.warn{background:#fdf3e3;color:#8a5a12}
+.tag.info{background:#edf3fa;color:var(--blue)}
+.clip{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  font-size:12px;color:var(--ink2);line-height:1.7}
+.exp{display:none}
+.exp.on{display:table-row}
+.exp>td{background:#fafbfc;padding:0;border-bottom:1px solid var(--line)}
+.expin{padding:16px 18px 18px;border-left:3px solid #e6e8ec}
+.ehead{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+.ehead .tot{font-size:16px;font-weight:500;font-variant-numeric:tabular-nums}
+.qs{display:flex;flex-direction:column;gap:9px;margin-bottom:14px}
+.qitem{display:flex;gap:11px;align-items:flex-start;font-size:12.5px;line-height:1.75}
+.qitem .qi{width:34px;flex:none;font-size:11px;color:var(--ink3);padding-top:1px}
+.qitem .qb{flex:1;min-width:0;color:var(--ink2)}
+.qitem .qb b{color:var(--ink);font-weight:500}
+.qitem .qp{width:56px;flex:none;text-align:right;font-variant-numeric:tabular-nums;font-weight:500}
+.qitem .qp.g{color:#0F6E56}.qitem .qp.y{color:#8a5a12}.qitem .qp.r{color:var(--red)}
+.qitem .bar{height:5px;border-radius:3px;background:var(--line2);margin-top:6px;overflow:hidden}
+.qitem .bar i{display:block;height:100%;border-radius:3px}
+.cmt{background:#fff;border:1px solid var(--line);border-radius:9px;padding:11px 13px;font-size:12.5px;
+  color:var(--ink2);line-height:1.8;margin-bottom:12px}
+.cmt b{color:var(--ink);font-weight:500}
+.eact{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.eact .sp{flex:1}
+
+/* 按钮 */
+.btn{font-family:inherit;font-size:12.5px;padding:8px 14px;border-radius:8px;border:1px solid var(--line);
+  background:#fff;color:var(--ink);cursor:pointer;white-space:nowrap}
+.btn:hover{border-color:#cfd6de;background:#fafbfc}
+.btn.mini{padding:4px 10px;font-size:11.5px}
+.btn.pri{background:var(--ink);border-color:var(--ink);color:#fff}
+.btn.pri:hover{background:#000}
+.btn.blue{background:var(--blue);border-color:var(--blue);color:#fff}
+.btn.blue:hover{background:#14507f}
+.btn.gh{background:transparent;border-color:transparent;color:var(--ink2)}
+.btn.gh:hover{background:#f1f2f5;color:var(--ink)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+
+.hint{font-size:11.5px;color:var(--ink3);line-height:1.85;margin-top:10px}
+.hint b{color:var(--ink2);font-weight:500}
+.actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:16px;padding-top:14px;border-top:1px solid var(--line2)}
+.actions .sp{flex:1}
+
+/* 文件匹配表 */
+.mstat{display:flex;gap:22px;flex-wrap:wrap;font-size:12px;color:var(--ink2);margin-bottom:12px}
+.mstat b{font-weight:500;color:var(--ink);font-variant-numeric:tabular-nums}
+.dotc{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:6px;vertical-align:1px}
+.filecell{display:flex;align-items:center;gap:8px}
+.filecell .fi{width:20px;height:23px;border-radius:4px;background:#edf3fa;color:var(--blue);font-size:8px;
+  display:flex;align-items:center;justify-content:center;flex:none}
+
+/* 批改中 */
+.prog{display:flex;align-items:center;gap:12px;margin-bottom:6px}
+.prog .track{flex:1;height:8px;border-radius:5px;background:var(--line2);overflow:hidden}
+.prog .fill{height:100%;border-radius:5px;background:var(--blue);transition:width .3s}
+.prog .pc{font-size:12px;color:var(--ink2);font-variant-numeric:tabular-nums;width:66px;text-align:right;flex:none}
+.feed{display:flex;flex-direction:column;gap:0;margin-top:14px}
+.fitem{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--line2);font-size:12.5px}
+.fitem:last-child{border-bottom:none}
+.fitem .ok{width:16px;height:16px;border-radius:50%;background:#eaf7f1;color:#0F6E56;font-size:9px;
+  display:flex;align-items:center;justify-content:center;flex:none}
+.fitem .run{width:16px;height:16px;border-radius:50%;border:1.5px solid var(--line);border-top-color:var(--blue);
+  flex:none;animation:sp .7s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+.fitem .nm{width:64px;flex:none;color:var(--ink2)}
+.fitem .msg{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink3);font-size:11.5px}
+.fitem .sv{font-variant-numeric:tabular-nums;font-weight:500;flex:none}
+
+@media (max-width:860px){
+  .side{display:none}
+  .main{padding:16px}
+  .steps{padding:12px}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="side">
+    <div class="brand"><div class="logo">一</div><div class="t">一堂课</div><div class="v">v3</div></div>
+    <nav class="nav">
+      <div class="grp"><b>概览</b><span class="ln"></span></div>
+      <a><span class="ico">▤</span>工作台</a>
+      <div class="grp"><b>课前</b><span class="ln"></span></div>
+      <a><span class="ico">☰</span>课程与名单</a>
+      <a class="off"><span class="ico">✎</span>课堂准备<span class="soon">规划中</span></a>
+      <div class="grp"><b>课中</b><span class="ln"></span></div>
+      <a><span class="ico">◉</span>发起签到</a>
+      <div class="grp"><b>课后</b><span class="ln"></span></div>
+      <a><span class="ico">▦</span>学情分析</a>
+      <a><span class="ico">!</span>预警名单<span class="n">3</span></a>
+      <a class="sub">个体画像</a>
+      <a class="sub">练习分析</a>
+      <a class="on"><span class="ico">✓</span>作业批改</a>
+      <a class="sub">签到记录</a>
+      <a class="sub">导出中心</a>
+      <div class="grp"><b>设置</b><span class="ln"></span></div>
+      <a id="navWb" onclick="showWbSet()"><span class="ico">◉</span>WorkBuddy</a>
+      <a><span class="ico">⚙</span>预警规则</a>
+      <a><span class="ico">⚙</span>系统设置</a>
+    </nav>
+    <div class="ft" id="wbfoot" onclick="openWb()">
+      <i></i><span id="wbTx">本地 WorkBuddy 已连接</span><span class="g">设置</span>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="head">
+      <div>
+        <h1>作业批改<span class="demo">原型 · 模拟数据</span></h1>
+        <div class="sub">上传标准答案和学生作业 → 自动逐题打分并给出失分原因 → 直接生成成绩表</div>
+      </div>
+      <div class="rt">
+        <select style="width:250px">
+          <option>第 3 章 跨境电商平台作业 · 跨境电子商务</option>
+          <option>第 2 章 国际贸易实务作业 · 跨境电子商务</option>
+        </select>
+        <button class="btn" onclick="alert('原型：新建一个批改批次，回到第 1 步')">+ 新建批改</button>
+      </div>
+    </div>
+
+    <!-- 步骤条 -->
+    <div class="steps" id="steps">
+      <div class="st" data-s="1" onclick="go(1)"><div class="no">1</div><div class="tx">设定评分标准<em>题目与分值</em></div></div>
+      <div class="bar"></div>
+      <div class="st" data-s="2" onclick="go(2)"><div class="no">2</div><div class="tx">收取作业<em>按名单自动匹配</em></div></div>
+      <div class="bar"></div>
+      <div class="st" data-s="3" onclick="go(3)"><div class="no">3</div><div class="tx">批改作业<em>调用 WorkBuddy</em></div></div>
+      <div class="bar"></div>
+      <div class="st" data-s="4" onclick="go(4)"><div class="no">4</div><div class="tx">成绩表与导出<em>可人工复核</em></div></div>
+    </div>
+
+    <!-- ============ 第 1 步 ============ -->
+    <div class="pane on" id="p1">
+      <div class="card">
+        <h2>基本信息</h2>
+        <div class="row">
+          <div class="fld g1"><label>课程</label>
+            <select><option>跨境电子商务 · 2026 秋</option><option>线性代数 · 2026 秋</option></select></div>
+          <div class="fld g2"><label>作业名称</label>
+            <input type="text" value="第 3 章 跨境电商平台作业"></div>
+          <div class="fld" style="width:120px"><label>及格线</label>
+            <input type="number" value="60"></div>
+        </div>
+        <div class="row" style="margin-bottom:0">
+          <div class="fld g1"><label>评分尺度</label>
+            <div class="segs" id="scale">
+              <button onclick="sc(this)">严格</button>
+              <button class="on" onclick="sc(this)">标准</button>
+              <button onclick="sc(this)">宽松</button>
+            </div>
+          </div>
+          <div class="fld g2"><label>补充要求（会附在评分规则后面，可留空）</label>
+            <input type="text" value="不足 300 字扣 5 分；未选具体平台本题不超过 20 分"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>题目与分值 <span>批改时按这个结构逐题记分，和标准答案的分值保持一致</span></h2>
+        <div class="qlist" id="qlist">
+          <div class="qrow">
+            <div class="qn">题 1</div>
+            <input type="text" value="跨境电子商务的定义与主流平台列举">
+            <div class="pt"><input type="number" value="30"><i>分</i></div>
+            <button class="del" onclick="alert('原型：删除该题')">✕</button>
+          </div>
+          <div class="qrow">
+            <div class="qn">题 2</div>
+            <input type="text" value="跨境电商相比传统外贸的三大优势">
+            <div class="pt"><input type="number" value="30"><i>分</i></div>
+            <button class="del" onclick="alert('原型：删除该题')">✕</button>
+          </div>
+          <div class="qrow">
+            <div class="qn">题 3</div>
+            <input type="text" value="选择一个平台，说明其物流/支付/推广/选品四要素">
+            <div class="pt"><input type="number" value="40"><i>分</i></div>
+            <button class="del" onclick="alert('原型：删除该题')">✕</button>
+          </div>
+        </div>
+        <div class="qsum">
+          <button class="btn mini" onclick="alert('原型：新增一行题目')">+ 加一题</button>
+          <span>合计 <b>100</b> 分 · 共 3 题</span>
+          <span style="color:var(--ink3)">分值之和与标准答案不一致时会提示</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>标准答案与评分规则 <span>这份文件是打分的唯一依据</span></h2>
+        <div class="drop" onclick="alert('原型：选择一个 docx / pdf / txt 文件')">
+          <div class="ic">⇪</div>
+          <div class="t">把 <b>标准答案和评分规则.docx</b> 拖到这里，或点击选择</div>
+          <div class="h">支持 docx / pdf / txt / md · 建议写清每题的分值结构和扣分点</div>
+        </div>
+        <div class="upfile">
+          <div class="fi">DOC</div>
+          <div class="fn">标准答案和评分规则.docx</div>
+          <div class="fs">18.4 KB · 已解析 3 题 / 6 个扣分点</div>
+          <button class="x" onclick="alert('原型：移除文件')">✕</button>
+        </div>
+        <div class="hint">
+          解析结果预览：<b>题 1</b> 定义准确 10 分（缺“分属不同关境”扣 7）· 平台列举 15 分（每个 5 分，错一个扣 5）· 表述规范 5 分；<b>题 2</b> 三大优势各 10 分；<b>题 3</b> 平台选择 10 · 物流 10 · 支付 10 · 推广 10。
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>批改输出</h2>
+        <div class="opts">
+          <label class="opt"><input type="checkbox" checked><span><b>逐题得分拆解</b>：每题写出「得分/满分」，并说明扣在哪里</span></label>
+          <label class="opt"><input type="checkbox" checked><span><b>总评一句话</b>：整份作业的水平判断，可直接贴给学生</span></label>
+          <label class="opt"><input type="checkbox" checked><span><b>异常件识别</b>：正文署名与文件名不符、文件损坏、空白作业，单独标出不改分</span></label>
+          <label class="opt"><input type="checkbox"><span><b>生成学生版评语</b>：去掉分值细节，只留鼓励和建议，可单独导出</span></label>
+        </div>
+      </div>
+
+      <div class="actions">
+        <span class="hint" style="margin:0">下一步会打开这门课的名单，逐份核对谁交了、谁没交</span>
+        <div class="sp"></div>
+        <button class="btn" onclick="alert('原型：保存为草稿，稍后继续')">存草稿</button>
+        <button class="btn pri" onclick="go(2)">下一步：收取作业 →</button>
+      </div>
+    </div>
+
+    <!-- ============ 第 2 步 ============ -->
+    <div class="pane" id="p2">
+      <div class="card">
+        <h2>收取作业 <span>文件按「学号+姓名」命名时会自动对上名单，对不上的手动指一下就行</span>
+          <div class="rt"><button class="btn mini" onclick="alert('原型：选择文件夹，批量导入')">选择文件夹</button></div>
+        </h2>
+        <div class="drop" onclick="alert('原型：批量选择学生作业文件')">
+          <div class="ic">⇪</div>
+          <div class="t">把全班作业 <b>一次性拖进来</b>，或点击选择多个文件</div>
+          <div class="h">支持 docx / pdf / txt / md · 也支持 zip 压缩包，会自动解开逐份匹配</div>
+        </div>
+
+        <div class="mstat" style="margin-top:16px">
+          <span><span class="dotc" style="background:var(--ok)"></span>已匹配 <b>41</b></span>
+          <span><span class="dotc" style="background:var(--amber)"></span>待确认 <b>3</b></span>
+          <span><span class="dotc" style="background:var(--ink3)"></span>未交 <b>4</b></span>
+          <span style="margin-left:auto;color:var(--ink3)">名单共 45 人 · 已收到 44 份文件</span>
+        </div>
+
+        <div class="tbwrap" style="max-height:420px">
+          <table>
+            <thead><tr>
+              <th style="width:30%">文件</th>
+              <th style="width:14%">从文件名识别</th>
+              <th style="width:16%">匹配到名单</th>
+              <th style="width:14%">状态</th>
+              <th>备注</th>
+            </tr></thead>
+            <tbody>
+              <tr>
+                <td><div class="filecell"><div class="fi">DOC</div><span class="clip">2023011045张伟.docx</span></div></td>
+                <td class="mono">2023011045 · 张伟</td>
+                <td>张伟</td>
+                <td><span class="tag ok">已匹配</span></td>
+                <td style="color:var(--ink3);font-size:11.5px">3 页 / 1180 字</td>
+              </tr>
+              <tr>
+                <td><div class="filecell"><div class="fi">DOC</div><span class="clip">2023011012刘芳.docx</span></div></td>
+                <td class="mono">2023011012 · 刘芳</td>
+                <td>刘芳</td>
+                <td><span class="tag ok">已匹配</span></td>
+                <td style="color:var(--ink3);font-size:11.5px">2 页 / 960 字</td>
+              </tr>
+              <tr>
+                <td><div class="filecell"><div class="fi">DOC</div><span class="clip">2023011033李娜.docx</span></div></td>
+                <td class="mono">2023011033 · 李娜</td>
+                <td>李娜</td>
+                <td><span class="tag warn">内容待核</span></td>
+                <td style="color:#8a5a12;font-size:11.5px">正文署名是「陈杰」，不是本人作业</td>
+              </tr>
+              <tr>
+                <td><div class="filecell"><div class="fi">DOC</div><span class="clip">王磊-跨境电商作业.docx</span></div></td>
+                <td class="mono">— · 王磊</td>
+                <td>王磊<span style="color:var(--ink3);font-size:11px">（按姓名）</span></td>
+                <td><span class="tag warn">待确认</span></td>
+                <td><button class="btn mini" onclick="alert('原型：改为从名单中选择另一人')">改指定</button></td>
+              </tr>
+              <tr>
+                <td><div class="filecell"><div class="fi">PDF</div><span class="clip">作业_最终版(1).pdf</span></div></td>
+                <td class="mono">—</td>
+                <td><span style="color:var(--ink3)">未识别</span></td>
+                <td><span class="tag warn">待确认</span></td>
+                <td><button class="btn mini" onclick="alert('原型：手动从名单里指定学生')">指定学生</button></td>
+              </tr>
+              <tr>
+                <td><div class="filecell"><div class="fi">DOC</div><span class="clip">2023011008陈杰.docx</span></div></td>
+                <td class="mono">2023011008 · 陈杰</td>
+                <td>陈杰</td>
+                <td><span class="tag ok">已匹配</span></td>
+                <td style="color:var(--ink3);font-size:11.5px">2 页 / 1020 字</td>
+              </tr>
+              <tr style="opacity:.62">
+                <td><div class="filecell"><div class="fi" style="background:#f1f2f5;color:var(--ink3)">—</div><span class="clip">（缺）</span></div></td>
+                <td class="mono">2023011027 · 孙浩</td>
+                <td>孙浩</td>
+                <td><span class="tag">未交</span></td>
+                <td style="color:var(--ink3);font-size:11.5px">可标记为补交，不参与均分</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="hint">
+          还有 38 份已自动匹配的文件未展开显示。缺交的 4 人：<b>孙浩、郑爽、冯磊、林小雨</b> —
+          <a href="javascript:;" style="color:var(--blue);text-decoration:none" onclick="alert('原型：生成缺交名单，可复制发群里')">生成缺交名单</a>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button class="btn gh" onclick="go(1)">← 上一步</button>
+        <span class="hint" style="margin:0">3 份待确认可以先跳过，批完再补</span>
+        <div class="sp"></div>
+        <button class="btn pri" onclick="go(3)">开始批改 44 份 →</button>
+      </div>
+    </div>
+
+    <!-- ============ 第 3 步 ============ -->
+    <div class="pane" id="p3">
+      <div class="card">
+        <h2>怎么批 <span>两种方式结果都进同一张成绩表，可以混用</span>
+          <div class="rt"><span class="tag ok" id="wbTag">本机 WorkBuddy 已连接</span></div>
+        </h2>
+        <div class="ways">
+          <div class="way on" id="wayA" onclick="pick('A')">
+            <div class="wt">平台调用 WorkBuddy <span class="tag">模型 default</span><span class="tag">超时 60 秒</span><span class="tag info">推荐</span></div>
+            <div class="wd">平台在后台启动你电脑上已登录的 WorkBuddy，逐份批改，<b>用你已有的额度，不额外付费</b>。结果自动回到成绩表。</div>
+          </div>
+          <div class="way" id="wayB" onclick="pick('B')">
+            <div class="wt">手动调用 WorkBuddy</div>
+            <div class="wd">平台把作业整理好、提示词生成好，<b>你粘贴到 WorkBuddy 里批</b>，批完把结果 Excel 导回平台。</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- A：平台调用 -->
+      <div id="paneA">
+        <div class="card">
+          <h2>正在批改 <span>逐题对照评分规则打分，每份约 3 秒</span>
+            <div class="rt"><span class="tag info">可随时暂停</span></div>
+          </h2>
+          <div class="prog">
+            <div class="track"><div class="fill" style="width:34%"></div></div>
+            <div class="pc">15 / 44</div>
+          </div>
+          <div class="hint" style="margin-top:2px">当前：<b>2023011019 周雨.docx</b> · 题 3 打分中 · 用 <b>deep-model</b></div>
+
+          <div class="feed">
+            <div class="fitem"><div class="ok">✓</div><div class="nm">张伟</div>
+              <div class="msg">题1 30/30 · 题2 30/30 · 题3 40/40</div><div class="sv" style="color:#0F6E56">100</div></div>
+            <div class="fitem"><div class="ok">✓</div><div class="nm">陈杰</div>
+              <div class="msg">题1 30/30 · 题2 30/30 · 题3 40/40</div><div class="sv" style="color:#0F6E56">100</div></div>
+            <div class="fitem"><div class="ok">✓</div><div class="nm">刘芳</div>
+              <div class="msg">题1 23/30（缺“分属不同关境”）· 题2 30/30 · 题3 38/40</div><div class="sv" style="color:#0F6E56">91</div></div>
+            <div class="fitem"><div class="ok">✓</div><div class="nm">王磊</div>
+              <div class="msg">题1 12/30 · 题2 10/30 · 题3 16/40（字数不足扣 5）</div><div class="sv" style="color:var(--red)">38</div></div>
+            <div class="fitem"><div class="ok" style="background:#fdf3e3;color:#8a5a12">!</div><div class="nm">李娜</div>
+              <div class="msg">正文署名「陈杰」，与本人不符 → 标记异常，暂不改分</div><div class="sv" style="color:#8a5a12;font-size:12px">待核</div></div>
+            <div class="fitem"><div class="ok">✓</div><div class="nm">赵敏</div>
+              <div class="msg">题1 25/30 · 题2 26/30 · 题3 35/40</div><div class="sv">86</div></div>
+            <div class="fitem"><div class="run"></div><div class="nm">周雨</div>
+              <div class="msg">题1 30/30 · 题2 28/30 · 题3 打分中…</div><div class="sv" style="color:var(--ink3)">—</div></div>
+          </div>
+          <div class="hint" style="border-top:1px solid var(--line2);padding-top:12px;margin-top:6px">
+            批改过程中可以关掉这个页面，后台会继续跑；回来看进度就行。<b>分数线以下的会自动标出来让你复核。</b>
+          </div>
+        </div>
+      </div>
+
+      <!-- B：手动调用 -->
+      <div id="paneB" style="display:none">
+        <div class="card">
+          <h2>① 复制提示词，粘贴到 WorkBuddy <span>提示词已按题目分值和评分尺度生成好，不用自己写</span></h2>
+          <div class="pbox">D:\ClassFlow\data\批改\第3章-跨境电商平台作业
+该目录中有 44 份学生作业和 1 份「标准答案和评分规则.docx」，请帮我逐份批改，
+把结果输出为 Excel 表格，保存到同一目录下「作业批改结果.xlsx」：
+第一列 姓名；第二列 得分；第三列 作业情况。
+
+要求：
+- 按评分规则逐题记分，作业情况里写清每题得分和失分原因，最后给一句总评；
+- 不足 300 字扣 5 分；未选具体平台的，题 3 不超过 20 分；
+- 若作业正文署名与文件名不符（交了别人的），在作业情况里标注「异常」，不要给分。</div>
+          <div class="actions" style="border-top:none;padding-top:12px;margin-top:0">
+            <button class="btn pri" onclick="alert('原型：提示词已复制到剪贴板')">复制提示词</button>
+            <button class="btn" onclick="alert('原型：启动 WorkBuddy 桌面版')">打开 WorkBuddy</button>
+            <div class="sp"></div>
+            <button class="btn mini" onclick="alert('原型：打开批改目录')">打开批改目录</button>
+          </div>
+          <div class="hint" style="border-top:1px solid var(--line2);padding-top:12px;margin-top:4px">
+            <b>备注：</b>批改目录已准备好 —— 44 份作业已按「学号+姓名」重命名（原文件名识别不出的 3 份收在
+            <b>_待确认\</b>，等你指定是谁；未交的 4 人列在 <b>_未交名单.txt</b>）。提示词里的目录就是它，粘进 WorkBuddy 直接回车即可。
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>② 批完把结果导回平台 <span>WorkBuddy 生成的 Excel 拖进来就行</span></h2>
+          <div class="drop" onclick="alert('原型：选择 WorkBuddy 导出的 .xlsx')">
+            <div class="ic">⇪</div>
+            <div class="t">把 <b>作业批改结果.xlsx</b> 拖到这里</div>
+            <div class="h">只要有「姓名 / 得分 / 作业情况」三列就能认 · 列名不完全一致也能自动对应</div>
+          </div>
+          <div class="hint">导入后同样能复核、改分、进学情分析，和平台调用批出来的没有区别。</div>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button class="btn gh" onclick="go(2)">← 上一步</button>
+        <div class="sp"></div>
+        <button class="btn" onclick="alert('原型：暂停批改')" id="p3pause">暂停</button>
+        <button class="btn pri" onclick="go(4)">跳到成绩表 →</button>
+      </div>
+    </div>
+
+    <!-- ============ 第 4 步 ============ -->
+    <div class="pane" id="p4">
+      <div class="card" style="padding:13px 18px">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:12.5px">
+          <span style="color:var(--ink2)">还要补批剩下的几份？</span>
+          <button class="btn mini" onclick="alert('原型：把 WorkBuddy 导出的 Excel 拖进来，按姓名合并进当前成绩表')">拖入 Excel 合并</button>
+          <button class="btn mini" onclick="alert('原型：回到第 3 步继续用平台调用批完剩下的 29 份')">继续平台批改</button>
+          <span class="hint" style="margin:0">已批的不会被覆盖，只补空位</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>本次成绩 <span>44 份已批 · 1 份异常待核 · 4 人未交</span>
+          <div class="rt">
+            <input type="text" placeholder="搜索姓名 / 学号" style="width:170px;padding:6px 10px">
+            <select style="width:120px"><option>全部</option><option>优秀</option><option>及格</option><option>不及格</option><option>异常</option></select>
+            <button class="btn" onclick="alert('原型：导出为 xlsx（姓名 / 得分 / 作业情况 三列，与老师原来的表一致）')">导出 xlsx</button>
+            <button class="btn" onclick="alert('原型：导出完整版（逐题得分、评语、异常说明分开成列）')">导出完整版</button>
+          </div>
+        </h2>
+
+        <div class="stats" style="margin-bottom:16px">
+          <div class="stat"><b>77.4</b><span>平均分</span></div>
+          <div class="stat"><b>100</b><span>最高</span></div>
+          <div class="stat"><b>38</b><span>最低</span></div>
+          <div class="stat"><b style="color:#0F6E56">31.8%</b><span>优秀率（≥90）</span></div>
+          <div class="stat"><b style="color:var(--red)">9.1%</b><span>不及格率</span></div>
+          <div class="stat"><b style="color:#8a5a12">1</b><span>异常件</span></div>
+        </div>
+
+        <div class="hint" style="margin:0 0 10px;display:flex;gap:14px;flex-wrap:wrap">
+          <span><span class="tag ok">优秀</span> 90 分以上</span>
+          <span><span class="tag">及格</span> 60–89</span>
+          <span><span class="tag bad">不及格</span> 60 分以下</span>
+          <span><span class="tag warn">异常</span> 内容与本人不符 / 无法读取</span>
+          <span style="margin-left:auto">点任意一行展开逐题得分与评语</span>
+        </div>
+
+        <div class="tbwrap">
+          <table>
+            <thead><tr>
+              <th style="width:26px">#</th>
+              <th style="width:150px">姓名</th>
+              <th class="num" style="width:64px">得分</th>
+              <th style="width:66px">等级</th>
+              <th>作业情况</th>
+              <th style="width:60px"></th>
+            </tr></thead>
+            <tbody id="tb"></tbody>
+          </table>
+        </div>
+        <div class="hint">共 45 人（含 4 人未交、1 份异常）。未交的按 0 分计入均分，可在设置里改成不计入。</div>
+      </div>
+
+      <div class="actions">
+        <button class="btn gh" onclick="go(3)">← 返回批改进度</button>
+        <span class="hint" style="margin:0">成绩可直接写入学情分析 → 练习分析，参与预警判定</span>
+        <div class="sp"></div>
+        <button class="btn pri" onclick="alert('原型：归档本次批改，成绩进入学情分析')">归档到学情分析</button>
+      </div>
+    </div>
+<!-- WorkBuddy 设置：主页面（侧栏「WorkBuddy」进入） -->
+<div class="pane" id="p5">
+  <div class="head">
+    <button class="btn" onclick="hideWbSet()" style="width:34px;height:34px;padding:0;font-size:15px">←</button>
+    <div>
+      <h1>WorkBuddy 设置</h1>
+      <div class="sub">平台调用 WorkBuddy 的所有功能，左边选功能，右边改参数；以后新功能会出现在左边的列表里</div>
+    </div>
+  </div>
+
+  <div class="wsplit">
+    <aside class="wside card">
+      <div class="witem on" data-k="link" onclick="wsec('link')">
+        <div class="wt"><span class="dotc" style="background:var(--ok)"></span>连接</div>
+        <div class="wd">WorkBuddy 3.2.1 · 已登录</div>
+      </div>
+      <div class="witem" data-k="grade" onclick="wsec('grade')">
+        <div class="wt">批改作业<span class="tag ok">使用中</span></div>
+        <div class="wd">44 份作业由它批改</div>
+      </div>
+      <div class="witem" data-k="quiz" onclick="wsec('quiz')">
+        <div class="wt">出题与讲评<span class="tag" style="border:1px dashed var(--line)">规划中</span></div>
+        <div class="wd">生成随堂题、写讲评稿</div>
+      </div>
+      <div class="witem" data-k="report" onclick="wsec('report')">
+        <div class="wt">学情小结<span class="tag" style="border:1px dashed var(--line)">规划中</span></div>
+        <div class="wd">生成可发家长的一周小结</div>
+      </div>
+    </aside>
+
+    <div style="flex:1;min-width:0">
+      <!-- 连接 -->
+      <div class="wsec on" id="wsec-link">
+        <div class="card">
+          <h2>连接 <span>所有功能都跑在这条连接上</span>
+            <div class="rt"><span class="tag ok">已连接</span></div>
+          </h2>
+          <div class="wstate" style="margin-bottom:12px">
+            <i></i>
+            <div><b>已连接</b><div style="font-size:11.5px;color:var(--ink3);margin-top:3px">WorkBuddy 3.2.1 · 账号已登录</div></div>
+            <div class="s">延迟 42ms</div>
+          </div>
+          <div class="fld" style="margin-bottom:6px">
+            <label>程序位置</label>
+            <div class="pathbox">E:\software\WorkBuddy\resources\app.asar.unpacked\cli\bin\codebuddy</div>
+          </div>
+          <div class="actions" style="border-top:none;padding-top:10px;margin-top:0">
+            <button class="btn mini" onclick="testWb()">重新检测</button>
+            <button class="btn mini" onclick="alert('原型：手动选择 codebuddy 可执行文件路径')">手动指定路径</button>
+            <div class="sp"></div>
+            <button class="btn mini" onclick="alert('原型：断开连接，状态灯变琥珀色')">断开连接</button>
+          </div>
+          <div class="note">
+            连上它，平台就能<b>用你自己 WorkBuddy 的额度</b>在后台干活，不额外付费。
+            作业原文会交给 WorkBuddy 处理，结果存在本机 <b>data\</b> 目录。<br>
+            WorkBuddy 升级后如果显示未连接，点「重新检测」就行；连不上也可以改用「手动调用」，批改功能不受影响。
+          </div>
+        </div>
+      </div>
+
+      <!-- 批改作业 -->
+      <div class="wsec" id="wsec-grade">
+        <div class="card">
+          <h2>批改作业 <span>平台调用 WorkBuddy 逐份批改学生作业时使用这些参数</span></h2>
+          <div class="row">
+            <div class="fld g1"><label>批改用模型</label>
+              <select>
+                <option>default（跟随 WorkBuddy 当前设置）</option>
+                <option>deep-model（更准，慢一点）</option>
+                <option>fast-model（快，适合客观题）</option>
+              </select>
+            </div>
+            <div class="fld" style="width:150px"><label>单份超时</label>
+              <input type="text" value="60 秒">
+            </div>
+          </div>
+          <div class="opts">
+            <label class="opt"><input type="checkbox" checked><span>在后台跑，不弹 WorkBuddy 窗口</span></label>
+            <label class="opt"><input type="checkbox" checked><span>不把批改过程写进 WorkBuddy 的对话历史</span></label>
+            <label class="opt"><input type="checkbox"><span>保留每次批改的原始返回，方便日后核对</span></label>
+          </div>
+          <div class="actions" style="border-top:none;padding-top:12px;margin-top:10px">
+            <span class="hint" style="margin:0">改完自动保存，批改中的批次不受影响</span>
+            <div class="sp"></div>
+            <button class="btn pri" onclick="alert('原型：已保存')">保存</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 出题与讲评 -->
+      <div class="wsec" id="wsec-quiz">
+        <div class="card">
+          <h2>出题与讲评 <span class="soon" style="font-size:10px;color:var(--ink3);border:1px dashed var(--line);border-radius:4px;padding:0 4px;font-weight:400">规划中</span></h2>
+          <div class="hint" style="margin:0">让 WorkBuddy 根据本课知识点生成随堂题、给全班答题写讲评稿。功能上线后，参数会出现在这里。</div>
+        </div>
+      </div>
+
+      <!-- 学情小结 -->
+      <div class="wsec" id="wsec-report">
+        <div class="card">
+          <h2>学情小结 <span class="soon" style="font-size:10px;color:var(--ink3);border:1px dashed var(--line);border-radius:4px;padding:0 4px;font-weight:400">规划中</span></h2>
+          <div class="hint" style="margin:0">把一周的出勤、答题、作业数据交给 WorkBuddy，生成一段可发家长的文字小结。功能上线后，参数会出现在这里。</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+  </main>
+</div>
+
+<!-- WorkBuddy 连接（只展示基础信息） -->
+<div class="mask" id="mask" onclick="if(event.target===this)closeWb()">
+  <div class="md">
+    <div class="mh"><h3>WorkBuddy 连接</h3><button class="x" onclick="closeWb()">✕</button></div>
+    <div class="mb">
+      <div class="wstate" id="wstate">
+        <i></i>
+        <div><b>已连接</b><div style="font-size:11.5px;color:var(--ink3);margin-top:3px">WorkBuddy 3.2.1 · 账号已登录</div></div>
+        <div class="s" id="wlat">延迟 42ms</div>
+      </div>
+
+      <div class="fld" style="margin-bottom:12px">
+        <label>程序位置</label>
+        <div class="pathbox">E:\software\WorkBuddy\resources\app.asar.unpacked\cli\bin\codebuddy</div>
+      </div>
+
+      <div class="note">
+        连上它，平台就能<b>用你自己 WorkBuddy 的额度</b>在后台批改作业，不额外付费。
+        作业原文会交给 WorkBuddy 处理，结果存在本机 <b>data\</b> 目录。<br>
+        WorkBuddy 升级后如果这里显示未连接，点「重新检测」就行；连不上也可以改用「手动调用」，批改功能不受影响。
+      </div>
+    </div>
+    <div class="mf">
+      <button class="btn" onclick="testWb()">重新检测</button>
+      <button class="btn" onclick="alert('原型：手动选择 codebuddy 可执行文件路径')">手动指定路径</button>
+      <div class="sp" style="flex:1"></div>
+      <button class="btn" onclick="closeWb();showWbSet()">模型、超时等设置 →</button>
+      <button class="btn pri" onclick="closeWb()">完成</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ---------- 步骤切换 ---------- */
+function go(n){
+  if(wbSetOn){
+    wbSetOn = false;
+    document.getElementById('steps').style.display = '';
+    var nav = document.getElementById('navWb');
+    if(nav) nav.classList.remove('on');
+  }
+  lastStep = n;
+  document.querySelectorAll('.pane').forEach(function(p){ p.classList.remove('on'); });
+  document.getElementById('p'+n).classList.add('on');
+  document.querySelectorAll('.st').forEach(function(s){
+    var i = +s.dataset.s;
+    s.classList.remove('on','done');
+    if(i === n) s.classList.add('on');
+    else if(i < n) s.classList.add('done');
+  });
+  document.querySelector('.main').scrollTop = 0;
+}
+function sc(el){
+  el.parentNode.querySelectorAll('button').forEach(function(b){ b.classList.remove('on'); });
+  el.classList.add('on');
+}
+
+/* ---------- 本机 WorkBuddy 连接状态 ---------- */
+var connected = true;
+
+function syncWb(){
+  var foot = document.getElementById('wbfoot');
+  var tx = document.getElementById('wbTx');
+  var tag = document.getElementById('wbTag');
+  var wayA = document.getElementById('wayA');
+  foot.classList.toggle('off', !connected);
+  tx.textContent = connected ? '本地 WorkBuddy 已连接' : '未连接 WorkBuddy';
+  if(tag){
+    tag.textContent = connected ? '本机 WorkBuddy 已连接' : '未连接 · 只能手动调用';
+    tag.className = 'tag ' + (connected ? 'ok' : 'warn');
+  }
+  if(wayA) wayA.classList.toggle('dis', !connected);
+  if(!connected) pick('B');
+}
+
+function openWb(){
+  document.getElementById('mask').classList.add('on');
+}
+
+function closeWb(){
+  document.getElementById('mask').classList.remove('on');
+}
+
+/* ---------- WorkBuddy 设置：主页面切换 ---------- */
+var wbSetOn = false, lastStep = 1;
+
+function showWbSet(){
+  var on = document.querySelector('.st.on');
+  if(on) lastStep = +on.dataset.s || 1;
+  wbSetOn = true;
+  document.querySelectorAll('.pane').forEach(function(p){ p.classList.remove('on'); });
+  document.getElementById('p5').classList.add('on');
+  document.getElementById('steps').style.display = 'none';
+  var nav = document.getElementById('navWb');
+  if(nav) nav.classList.add('on');
+  document.querySelector('.main').scrollTop = 0;
+}
+
+function hideWbSet(){
+  wbSetOn = false;
+  document.getElementById('steps').style.display = '';
+  var nav = document.getElementById('navWb');
+  if(nav) nav.classList.remove('on');
+  go(lastStep);
+}
+
+/* 设置页内：左侧选功能，右侧换配置 */
+function wsec(k){
+  document.querySelectorAll('.witem').forEach(function(i){
+    i.classList.toggle('on', i.dataset.k === k);
+  });
+  document.querySelectorAll('.wsec').forEach(function(s){
+    s.classList.toggle('on', s.id === 'wsec-' + k);
+  });
+}
+
+function testWb(){
+  var st = document.getElementById('wstate');
+  var lat = document.getElementById('wlat');
+  st.innerHTML = '<i style="background:#9aa0a8;box-shadow:0 0 0 3px rgba(154,160,168,.14)"></i>' +
+    '<div><b>检测中…</b><div style="font-size:11.5px;color:var(--ink3);margin-top:3px">正在启动 codebuddy</div></div>' +
+    '<div class="s">请稍候</div>';
+  setTimeout(function(){
+    connected = true;
+    st.className = 'wstate';
+    st.innerHTML = '<i></i><div><b>已连接</b><div style="font-size:11.5px;color:var(--ink3);margin-top:3px">WorkBuddy 3.2.1 · 账号已登录</div></div>' +
+      '<div class="s">延迟 42ms</div>';
+    syncWb();
+  }, 1200);
+}
+
+function disconnectWb(){
+  connected = false;
+  var st = document.getElementById('wstate');
+  st.className = 'wstate off';
+  st.innerHTML = '<i></i><div><b>未连接</b><div style="font-size:11.5px;color:var(--ink3);margin-top:3px">点「重新检测」或手动指定路径</div></div>' +
+    '<div class="s">批改将走手动方式</div>';
+  syncWb();
+}
+
+/* ---------- 两种批改方式 ---------- */
+function pick(k){
+  if(k === 'A' && !connected) k = 'B';
+  document.getElementById('wayA').classList.toggle('on', k === 'A');
+  document.getElementById('wayB').classList.toggle('on', k === 'B');
+  document.getElementById('paneA').style.display = k === 'A' ? '' : 'none';
+  document.getElementById('paneB').style.display = k === 'B' ? '' : 'none';
+  document.getElementById('p3pause').style.display = k === 'A' ? '' : 'none';
+}
+
+/* ---------- 成绩表（模拟数据） ---------- */
+var ROWS = [
+  { n:'张伟', id:'2023011045', s:100, lv:'优秀',
+    q:[[30,30,'定义与标准答案高度吻合，含「分属不同关境」要素；平台列举亚马逊、速卖通、eBay 三个主流平台'],
+       [30,30,'三大优势（缩短链条 / 降低门槛 / 数据化）完全命中'],
+       [40,40,'四要素完整且具实操性：物流区分海外仓+FBA+专线；支付覆盖平台结算与独立站（Stripe/PayPal）；推广写了 Google+FB+YouTube 测评']],
+    c:'优秀范例。四要素写得有取舍、有细节，建议作为课堂标杆案例讲评。' },
+  { n:'陈杰', id:'2023011008', s:100, lv:'优秀',
+    q:[[30,30,'定义完整；平台列举正确']  ,[30,30,'三大优势齐全并各配一句解释'],[40,40,'选亚马逊，四要素逐一展开，逻辑清晰']],
+    c:'与张伟并列第一。表达比标准答案更精炼，可作为另一种写法示范。' },
+  { n:'周雨', id:'2023011019', s:98, lv:'优秀',
+    q:[[30,30,'定义准确'],[28,30,'客户多这一点只写了「人多」，未解释流量成本'],[40,40,'四要素完整']],
+    c:'整体扎实。题 2 的第三点可以再具体到「获客成本」。' },
+  { n:'刘芳', id:'2023011012', s:91, lv:'优秀',
+    q:[[23,30,'定义偏口语化，缺「分属不同关境」要素（扣 7）；平台列举亚马逊、速卖通、eBay 三个正确（15/15）'],
+       [30,30,'三大优势（利润高 / 成本低 / 客户多）齐全'],
+       [38,40,'四要素齐全，平台选亚马逊并给出理由；物流仅写「FBA 速度快」略简（扣 2）']],
+    c:'概念基本掌握，表述规范性有待加强。' },
+  { n:'赵敏', id:'2023011021', s:86, lv:'及格',
+    q:[[25,30,'定义基本准确，漏了「关境」'],[26,30,'三大优势写了两点，第三点只有标题'],[35,40,'四要素中推广写得太笼统']],
+    c:'能答到点上，展开不足。建议对照标准答案补一遍题 3。' },
+  { n:'郑爽', id:'2023011030', s:82, lv:'及格',
+    q:[[24,30,'定义准确度尚可'],[24,30,'优势只讲了成本和利润'],[34,40,'平台选择合理，支付环节只提到平台结算']],
+    c:'基础概念清楚，细节需要补。' },
+  { n:'孙浩', id:'2023011027', s:78, lv:'及格',
+    q:[[22,30,'定义有表述偏差'],[26,30,'三大优势齐全'],[30,40,'物流与推广偏简，字数 420 未扣分']],
+    c:'完成度可以，题 3 缺具体做法。' },
+  { n:'林小雨', id:'2023011041', s:73, lv:'及格',
+    q:[[20,30,'定义缺要素，平台只举两个'],[23,30,'优势写了两点'],[30,40,'四要素中选品未展开']],
+    c:'达到及格线，建议补齐题 1 的定义要素。' },
+  { n:'冯磊', id:'2023011036', s:67, lv:'及格',
+    q:[[18,30,'定义与国内电商混淆'],[21,30,'优势较泛'],[28,40,'有平台但四要素缺支付']],
+    c:'刚过及格线。基础概念需要重新梳理。' },
+  { n:'吴迪', id:'2023011003', s:54, lv:'不及格',
+    q:[[14,30,'定义错误，把「跨境」理解成跨省'],[14,30,'优势只写「赚钱」'],[26,40,'平台选择合理但四要素只写物流']],
+    c:'概念混淆较多，建议课后单独辅导。' },
+  { n:'王磊', id:'2023011050', s:38, lv:'不及格',
+    q:[[12,30,'定义有误，把国内电商当跨境；平台只举了淘宝'],[10,30,'只写了「便宜」'],[16,40,'未选具体平台，四要素只提物流，字数 210 不足扣 5']],
+    c:'基础概念混淆，几乎没有展开。需要重做一次。' },
+  { n:'李娜', id:'2023011033', s:null, lv:'异常',
+    q:null,
+    c:'提交文件「李娜.docx」正文显示为「姓名：陈杰」，与署名不符；李娜本人作业缺失。处理建议：核实后通知补交，或确认是否为陈杰重复提交。' }
+];
+
+var tb = document.getElementById('tb');
+ROWS.forEach(function(r, i){
+  var cls = r.lv==='优秀'?'g':(r.lv==='不及格'?'r':(r.lv==='异常'?'y':''));
+  var scCls = r.lv==='优秀'?'g':(r.lv==='不及格'?'r':'');
+  var tag = r.lv==='优秀'?'ok':(r.lv==='不及格'?'bad':(r.lv==='异常'?'warn':''));
+  var score = r.s===null ? '<span class="sc n">—（异常）</span>' : '<span class="sc '+scCls+'">'+r.s+'</span>';
+  var brief = r.s===null
+    ? '<span class="clip">提交文件正文署名为「陈杰」，与署名不符，本人作业缺失</span>'
+    : '<span class="clip">'+r.q.map(function(q,k){ return '题'+(k+1)+' '+q[0]+'/'+q[1]; }).join(' · ')+' — '+r.c+'</span>';
+
+  var tr = document.createElement('tr');
+  tr.className = 'rec '+cls;
+  tr.dataset.i = i;
+  tr.innerHTML = '<td class="mono">'+(i+1)+'</td><td>'+r.n+'</td><td class="num">'+score+
+    '</td><td><span class="tag '+tag+'">'+r.lv+'</span></td><td>'+brief+'</td>'+
+    '<td><button class="btn mini">展开</button></td>';
+  tr.onclick = function(){ tog(tr, i); };
+  tb.appendChild(tr);
+
+  /* 展开行 */
+  var ex = document.createElement('tr');
+  ex.className = 'exp';
+  ex.id = 'ex'+i;
+  if(r.q){
+    var qs = r.q.map(function(q,k){
+      var pc = Math.round(q[0]/q[1]*100);
+      var c = pc>=95?'g':(pc>=70?'y':'r');
+      var col = c==='g'?'#1D9E75':(c==='y'?'#BA7517':'#A32D2D');
+      return '<div class="qitem"><div class="qi">题 '+(k+1)+'</div><div class="qb">'+
+        '<b>'+q[2]+'</b><div class="bar"><i style="width:'+pc+'%;background:'+col+'"></i></div></div>'+
+        '<div class="qp '+c+'">'+q[0]+'/'+q[1]+'</div></div>';
+    }).join('');
+    ex.innerHTML = '<td colspan="6"><div class="expin">'+
+      '<div class="ehead"><span class="tot">'+r.s+' 分</span>'+
+        '<span class="tag '+(r.lv==='优秀'?'ok':(r.lv==='不及格'?'bad':''))+'">'+r.lv+'</span>'+
+        '<span style="color:var(--ink3);font-size:11.5px">'+r.id+' · 4 页 / 1180 字</span>'+
+        '<span style="flex:1"></span>'+
+        '<button class="btn mini" onclick="event.stopPropagation();alert(\'原型：打开学生作业原文，逐句对照\')">看原文</button>'+
+        '<button class="btn mini" onclick="event.stopPropagation();alert(\'原型：复议改分，弹出填写「改后得分」和「原因」\')">人工改分</button>'+
+      '</div>'+
+      '<div class="qs">'+qs+'</div>'+
+      '<div class="cmt"><b>总评：</b>'+r.c+(r.lv==='优秀'?'<br>可以稍微压一点题 2 的解释成本，把细节留给题 3。':'')+'</div>'+
+      '<div class="eact"><span style="font-size:11.5px;color:var(--ink3)">已同步到学情分析 · 练习分析</span></div>'+
+    '</div></td>';
+  }else{
+    ex.innerHTML = '<td colspan="6"><div class="expin" style="border-left-color:#ecd3a3">'+
+      '<div class="ehead"><span class="tag warn">异常 · 无法评定</span>'+
+        '<span style="color:var(--ink3);font-size:11.5px">'+r.id+' · 文件 1.2 MB</span></div>'+
+      '<div class="cmt">'+r.c+'</div>'+
+      '<div class="eact">'+
+        '<button class="btn mini" onclick="event.stopPropagation();alert(\'原型：给学生发一条补交通知\')">通知补交</button>'+
+        '<button class="btn mini" onclick="event.stopPropagation();alert(\'原型：按「陈杰」的作业重复提交处理，判 0 分\')">判 0 分</button>'+
+        '<button class="btn mini" onclick="event.stopPropagation();alert(\'原型：忽略此件，不计入统计\')">忽略此件</button>'+
+        '<span class="sp"></span>'+
+        '<button class="btn mini" onclick="event.stopPropagation();alert(\'原型：打开该文件原文核对\')">核对原文</button>'+
+      '</div></div></td>';
+  }
+  tb.appendChild(ex);
+});
+
+function tog(tr, i){
+  var ex = document.getElementById('ex'+i);
+  var on = ex.classList.toggle('on');
+  tr.querySelector('button.mini').textContent = on ? '收起' : '展开';
+}
+
+/* 初始 */
+syncWb();
+go(1);
+</script>
+</body>
+</html>

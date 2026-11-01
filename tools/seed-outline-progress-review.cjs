@@ -1,0 +1,12 @@
+'use strict';
+const fs=require('node:fs'),path=require('node:path'),{createService}=require('../server/ppt/service');
+const log=fs.readFileSync(path.resolve(__dirname,'../logs/outline-progress-review.stdout.log'),'utf8');
+const root=log.match(/Isolated UI fixture: (.+)/)?.[1]?.trim();
+if(!root||!path.basename(root).startsWith('inclass-workflow-ui-'))throw new Error('Expected isolated UI fixture.');
+const settingsFile=path.join(root,'settings.json'),settings=JSON.parse(fs.readFileSync(settingsFile));
+const skill=path.join(root,'test-skill');fs.mkdirSync(skill,{recursive:true});fs.writeFileSync(path.join(skill,'SKILL.md'),'Synthetic CLI fixture only.');
+settings.workbuddy={enabled:true,path:path.resolve(__dirname,'fixtures/ppt-progress-cli.cjs')};settings.ppt={skillPath:skill,timeoutMs:240000};fs.writeFileSync(settingsFile,JSON.stringify(settings));
+const service=createService({root:path.join(root,'ppt'),getSettings:()=>settings,getCourses:()=>[]});
+const task=service.create({title:'大纲编辑与进度检查（虚构）',audience:'七年级',minutes:15,content:'学习平均数和中位数，比较异常值的影响。'});
+service.outline(task.id,{objective:'理解平均数与中位数，能够根据给定数据计算并比较两者。',sections:[{title:'情境导入',minutes:3,description:'展示1、2、3、4、40这一组数据。先请学生讨论如何描述这组数据，再记录不同意见。\n保留学生的直觉，为后续比较做准备。'},{title:'平均数与中位数',minutes:7,description:'逐步计算平均数为10，中位数为3。分别说明计算方法，并比较极端数值带来的影响。'},{title:'课堂练习与总结',minutes:5,description:'使用2、4、6、8、10练习，两个结果均为6。请学生用自己的话解释选择依据。'}]});
+console.log('Review URL: http://127.0.0.1:3012/preparation?type=ppt#task/'+task.id);

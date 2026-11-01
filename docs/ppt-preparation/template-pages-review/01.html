@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>学习目标与三角形的定义</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 1280px; height: 720px; overflow: hidden; }
+  body {
+    width: 1280px;
+    height: 720px;
+    background: #FFFFFF;
+    font-family: "Microsoft YaHei", "\5FAE\8F6F\96C5\9ED1", sans-serif;
+    color: #24364D;
+    position: relative;
+  }
+  .accent { position: absolute; left: 48px; top: 34px; width: 6px; height: 46px; background: #0E3F8C; }
+  .title { position: absolute; left: 68px; top: 32px; font-size: 32px; font-weight: bold; color: #24364D; letter-spacing: 1px; }
+  .subtitle { position: absolute; left: 70px; top: 72px; font-size: 15px; color: #788291; }
+  .meta { position: absolute; right: 48px; top: 40px; font-size: 15px; color: #788291; text-align: right; line-height: 24px; }
+  .meta b { color: #0E3F8C; font-size: 17px; }
+  .rule { position: absolute; left: 48px; top: 98px; width: 1184px; height: 2px; background: #D6DCE5; }
+
+  .card {
+    position: absolute;
+    background: #FFFFFF;
+    border: 1px solid #D6DCE5;
+    border-top: 4px solid #0E3F8C;
+    padding: 14px 18px 12px 18px;
+  }
+  .card h2 { font-size: 20px; color: #0E3F8C; font-weight: bold; margin-bottom: 10px; letter-spacing: 1px; }
+  .card .lead { display: inline-block; background: #D5DFED; color: #0E3F8C; font-size: 15px; font-weight: bold; padding: 2px 8px; margin-bottom: 8px; }
+  .goal { font-size: 19px; color: #243858; line-height: 30px; }
+  .goal span { color: #0E3F8C; font-weight: bold; margin-right: 6px; }
+  .review { font-size: 17px; color: #243858; line-height: 26px; }
+  .review em { font-style: normal; color: #0E3F8C; font-weight: bold; }
+
+  #cardGoal { left: 48px; top: 118px; width: 384px; height: 182px; }
+  #cardReview { left: 48px; top: 316px; width: 384px; height: 142px; }
+
+  .panel {
+    position: absolute;
+    top: 118px;
+    width: 244px;
+    height: 340px;
+    background: #F5F8FC;
+    border: 1px solid #D6DCE5;
+    padding: 12px 14px 10px 14px;
+    text-align: center;
+  }
+  .panel .step { font-size: 18px; font-weight: bold; color: #0E3F8C; }
+  .panel .cap { font-size: 16px; color: #4A5568; line-height: 24px; margin-top: 2px; }
+  .panel .cap b { color: #24364D; }
+  #p1 { left: 452px; }
+  #p2 { left: 720px; }
+  #p3 { left: 988px; background: #FFFFFF; border: 2px solid #0E3F8C; }
+
+  .arrow { position: absolute; top: 272px; width: 24px; height: 24px; }
+  #a1 { left: 696px; }
+  #a2 { left: 964px; }
+
+  .def {
+    position: absolute;
+    left: 48px; top: 478px; width: 1184px; height: 110px;
+    background: #D5DFED;
+    border-left: 8px solid #0E3F8C;
+    padding: 0 28px;
+    display: flex;
+    align-items: center;
+  }
+  .def .txt { font-size: 29px; font-weight: bold; color: #24364D; letter-spacing: 1px; }
+  .def .txt i { font-style: normal; color: #0E3F8C; }
+  .def .tag { font-size: 16px; color: #0E3F8C; font-weight: bold; border: 2px solid #0E3F8C; padding: 3px 10px; margin-right: 22px; white-space: nowrap; }
+
+  .slogan { position: absolute; left: 48px; top: 606px; width: 1184px; height: 72px; }
+  .slogan .lb { position: absolute; left: 0; top: 16px; font-size: 18px; font-weight: bold; color: #788291; }
+  .slogan .chip {
+    position: absolute; top: 0;
+    width: 200px; height: 60px;
+    background: #0E3F8C;
+    color: #FFFFFF;
+    font-size: 26px; font-weight: bold;
+    text-align: center; line-height: 60px;
+    letter-spacing: 3px;
+  }
+  .slogan .plus { position: absolute; top: 14px; font-size: 26px; font-weight: bold; color: #FFC107; }
+  #c1 { left: 96px; }
+  #plus1 { left: 300px; }
+  #c2 { left: 340px; }
+  #plus2 { left: 544px; }
+  #c3 { left: 584px; }
+  .slogan .hint { position: absolute; right: 0; top: 14px; font-size: 17px; color: #788291; line-height: 30px; text-align: right; }
+
+  .foot { position: absolute; left: 48px; top: 694px; font-size: 13px; color: #8B97A8; }
+  .foot2 { position: absolute; right: 48px; top: 694px; font-size: 13px; color: #8B97A8; }
+</style>
+</head>
+<body>
+
+<div class="accent"></div>
+<div class="title">学习目标与三角形的定义</div>
+<div class="subtitle">认识三角形 · 小学三年级 · 20 分钟微课</div>
+<div class="meta">第 <b>1</b> 页 / 共 3 页<br>本页教学约 8 分钟</div>
+<div class="rule"></div>
+
+<div class="card" id="cardGoal">
+  <h2>本课学习目标</h2>
+  <div class="goal"><span>①</span>知道什么样的图形是三角形</div>
+  <div class="goal" style="margin-top:8px"><span>②</span>能判断一个图形是不是三角形</div>
+</div>
+
+<div class="card" id="cardReview">
+  <div class="lead">复习旧知</div>
+  <svg width="348" height="66" viewBox="0 0 348 66">
+    <line x1="26" y1="34" x2="322" y2="34" stroke="#0E3F8C" stroke-width="6" stroke-linecap="round"></line>
+    <circle cx="26" cy="34" r="8" fill="#0E3F8C"></circle>
+    <circle cx="322" cy="34" r="8" fill="#0E3F8C"></circle>
+    <text x="26" y="60" font-family="Microsoft YaHei" font-size="14" fill="#788291" text-anchor="middle">端点</text>
+    <text x="322" y="60" font-family="Microsoft YaHei" font-size="14" fill="#788291" text-anchor="middle">端点</text>
+  </svg>
+  <div class="review">线段是<em>直</em>的，有<em>两个端点</em>。</div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="step">① 第一条边（底边）</div>
+  <svg width="214" height="240" viewBox="0 0 214 240">
+    <line x1="24" y1="200" x2="190" y2="200" stroke="#0E3F8C" stroke-width="7" stroke-linecap="round"></line>
+    <circle cx="24" cy="200" r="8" fill="#0E3F8C"></circle>
+    <circle cx="190" cy="200" r="8" fill="#0E3F8C"></circle>
+  </svg>
+  <div class="cap">先画<b>一条线段</b><br>两端各有一个端点</div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="step">② 第二条边</div>
+  <svg width="214" height="240" viewBox="0 0 214 240">
+    <line x1="24" y1="200" x2="190" y2="200" stroke="#0E3F8C" stroke-width="7" stroke-linecap="round"></line>
+    <line x1="190" y1="200" x2="107" y2="44" stroke="#0E3F8C" stroke-width="7" stroke-linecap="round"></line>
+    <circle cx="24" cy="200" r="8" fill="#0E3F8C"></circle>
+    <circle cx="190" cy="200" r="8" fill="#0E3F8C"></circle>
+    <circle cx="107" cy="44" r="8" fill="#0E3F8C"></circle>
+  </svg>
+  <div class="cap">第二条线段<b>接</b>在<br>第一条的端点上</div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="step">③ 第三条边，围成一圈</div>
+  <svg width="214" height="240" viewBox="0 0 214 240">
+    <polygon points="24,200 190,200 107,44" fill="#D5DFED" stroke="#0E3F8C" stroke-width="7" stroke-linejoin="round"></polygon>
+    <circle cx="24" cy="200" r="9" fill="#1E4FA8"></circle>
+    <circle cx="190" cy="200" r="9" fill="#1E4FA8"></circle>
+    <circle cx="107" cy="44" r="9" fill="#1E4FA8"></circle>
+    <text x="120" y="40" font-family="Microsoft YaHei" font-size="15" fill="#0E3F8C">顶点</text>
+    <text x="14" y="228" font-family="Microsoft YaHei" font-size="15" fill="#0E3F8C">顶点</text>
+    <text x="176" y="228" font-family="Microsoft YaHei" font-size="15" fill="#0E3F8C">顶点</text>
+  </svg>
+  <div class="cap">三条线段<b>首尾相接</b><br>围成了一个封闭图形</div>
+</div>
+
+<svg class="arrow" id="a1" viewBox="0 0 24 24"><path d="M8 4 L18 12 L8 20" fill="none" stroke="#788291" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+<svg class="arrow" id="a2" viewBox="0 0 24 24"><path d="M8 4 L18 12 L8 20" fill="none" stroke="#788291" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+
+<div class="def">
+  <div class="tag">定义</div>
+  <div class="txt">由<i>三条线段</i><i>首尾相接</i><i>围成</i>的图形叫做<i>三角形</i>。</div>
+</div>
+
+<div class="slogan">
+  <div class="lb">记一记：</div>
+  <div class="chip" id="c1">三条边</div>
+  <div class="plus" id="plus1">＋</div>
+  <div class="chip" id="c2">首尾接</div>
+  <div class="plus" id="plus2">＋</div>
+  <div class="chip" id="c3">围起来</div>
+  <div class="hint">同桌互相说一遍口诀<br>再全班齐读 2 遍</div>
+</div>
+
+<div class="foot">认识三角形</div>
+<div class="foot2">1 / 3</div>
+
+</body>
+</html>

@@ -1,0 +1,41 @@
+{
+  "sourceSha256": "92cee441261d892c5d3ec9b816ea48527a7aec46cc3bba085693129e52235b97",
+  "outputSha256": "08b32d7614b376fe34b230f1aa438a8d109b6b01e0de498dd85c02871be35c39",
+  "completeTextEqualIgnoringWhitespace": true,
+  "oldParagraphs": 155,
+  "newParagraphs": 262,
+  "nativeTables": 5,
+  "chapterHeadings": 9,
+  "repeatHeaders": 5,
+  "noSplitRows": 32,
+  "grids": [
+    [
+      1700,
+      6606
+    ],
+    [
+      1550,
+      2100,
+      2750,
+      1906
+    ],
+    [
+      1050,
+      600,
+      1560,
+      1860,
+      1850,
+      1386
+    ],
+    [
+      1500,
+      6806
+    ],
+    [
+      1500,
+      4306,
+      2500
+    ]
+  ],
+  "nativeWordVisualReview": false
+}

@@ -1,0 +1,13 @@
+'use strict';
+const fs=require('node:fs'),os=require('node:os'),path=require('node:path'),assert=require('node:assert/strict');
+const rules=require('../server/ppt/presentation-rules'),{createService}=require('../server/ppt/service'),{buildHandoff}=require('../server/ppt/handoff');
+const root=fs.mkdtempSync(path.join(os.tmpdir(),'inclass-cover-rules-'));
+try{const service=createService({root,getSettings:()=>({}),getCourses:()=>[]});const task=service.create({title:'合成课程：封面测试',presenter:'测试教师',lessonDate:'2026-10-31',audience:'测试对象',minutes:20,pageCount:4,content:'合成内容'});
+assert.equal(service.get(task.id).presenter,'测试教师');assert.equal(service.get(task.id).lessonDate,'2026-10-31');for(const date of ['2026-02-30','2026-13-01','2026-10-31xxx'])assert.throws(()=>service.create({...task,lessonDate:date}),/日期/);
+for(const prompt of [service.prompt(task),buildHandoff({task,phase:'outline',runDir:root,skill:'skill'}),buildHandoff({task,phase:'html',runDir:root,skill:'skill'})]){assert.ok(prompt.includes(rules.coverRules));assert.match(prompt,/测试教师/);assert.match(prompt,/2026-10-31/);assert.match(prompt,/不展示学习目标/);assert.match(prompt,/本页N分钟/);}
+assert.match(buildHandoff({task,phase:'export',runDir:root,skill:'skill'}),/以其文案、页数、顺序和主要排版为准/);assert.equal(rules.filename('课程名称'),'课程名称.pptx');assert.equal(rules.filename('A/B:C'),'A-B-C.pptx');assert.equal(rules.filename('CON'),'课件-CON.pptx');
+const metadata=path.join(root,task.id,'task.json'),old=JSON.parse(fs.readFileSync(metadata));delete old.presenter;delete old.lessonDate;old.outline={objective:'保留',sections:[]};fs.writeFileSync(metadata,JSON.stringify(old));const loaded=service.get(task.id);assert.equal(loaded.presenter,'');service.update(task.id,loaded);assert.equal(service.get(task.id).outline.objective,'保留');
+const pageRunner=fs.readFileSync('server/ppt/page-runner.js','utf8');assert.match(pageRunner,/presentation-rules/);assert.match(pageRunner,/封面不能展开学习目标/);
+const vm=require('node:vm'),ui=fs.readFileSync('server/ppt/public/ppt.js','utf8'),context=vm.createContext({esc:v=>String(v)});vm.runInContext(ui.slice(ui.indexOf('function courseCover('),ui.indexOf('function renderList(')),context);const cover=vm.runInContext("courseCover({id:'test',title:'合成课程',cover:{type:'html',version:3}})",context);assert.match(cover,/data-html-url/);assert.match(cover,/version=3&page=0/);assert.match(cover,/sandbox=""/);assert.ok(!cover.includes(' src='));
+console.log('PASS: presenter/date persistence and validation, shared cover/minute restrictions in all prompt paths, safe course filename, legacy unchanged-form compatibility');
+}finally{fs.rmSync(root,{recursive:true,force:true});}

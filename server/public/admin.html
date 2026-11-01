@@ -2,6 +2,12 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
+<script>
+const legacyAttendanceParams=new URLSearchParams(location.search);
+if(!legacyAttendanceParams.get('pane')&&!legacyAttendanceParams.get('tab')||['dash','records'].includes(legacyAttendanceParams.get('pane')||legacyAttendanceParams.get('tab'))){
+  const target=new URL('/session',location.origin);target.searchParams.set('tab','records');if(legacyAttendanceParams.get('courseId'))target.searchParams.set('courseId',legacyAttendanceParams.get('courseId'));location.replace(target.href);
+}
+</script>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>后台 · 课中签到</title>
 <style>
@@ -68,12 +74,17 @@ svg{display:block}
 .uplab:hover{border-color:#b9bec6}
 @media (max-width:640px){.stats{gap:18px}td,th{padding-right:8px}}
 </style>
+<link rel="stylesheet" href="/shell.css">
+<link rel="icon" type="image/svg+xml" href="/assets/logo.svg?v=20261026">
 </head>
-<body>
+<body data-active="records">
+<div class="app">
+  <aside class="sh-side" id="shSide"></aside>
+  <main class="sh-main">
 <div class="wrap">
   <div class="top">
     <button class="back" id="back">←</button>
-    <div><h1>后台设置</h1><div class="sub" id="sub">—</div></div>
+    <div><h1 id="pageTitle">签到记录</h1><div class="sub" id="sub">—</div></div>
   </div>
 
   <div class="tabs">
@@ -87,6 +98,7 @@ svg{display:block}
     <div class="cur">
       <span>课程</span><select id="dashCourse"></select>
       <span class="tag" id="dashTag"></span>
+      <button class="btn" id="goXq" style="margin-left:auto">学情分析 ↗</button>
     </div>
     <div class="card">
       <h2>总览</h2>
@@ -118,8 +130,8 @@ svg{display:block}
       <div id="courseList"></div>
       <div class="divider"></div>
       <div class="row">
-        <div class="col"><label>新课程名称</label><input id="newCourseName" placeholder="例如：线性代数"></div>
-        <div class="col" style="max-width:160px"><label>学期</label><input id="newCourseTerm" placeholder="2026 秋"></div>
+        <div class="col"><label for="newCourseName">新课程名称</label><input id="newCourseName" placeholder="例如：线性代数"></div>
+        <div class="col" style="max-width:160px"><label for="newCourseTerm">学期</label><input id="newCourseTerm" placeholder="2026 秋"></div>
         <div class="col" style="flex:0 0 auto"><button class="btn pri" id="addCourse">添加课程</button></div>
       </div>
     </div>
@@ -133,7 +145,7 @@ svg{display:block}
 
       <div class="row">
         <div class="col" style="flex:1 1 100%">
-          <label>粘贴名单 · 一行一条，支持「学号,姓名」「学号 姓名」「学号 + Tab + 姓名」，全角逗号也认</label>
+          <label for="pasteBox">粘贴名单 · 一行一条，支持「学号,姓名」「学号 姓名」「学号 + Tab + 姓名」，全角逗号也认</label>
           <textarea id="pasteBox" placeholder="2026110998,杨佳林
 2026110999,李晓明
 2026111000	王芳"></textarea>
@@ -160,10 +172,10 @@ svg{display:block}
       <div id="stuList" class="scroll"></div>
     </div>
 
-    <div class="card">
+    <div class="card" id="export">
       <h2>签到数据导出</h2>
       <div class="row">
-        <div class="col" style="max-width:420px"><label>选某一次点名</label><select id="expSession"></select></div>
+        <div class="col" style="max-width:420px"><label for="expSession">选某一次点名</label><select id="expSession"></select></div>
         <div class="col" style="flex:0 0 auto"><button class="btn" id="expOne">导出这一次</button></div>
         <div class="col" style="flex:0 0 auto"><button class="btn pri" id="expAll">导出整门课</button></div>
       </div>
@@ -180,37 +192,64 @@ svg{display:block}
         <div class="col" style="flex:0 0 auto"><button class="btn" id="openFolder">打开文件夹</button></div>
       </div>
       <table class="filetable" id="fileList"></table>
-      <div class="hint">拷走整个 <b>data</b> 文件夹就是完整备份；删掉就全没了，注意别误删。</div>
+      <div class="hint">请到<a href="/backup">数据与备份</a>创建并校验完整备份。不要手工删除教学数据目录。</div>
     </div>
   </div>
 
   <!-- ========== 设置 ========== -->
-  <div class="pane" id="pane-set">
+  <div class="pane settings-grid" id="pane-set">
     <div class="card">
       <h2>签到参数</h2>
       <div class="row">
-        <div class="col"><label>二维码刷新间隔（毫秒）</label><input id="setRefresh" type="number" step="500" min="1000"></div>
-        <div class="col"><label>令牌宽限片数（片）</label><input id="setGrace" type="number" step="1" min="0"></div>
+        <div class="col"><label for="setRefresh">二维码刷新间隔（毫秒）</label><input id="setRefresh" type="number" step="500" min="1000"></div>
+        <div class="col"><label for="setGrace">令牌宽限片数（片）</label><input id="setGrace" type="number" step="1" min="0"></div>
       </div>
       <div class="row">
-        <div class="col"><label>签到窗口（秒）</label><input id="setWindow" type="number" step="10" min="10"></div>
-        <div class="col"><label>迟到补签宽限（分钟）</label><input id="setLate" type="number" step="1" min="0"></div>
+        <div class="col"><label for="setWindow">签到窗口（秒）</label><input id="setWindow" type="number" step="10" min="10"></div>
+        <div class="col"><label for="setLate">迟到补签宽限（分钟）</label><input id="setLate" type="number" step="1" min="0"></div>
       </div>
       <div class="row">
-        <div class="col"><label>答题凭证有效期（秒）</label><input id="setTicket" type="number" step="10" min="20"></div>
-        <div class="col"><label>端口（改 bat 里的 PORT，重启生效）</label><input id="setPort" readonly></div>
+        <div class="col"><label for="setTicket">答题凭证有效期（秒）</label><input id="setTicket" type="number" step="10" min="20"></div>
+        <div class="col"><label for="setPort">端口（改 bat 里的 PORT，重启生效）</label><input id="setPort" readonly></div>
       </div>
       <div class="hint" id="setHint"></div>
       <div style="display:flex;justify-content:flex-end;margin-top:12px"><button class="btn pri" id="saveSet">保存设置</button></div>
     </div>
-    <div class="card">
+    <div class="card" id="rules">
+      <h2>学情预警规则</h2>
+      <fieldset class="rule-group"><legend>出勤预警</legend>
+      <div class="row">
+        <div class="col"><label for="setAbsRun">连续缺勤几次预警</label><input id="setAbsRun" type="number" min="1" step="1"></div>
+      </div></fieldset>
+      <fieldset class="rule-group"><legend>答题预警</legend>
+      <div class="row">
+        <div class="col"><label for="setCorN">答题窗口：最近几次课</label><input id="setCorN" type="number" min="1" step="1"></div>
+        <div class="col"><label for="setCorMin">窗口内至少答题几次才判</label><input id="setCorMin" type="number" min="1" step="1"></div>
+        <div class="col"><label for="setCorRate">答对率低于（%）</label><input id="setCorRate" type="number" min="0" max="100" step="1"></div>
+      </div>
+      </fieldset>
+      <fieldset class="rule-group"><legend>作业预警</legend>
+      <div class="row">
+        <div class="col"><label for="setHwMiss">作业未交几次预警</label><input id="setHwMiss" type="number" min="1" step="1"></div>
+        <div class="col"><label for="setHwLow">作业低分几次预警</label><input id="setHwLow" type="number" min="1" step="1"></div>
+        <div class="col"><label for="setHwLowScore">低分线（分）</label><input id="setHwLowScore" type="number" min="0" max="100" step="1"></div>
+      </div>
+      </fieldset>
+      <div style="display:flex;justify-content:flex-end;margin-top:4px"><button class="btn pri" id="saveRules">保存预警规则</button></div>
+    </div>
+    <div class="card" id="data">
       <h2>数据目录</h2>
       <div class="hint" id="setDataPath">—</div>
-      <div class="hint">所有数据在 data 目录里的 JSON 文件，一天一节课大概几十 KB。</div>
+      <div class="hint">教学数据包含名单、课堂记录、作业附件、课件与模板。请使用独立备份页创建完整备份。<a href="/backup">进入数据与备份 →</a></div>
     </div>
   </div>
 </div>
+  </main>
+</div>
 <div class="toast" id="toast"></div>
+<script>document.body.dataset.active = (new URLSearchParams(location.search).get('pane') === 'course') ? 'course'
+  : (new URLSearchParams(location.search).get('pane') === 'set' ? 'sys' : 'records');</script>
+<script src="/shell.js"></script>
 
 <script>
 const $ = id => document.getElementById(id);
@@ -598,6 +637,14 @@ function renderSettings() {
   $('setWindow').value = Math.round((s.windowMs || 90000) / 1000);
   $('setLate').value = Math.round((s.lateGraceMs || 600000) / 60000);
   $('setTicket').value = Math.round((s.ticketTtlMs || 120000) / 1000);
+  const R = Object.assign({ absenceRun: 2, corLastN: 5, corMinAns: 3, corRate: 20, hwMiss: 2, hwLow: 2, hwLowScore: 60 }, s.xqRules || {});
+  $('setAbsRun').value = R.absenceRun;
+  $('setCorN').value = R.corLastN;
+  $('setCorMin').value = R.corMinAns;
+  $('setCorRate').value = R.corRate;
+  $('setHwMiss').value = R.hwMiss;
+  $('setHwLow').value = R.hwLow;
+  $('setHwLowScore').value = R.hwLowScore;
   hint();
 }
 
@@ -621,11 +668,31 @@ $('saveSet').onclick = async () => {
   if (d) { toast('已保存，下一场点名生效'); D.settings = d; hint(); }
 };
 
+$('saveRules').onclick = async () => {
+  const d = await api('/api/xq/rules', {
+    absenceRun: Number($('setAbsRun').value),
+    corLastN: Number($('setCorN').value),
+    corMinAns: Number($('setCorMin').value),
+    corRate: Number($('setCorRate').value),
+    hwMiss: Number($('setHwMiss').value),
+    hwLow: Number($('setHwLow').value),
+    hwLowScore: Number($('setHwLowScore').value)
+  }, 'PUT');
+  if (d) { toast('预警规则已保存'); if (D.settings) D.settings.xqRules = d; }
+};
+
+$('goXq').onclick = () => {
+  if (CID) location.href = '/xueqing?courseId=' + CID;
+  else toast('先建一门课');
+};
+
 /* ---------------- 交互 ---------------- */
 document.querySelectorAll('.tab').forEach(t => {
   t.onclick = () => {
+    if (t.dataset.pane === 'course') { location.href = '/courses' + (CID ? '#edit/' + encodeURIComponent(CID) : ''); return; }
     document.querySelectorAll('.tab').forEach(x => x.classList.toggle('on', x === t));
     document.querySelectorAll('.pane').forEach(p => p.classList.toggle('on', p.id === 'pane-' + t.dataset.pane));
+    $('pageTitle').textContent = { dash: '签到记录', course: '课程管理', set: '系统设置' }[t.dataset.pane];
     if (t.dataset.pane === 'dash') loadStats();
     if (t.dataset.pane === 'course') loadDataInfo();
   };
@@ -635,14 +702,20 @@ $('back').onclick = () => location.href = '/';
 
 /* 从 compose 的「去补名单」进来时直接落到课程管理 */
 (function initTab() {
-  const t = qs.get('tab');
+  const t = qs.get('tab') || qs.get('pane');
   if (t) {
     const btn = document.querySelector(`.tab[data-pane="${t}"]`);
     if (btn) btn.click();
   }
 })();
 
-loadAll().then(() => { renderExport(); });
+loadAll().then(() => {
+  renderExport();
+  if (location.hash) {
+    const el = document.querySelector(location.hash);
+    if (el) setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60);
+  }
+});
 </script>
 </body>
 </html>

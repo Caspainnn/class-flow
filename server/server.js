@@ -9,11 +9,16 @@ const crypto = require('crypto');
 const { exec } = require('child_process');
 const QRCode = require('qrcode');
 const store = require('./lib/store');
+const answers = require('./lib/answers');
 
+require('./backup/restore-worker').recover(store.DATA_DIR);
+const backupRuntime = require('./backup/runtime');
+backupRuntime.configure(store.DATA_DIR);
 store.seed();
 
 /* ---------------- 配置 ---------------- */
 const PORT = Number(process.env.PORT || 3000);
+const HOST = process.env.HOST || '0.0.0.0';
 const PUBLIC_DIR = path.join(__dirname, 'public');
 let SETTINGS = store.read('settings', {});
 
@@ -112,16 +117,17 @@ function verifyCode(sessionId, code) {
 }
 
 /* ---------------- 数据访问 ---------------- */
-const getCourses = () => store.read('courses', []);
+const getCourses = () => store.read('courses', []).filter(c => !c.deletedAt);
 const getStudents = courseId => {
-  const all = store.read('students', []);
+  const deleted = new Set(store.read('courses', []).filter(c => c.deletedAt).map(c => c.id));
+  const all = store.read('students', []).filter(s => !deleted.has(s.courseId));
   return courseId ? all.filter(s => s.courseId === courseId) : all;
 };
-const getSessions = () => store.read('sessions', []);
+const getSessions = () => { const deleted = new Set(store.read('courses', []).filter(c => c.deletedAt).map(c => c.id)); return store.read('sessions', []).filter(s => !deleted.has(s.courseId)); };
 const findCourse = id => getCourses().find(c => c.id === id) || null;
 
 function saveSession(s) {
-  const list = getSessions();
+  const list = store.read('sessions', []);
   const i = list.findIndex(x => x.id === s.id);
   if (i >= 0) list[i] = s; else list.push(s);
   store.write('sessions', list);
@@ -137,11 +143,13 @@ function normQuestion(raw) {
   const text = String(q.text == null ? '' : q.text).trim();
   const options = (Array.isArray(q.options) ? q.options : [])
     .map(x => String(x == null ? '' : x).trim()).filter(Boolean).slice(0, 6);
-  let correct = Number(q.correct);
-  if (!Number.isInteger(correct) || correct < 0 || correct >= options.length) correct = 0;
+  const type = q.type === 'multiple' || Array.isArray(q.correct) ? 'multiple' : 'single';
+  const correct = answers.normalize(q.correct, options.length, type === 'multiple');
+  if (correct === null) return { error: '请选择有效的正确答案' };
+  if (type === 'multiple' && correct.length < 2) return { error: '多选题至少设置两个正确答案' };
   if (!text) return { error: '题干还没填' };
   if (options.length < 2) return { error: '至少要有两个选项' };
-  return { text, options, correct };
+  return { text, options, correct, type };
 }
 
 function startSession(courseId, rawQuestion) {
@@ -156,7 +164,7 @@ function startSession(courseId, rawQuestion) {
   const s = {
     id: store.uid(6),
     courseId: course.id,
-    question: { text: q.text, options: q.options, correct: q.correct },
+    question: { text: q.text, options: q.options, correct: q.correct, type: q.type },
     startedAt: now,
     endsAt: now + windowMs(),
     closed: false,
@@ -167,11 +175,11 @@ function startSession(courseId, rawQuestion) {
   tickets = new Map();
 
   // 最近出过的题（最多 10 条），只是方便复用，不算题库
-  const courses = getCourses();
+  const courses = store.read('courses', []);
   const c = courses.find(x => x.id === course.id);
   if (c) {
     const recent = (c.recentQuestions || []).filter(x => x.text !== q.text);
-    recent.unshift({ text: q.text, options: q.options, correct: q.correct, at: now });
+    recent.unshift({ text: q.text, options: q.options, correct: q.correct, type: q.type, at: now });
     c.recentQuestions = recent.slice(0, 10);
     store.write('courses', courses);
   }
@@ -185,14 +193,14 @@ function sessionState(s) {
   const absent = roster.filter(x => !signed.has(x.id))
     .map(x => ({ id: x.id, name: x.name }))
     .sort((a, b) => a.id.localeCompare(b.id));
-  const dist = s.question.options.map((_, i) => s.records.filter(r => r.answer === i).length);
-  const answered = s.records.filter(r => r.answer >= 0);
+  const dist = s.question.options.map((_, i) => s.records.filter(r => answers.includes(r.answer, i)).length);
+  const answered = s.records.filter(r => answers.answered(r.answer));
   const course = findCourse(s.courseId);
   return {
     id: s.id,
     courseId: s.courseId,
     course: course ? course.name : '',
-    question: { text: s.question.text, options: s.question.options, correct: s.question.correct },
+    question: { text: s.question.text, options: s.question.options, correct: s.question.correct, type: s.question.type || (Array.isArray(s.question.correct) ? 'multiple' : 'single') },
     startedAt: s.startedAt,
     open: now < s.endsAt,
     remainMs: Math.max(0, s.endsAt - now),
@@ -222,7 +230,7 @@ function statOfSession(s) {
   const recs = s.records.filter(r => ids.has(r.studentId));
   const total = roster.length;
   const present = recs.length;
-  const answered = recs.filter(r => r.answer >= 0);
+  const answered = recs.filter(r => answers.answered(r.answer));
   return {
     id: s.id,
     courseId: s.courseId,
@@ -234,7 +242,7 @@ function statOfSession(s) {
     absent: Math.max(0, total - present),
     rate: total ? round1(present / total * 100) : 0,
     correctRate: answered.length ? round1(answered.filter(r => r.correct).length / answered.length * 100) : null,
-    dist: s.question.options.map((_, i) => recs.filter(r => r.answer === i).length)
+    dist: s.question.options.map((_, i) => recs.filter(r => answers.includes(r.answer, i)).length)
   };
 }
 
@@ -251,7 +259,7 @@ function courseStats(courseId) {
       if (!r) return;
       attended++;
       if (r.status === 'late') late++;
-      if (r.answer >= 0) { answered++; if (r.correct) correct++; }
+      if (answers.answered(r.answer)) { answered++; if (r.correct) correct++; }
     });
     return {
       id: stu.id,
@@ -315,8 +323,9 @@ function pickRoster(rows, existing) {
     const id = String(cells[0] == null ? '' : cells[0]).trim();
     const name = String(cells[1] == null ? '' : cells[1]).trim().replace(/\s+/g, '');
     if (!id && !name) return;
+    if (/^(学号|学生学号|studentid|id)$/i.test(id) && /^(姓名|学生姓名|name)$/i.test(name)) return;
     if (!ID_RE.test(id) || !name) { bad.push((id + ' ' + name).trim() || '(空行)'); return; }
-    if (seen.has(id)) return;
+    if (seen.has(id)) { bad.push(id + ' ' + name); return; }
     seen.add(id);
     added.push({ id, name });
   });
@@ -347,7 +356,7 @@ function lanIP() {
   return '127.0.0.1';
 }
 const LOCAL_IP = lanIP();
-const ORIGIN = process.env.PUBLIC_ORIGIN || `http://${LOCAL_IP}:${PORT}`;
+const ORIGIN = process.env.PUBLIC_ORIGIN || `http://${HOST === '127.0.0.1' ? HOST : LOCAL_IP}:${PORT}`;
 
 const isLocal = req => {
   const ip = req.socket.remoteAddress || '';
@@ -355,8 +364,9 @@ const isLocal = req => {
 };
 
 const PUBLIC_ROUTES = [
+  /^\/questionnaire\/(?:student\.html|student\.js|style\.css)$/, /^\/api\/questionnaire-public\/[a-zA-Z0-9-]{6,80}(?:\/submit)?$/,
   /^\/s\//, /^\/join\/?$/, /^\/api\/claim$/, /^\/api\/submit$/,
-  /^\/qr\.svg$/, /^\/favicon\.ico$/, /^\/api\/ping$/
+  /^\/qr\.svg$/, /^\/favicon\.ico$/, /^\/assets\/logo\.svg$/, /^\/api\/ping$/
 ];
 
 /* ---------------- 路由 ---------------- */
@@ -364,6 +374,7 @@ const handler = async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
   const p = url.pathname;
   const m = req.method;
+  if (backupRuntime.gate(req,res,url,json)) return;
 
   if (!isLocal(req) && !PUBLIC_ROUTES.some(r => r.test(p))) {
     if (p.startsWith('/api/')) return json(res, 403, { error: '这个页面只能在老师电脑上打开' });
@@ -372,14 +383,48 @@ const handler = async (req, res) => {
       + '<h3>这个页面只能在老师的电脑上打开</h3><p>学生请扫投影上的二维码，或打开 /join。</p></body>');
   }
 
+  if (m === 'GET' && p === '/admin' && url.searchParams.get('pane') === 'set' && (url.hash === '#data' || url.searchParams.get('section') === 'data')) { res.writeHead(302,{Location:'/backup'}); return res.end(); }
+  // Old dashboard bookmarks keep course context; the dashboard itself is teacher-only.
+  if (m === 'GET' && p === '/xueqing' && url.searchParams.get('tab') === 'dash') {
+    const q = new URLSearchParams(); if (url.searchParams.get('courseId')) q.set('courseId',url.searchParams.get('courseId'));
+    res.writeHead(302,{Location:'/dashboard'+(q.size?'?'+q:'')}); return res.end();
+  }
+  if (['/dashboard','/backup'].includes(p) && (!isLocal(req) || !/^(localhost|127\.0\.0\.1|\[::1\])(?::\d+)?$/i.test(req.headers.host||''))) return json(res,403,{error:'请在老师电脑的本机平台查看此页面。'});
   /* ---- 页面 ---- */
+  const workspacePages = ['/', '/session', '/compose', '/live', '/courses', '/preparation', '/homework', '/grading', '/workbuddy', '/xueqing', '/admin', '/questionnaires', '/dashboard', '/backup'];
+  if (m === 'GET' && workspacePages.includes(p) && req.headers['sec-fetch-dest'] !== 'iframe') return sendFile(res, 'workspace.html');
+  if (p === '/ppt-notifications.js') return sendFile(res, 'ppt-notifications.js');
+  if (p === '/workspace.js') return sendFile(res, 'workspace.js');
+  if (await require('./questionnaire/routes')(req,res,{url,m,json,store,getCourses,getStudents,isLocal,studentOrigin:ORIGIN})) return;
+  if (await require('./backup/routes')(req,res,{url,m,json,store,isLocal,serverConfig:{port:PORT,host:HOST,projectRoot:path.resolve(__dirname,'..'),script:path.join(__dirname,'server.js')}})) return;
+  if (require('./dashboard/routes')(req,res,{url,m,json,store,isLocal})) return;
   if (p === '/') return sendFile(res, 'home.html');
-  if (p === '/compose') return sendFile(res, 'compose.html');
-  if (p === '/live') return sendFile(res, 'live.html');
+  if (p === '/session') return sendFile(res, 'session.html');
+  if (p === '/compose') return sendFile(res, 'session.html');   // 老入口
+  if (p === '/live') return sendFile(res, 'session.html');      // 老入口
+  if (p === '/shell.css') return sendFile(res, 'shell.css');
+  if (p === '/shell.js') return sendFile(res, 'shell.js');
+  if (p === '/courses') return sendFile(res, 'courses.html');
+  if (p === '/preparation') return sendFile(res, url.searchParams.get('type') === 'plan' ? '../lesson-plan/public/plan.html' : url.searchParams.get('section') === 'templates' ? '../ppt/public/ppt-templates.html' : '../ppt/public/ppt.html');
+  if (p === '/lesson-plan.css') return sendFile(res, '../lesson-plan/public/plan.css');
+  if (p === '/lesson-plan.js') return sendFile(res, '../lesson-plan/public/plan.js');
+  if (['/ppt-templates.js','/ppt-templates.css','/ppt-management.css'].includes(p)) return sendFile(res, '../ppt/public' + p);
+  if (p === '/ppt.css') return sendFile(res, '../ppt/public/ppt.css');
+  if (p === '/ppt.js') return sendFile(res, '../ppt/public/ppt.js');
+  if (p === '/ppt-progress-view.js') return sendFile(res, '../ppt/public/ppt-progress-view.js');
+  if (p === '/ppt-method-view.js') return sendFile(res, '../ppt/public/ppt-method-view.js');
+  if (p === '/ppt-html-preview.js') return sendFile(res, '../ppt/public/ppt-html-preview.js');
+  if (p === '/ppt-html-view.js') return sendFile(res, '../ppt/public/ppt-html-view.js');
+  if (p === '/vendor/element-upload.js') return sendFile(res, 'vendor/element-upload.js');
+  if (p === '/vendor/element-upload.css') return sendFile(res, 'vendor/element-upload.css');
+  if (p === '/admin' && url.searchParams.get('pane') === 'course') {
+    const id = url.searchParams.get('courseId');
+    res.writeHead(302, {Location: '/courses' + (id ? '#edit/' + encodeURIComponent(id) : '')}); return res.end();
+  }
   if (p === '/admin') return sendFile(res, 'admin.html');
   if (p === '/join') return sendFile(res, 'student.html');
   if (p.startsWith('/s/')) return sendFile(res, 'student.html');
-  if (p === '/favicon.ico') { res.writeHead(204); return res.end(); }
+  if (p === '/assets/logo.svg' || p === '/favicon.ico') return sendFile(res, 'assets/logo.svg');
 
   if (p === '/qr.svg') {
     const s = currentSession();
@@ -429,7 +474,7 @@ const handler = async (req, res) => {
       ok: true, ticket, late: now > s.endsAt,
       expiresIn: ticketTtlMs(),
       title: course ? course.name : '',
-      question: { text: s.question.text, options: s.question.options }
+      question: { text: s.question.text, options: s.question.options, type: s.question.type || (Array.isArray(s.question.correct) ? 'multiple' : 'single') }
     });
   }
 
@@ -454,8 +499,9 @@ const handler = async (req, res) => {
     }
     if (s.records.some(r => r.studentId === stu.id)) return json(res, 400, { error: '这个学号已经签过到了' });
 
+    const answer = answers.normalize(b.answer, s.question.options.length, Array.isArray(s.question.correct));
+    if (answer === null) return json(res, 400, { error: '请选择有效的答案' });
     t.used = true;
-    const answer = Number.isInteger(b.answer) ? b.answer : -1;
     s.records.push({
       studentId: stu.id,
       name: stu.name,
@@ -463,7 +509,7 @@ const handler = async (req, res) => {
       claimedAt: t.claimedAt,
       submittedAt: Date.now(),
       answer,
-      correct: answer === s.question.correct
+      correct: answers.matches(answer, s.question.correct)
     });
     saveSession(s);
     // 不告诉学生答对没答对：课上不揭晓，避免互相看分数、也避免打击
@@ -506,57 +552,22 @@ const handler = async (req, res) => {
   }
 
   /* ---- 课程 ---- */
-  if (p === '/api/courses' && m === 'POST') {
-    const b = await readBody(req);
-    const name = String(b.name || '').trim();
-    if (!name) return json(res, 400, { error: '课程名不能为空' });
-    const courses = getCourses();
-    const course = {
-      id: 'c' + store.uid(5),
-      name,
-      term: String(b.term || '').trim(),
-      createdAt: Date.now(),
-      recentQuestions: []
-    };
-    courses.push(course);
-    store.write('courses', courses);
-    return json(res, 200, course);
-  }
-
+  const courseService = require('./lib/courses')(store, () => { const session=currentSession(); return session && !session.closed ? session.courseId : null; });
   let mm = p.match(/^\/api\/courses\/([\w-]+)$/);
-  if (mm && m === 'PUT') {
-    const b = await readBody(req);
-    const courses = getCourses();
-    const c = courses.find(x => x.id === mm[1]);
-    if (!c) return json(res, 404, { error: '课程不存在' });
-    if (b.name != null) {
-      const name = String(b.name).trim();
-      if (!name) return json(res, 400, { error: '课程名不能为空' });
-      c.name = name;
-    }
-    if (b.term != null) c.term = String(b.term).trim();
-    store.write('courses', courses);
-    return json(res, 200, c);
-  }
-  if (mm && m === 'DELETE') {
-    const id = mm[1];
-    if (!findCourse(id)) return json(res, 404, { error: '课程不存在' });
-    store.write('courses', getCourses().filter(x => x.id !== id));
-    store.write('students', store.read('students', []).filter(x => x.courseId !== id));
-    store.write('sessions', getSessions().filter(x => x.courseId !== id));
-    if (activeSessionId && !currentSession()) activeSessionId = null;
-    const settings = store.read('settings', {});
-    if (settings.activeCourseId === id) {
-      const rest = getCourses();
-      settings.activeCourseId = rest.length ? rest[0].id : null;
-      store.write('settings', settings);
-    }
-    return json(res, 200, { ok: true });
+  if (p === '/api/courses' || mm) {
+    try {
+      if (p === '/api/courses' && m === 'GET') return json(res,200,{items:courseService.list()});
+      if (p === '/api/courses' && m === 'POST') return json(res,200,courseService.create(await readBody(req)));
+      if (mm && m === 'PUT') return json(res,200,courseService.update(mm[1],await readBody(req)));
+      if (mm && m === 'DELETE') return json(res,200,courseService.remove(mm[1],(await readBody(req)).confirm));
+    } catch(e) { return json(res,e.status||500,{error:e.status?e.message:'课程操作失败，请重试'}); }
   }
 
   /* ---- 会话 ---- */
   if (p === '/api/session/start' && m === 'POST') {
     const b = await readBody(req);
+    const current = currentSession();
+    if (current && !current.closed) return json(res, 409, { error: '已有进行中的签到，请先结束或取消当前签到' });
     const s = startSession(b.courseId, b.question);
     if (s.error) return json(res, 400, s);
     return json(res, 200, { ok: true, sessionId: s.id });
@@ -572,7 +583,23 @@ const handler = async (req, res) => {
     const s = currentSession();
     if (s) { s.closed = true; s.endsAt = Date.now(); saveSession(s); }
     activeSessionId = null;
-    return json(res, 200, { ok: true });
+    return json(res, 200, { ok: true, session: s ? sessionState(s) : null });
+  }
+
+  if (p === '/api/session/cancel' && m === 'POST') {
+    const b = await readBody(req);
+    if (!b || typeof b.sessionId !== 'string' || !b.sessionId.trim()) {
+      return json(res, 400, { error: '请指定要取消的签到' });
+    }
+    const s = currentSession();
+    if (!s || s.closed || s.id !== b.sessionId) {
+      return json(res, 409, { error: '当前签到已变化，请刷新后重试' });
+    }
+    if (s.records.length) return json(res, 409, { error: '已有学生提交，不能取消签到，请结束并保留记录' });
+    store.write('sessions', store.read('sessions', []).filter(session => session.id !== s.id));
+    activeSessionId = null;
+    tickets = new Map();
+    return json(res, 200, { ok: true, sessionId: s.id });
   }
 
   if (p === '/api/sessions' && m === 'GET') {
@@ -621,7 +648,7 @@ const handler = async (req, res) => {
     const list = store.read('students', []);
     added.forEach(x => list.push({ id: x.id, name: x.name, courseId }));
     store.write('students', list);
-    return json(res, 200, { ok: added.length, skipped: bad.length, total: getStudents(courseId).length, bad: bad.slice(0, 10) });
+    return json(res, 200, { ok: added.length, skipped: bad.length, total: getStudents(courseId).length, bad });
   }
 
   if (p === '/api/students/upload' && m === 'POST') {
@@ -634,6 +661,7 @@ const handler = async (req, res) => {
       buf = Buffer.from(String(b.fileBase64 || '').replace(/^data:[^,]*,/, ''), 'base64');
     } catch { return json(res, 400, { error: '文件读取失败' }); }
     if (!buf.length) return json(res, 400, { error: '文件是空的' });
+    if (buf.length > 20 * 1024 * 1024) return json(res, 400, { error: '文件不能超过20MB' });
 
     let rows = [];
     try {
@@ -656,6 +684,7 @@ const handler = async (req, res) => {
       return json(res, 400, { error: '解析失败：' + e.message + '（老式 .xls 请先另存为 .xlsx）' });
     }
 
+    if (!findCourse(courseId)) return json(res, 409, { error: '课程已删除，无法导入名单' });
     const { added, bad } = pickRoster(rows, getStudents(courseId));
     const list = store.read('students', []);
     added.forEach(x => list.push({ id: x.id, name: x.name, courseId }));
@@ -663,7 +692,7 @@ const handler = async (req, res) => {
     return json(res, 200, {
       ok: added.length, skipped: bad.length,
       total: getStudents(courseId).length,
-      bad: bad.slice(0, 10),
+      bad,
       rows: rows.length
     });
   }
@@ -768,7 +797,7 @@ const handler = async (req, res) => {
     let rowIdx = 4;
     list.forEach((s, si) => {
       const byId = new Map(s.records.map(r => [r.studentId, r]));
-      const correctText = `${letter(s.question.correct)}. ${s.question.options[s.question.correct] || ''}`;
+      const correctText = answers.format(s.question.correct, s.question.options);
       const batch = `第 ${si + 1} 次 · ${stamp(s.startedAt)}`;
 
       roster.forEach(stu => {
@@ -778,7 +807,7 @@ const handler = async (req, res) => {
           stu.id,
           String(stu.name).replace(/\s/g, ''),
           s.question.text,
-          r && r.answer >= 0 ? `${letter(r.answer)}. ${s.question.options[r.answer] || ''}` : '',
+          r && answers.answered(r.answer) ? answers.format(r.answer, s.question.options) : '',
           correctText,
           r ? (r.correct ? '对' : '错') : '',
           r ? (r.status === 'late' ? '迟到' : '到课') : '缺勤',
@@ -820,6 +849,35 @@ const handler = async (req, res) => {
     return res.end(Buffer.from(buf));
   }
 
+  if (await require('./lesson-plan/routes')(req, res, {url,m,json,store,getCourses})) return;
+  if (await require('./ppt/routes')(req, res, {url,m,json,readBody,store,getCourses})) return;
+
+  /* ---- 学情分析（独立模块，代码在 ../xueqing） ---- */
+  try {
+    if (await require('../xueqing/xueqing')(req, res, {
+      url, m, json, readBody, store, getCourses, getStudents, getSessions,
+      findCourse, stamp, localDate, letter, ExcelJS, round1
+    })) return;
+  } catch (e) {
+    console.error('[xueqing]', e);
+    if (!res.headersSent) return json(res, 500, { error: '学情分析出错：' + e.message });
+    try { res.end(); } catch {}
+    return;
+  }
+
+  /* ---- 作业批改（独立模块，代码在 ../server/grade） ---- */
+  try {
+    if (await require('./grade/grade')(req, res, {
+      url, m, json, readBody, store, getStudents, getSessions,
+      findCourse, stamp, localDate, letter, ExcelJS, round1
+    })) return;
+  } catch (e) {
+    console.error('[grade]', e);
+    if (!res.headersSent) return json(res, 500, { error: '作业批改出错：' + e.message });
+    try { res.end(); } catch {}
+    return;
+  }
+
   /* ---- 退出 ---- */
   if (p === '/api/quit' && m === 'POST') {
     json(res, 200, { ok: true });
@@ -827,7 +885,9 @@ const handler = async (req, res) => {
     return;
   }
 
-  json(res, 404, { error: 'not found' });
+  if (!res.headersSent) return json(res, 404, { error: 'not found' });
+  console.log('[warn] 响应已发出但路由穿透：', m, p);
+  try { res.end(); } catch {}
 };
 
 /* ---------------- 启动 ---------------- */
@@ -840,11 +900,11 @@ const handler = async (req, res) => {
   if (last) activeSessionId = last.id;
 })();
 
-http.createServer(handler).listen(PORT, '0.0.0.0', () => {
+http.createServer(handler).listen(PORT, HOST, () => {
   console.log('');
   console.log('  课中签到 v3  已启动');
   console.log(`  老师端  http://127.0.0.1:${PORT}/`);
-  console.log(`  学生端  http://${LOCAL_IP}:${PORT}/join  （同一 Wi-Fi）`);
+  console.log(`  学生端  ${ORIGIN}/join  ${HOST === '127.0.0.1' ? '（仅限本机）' : '（同一 Wi-Fi）'}`);
   console.log(`  数据目录  ${store.DATA_DIR}`);
   console.log(`  码 ${refreshMs() / 1000}s 刷新 · 有效 ${(refreshMs() * (graceSlices() + 1)) / 1000}s · 窗口 ${windowMs() / 1000}s`);
   if (activeSessionId) console.log(`  接着上次未结束的签到：${activeSessionId}`);

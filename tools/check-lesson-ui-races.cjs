@@ -1,0 +1,44 @@
+'use strict';
+// Unit checks for async controller behavior; these are not a browser acceptance test.
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
+let source=fs.readFileSync('server/lesson-plan/public/plan.js','utf8');
+source=source.slice(0,source.indexOf(' (async()=>{try{const results='))+'})();';
+source=source.replace(" $('#newTask').onclick=newTask;"," globalThis.controller={saveNamedVersion,setEditor:(t,p)=>{task=t;plan=p;step=4;activeSection=1;editingSection=true;dirty=true;sectionBaseline=structuredClone(t.plan.sections[1]);},perform,poll,accept,render,confirm,updateProgress,set:(t,n)=>{task=t;step=n;},get:()=>task,getForm:()=>form}; $('#newTask').onclick=newTask;");
+const elements=new Map(),input={disabled:false,isConnected:true},alreadyDisabled={disabled:true,isConnected:true};
+function element(k){if(!elements.has(k))elements.set(k,{hidden:true,textContent:'',onclick:null,addEventListener(){},querySelectorAll:()=>[]});return elements.get(k);}
+let response;
+const mounts=[];
+const ctx={console,structuredClone,URLSearchParams,setTimeout:()=>0,clearTimeout:()=>{},localStorage:{setItem(){}},history:{replaceState(){}},location:{hash:'',search:'',pathname:'/preparation'},window:{addEventListener(){},InclassUpload:{mount:(_,o)=>{mounts.push(o);return ()=>{};}}},document:{querySelector:element,querySelectorAll:s=>s.includes('input')?[input,alreadyDisabled]:[]},fetch:()=>new Promise(r=>response=r)};
+vm.createContext(ctx);vm.runInContext(source,ctx);
+(async()=>{
+ let frozen=false;await ctx.controller.perform(async()=>{frozen=input.disabled;});assert.equal(frozen,true,'editing must freeze while a save/upload is pending');
+ assert.equal(input.disabled,false);assert.equal(alreadyDisabled.disabled,true,'original disabled states must be preserved');
+ const dialog=element('#confirm');dialog.showModal=()=>{};dialog.close=()=>dialog.onclose();element('#safe').focus=()=>{};element('#risk').disabled=true;element('#safe').disabled=true;
+ const decision=ctx.controller.confirm('Leave?','Unsaved input');assert.equal(element('#risk').disabled,false,'risk choice must remain clickable inside a locked controller');assert.equal(element('#safe').disabled,false);element('#safe').onclick();assert.equal(await decision,false);
+ ctx.controller.set({id:'old',status:'running'},3);const pending=ctx.controller.poll();
+ ctx.controller.set({id:'new',status:'draft',title:'must preserve new task'},1);
+ response({ok:true,json:async()=>({id:'old',status:'complete'})});await pending;
+ assert.equal(ctx.controller.get().id,'new','late polling result must never replace current task');
+ ctx.controller.set({id:'progress',status:'running',run:{startedAt:Date.now(),progress:{activity:'正在编写教案内容',lastActivityAt:Date.now(),history:[{time:Date.now(),message:'读取要求'}],output:[{text:'正在安排教学环节。'}]}}},3);
+ const log=element('#progressHistory');log.innerHTML='';log.scrollHeight=500;log.clientHeight=220;log.scrollTop=0;
+ ctx.controller.updateProgress();assert.match(element('#progressActivity').textContent,/编写/);assert.match(log.innerHTML,/读取要求/);assert.equal(log.scrollTop,500,'new progress follows the latest event');
+ log.scrollTop=10;ctx.controller.get().run.progress.history.push({time:Date.now(),message:'写入教案'});ctx.controller.updateProgress();assert.equal(log.scrollTop,10,'reading older events must not be interrupted by polling');
+ assert.doesNotMatch(source,/progressOutput|workbuddyOutput|查看WorkBuddy中间输出/);
+ const t={id:'draft',status:'draft',title:'original',audience:'students',minutes:10,content:'addition',files:[{id:'file1',name:'one.md',file:'files/one.md'}],versions:[],revision:1,updatedAt:Date.now()};
+ ctx.controller.accept(t);ctx.controller.set(t,1);ctx.controller.render();
+ element('#requirements').oninput({target:{id:'f-title',value:'unsaved new title'}});
+ const removal=mounts.at(-1).onRemove({uid:'file1'});
+ response({ok:true,json:async()=>({...t,files:[],revision:2})});await removal;
+ assert.equal(ctx.controller.getForm().title,'unsaved new title','removing an attachment must preserve unsaved form input');
+ assert.equal(mounts.at(-1).files.length,0,'attachment removal must remount the actual controlled upload list');
+ const savedPlan={sections:[{title:'一、说明',blocks:[{type:'text',text:'原说明'}]},{title:'二、目标',blocks:[{type:'text',text:'原目标'}]}]},editedPlan=structuredClone(savedPlan);editedPlan.sections[1].blocks[0].text='修改后目标';
+ const editTask={...t,status:'complete',files:[],plan:savedPlan,requirementsRevision:0,versions:[{number:1,requirementsRevision:0,plan:savedPlan,file:'versions/1.docx'}]};
+ let editorRenders=0;Object.defineProperty(element('#stage'),'innerHTML',{configurable:true,set(){editorRenders++;},get(){return '';}});
+ ctx.controller.setEditor(editTask,editedPlan);ctx.controller.render();assert.equal(editorRenders,1);
+ const publishing=ctx.controller.perform(()=>ctx.controller.saveNamedVersion('\u8bfe\u5802\u7248'));assert.equal(input.disabled,true);
+ response({ok:true,json:async()=>({...editTask,plan:editedPlan,revision:2})});await new Promise(setImmediate);
+ assert.equal(ctx.controller.get().revision,2,'section draft must save first');assert.equal(editorRenders,1,'must not mount enabled controls while awaiting Word export');assert.equal(input.disabled,true);
+ response({ok:false,json:async()=>({error:'导出验证失败'})});await publishing;
+ assert.equal(editorRenders,2,'failed export renders the persisted draft');assert.equal(ctx.controller.get().plan.sections[1].blocks[0].text,'修改后目标');assert.equal(ctx.controller.get().versions.length,1);assert.equal(input.disabled,false);assert.match(element('#notice').textContent,/导出验证失败/);
+ console.log('lesson UI controller: editing freeze, disabled-state restoration, stale polling, attachment removal and input retention PASS (unit, not browser)');
+})().catch(e=>{console.error(e);process.exitCode=1;});

@@ -1,0 +1,21 @@
+'use strict';
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
+const {TWO_HOURS,runTimeoutMs}=require('../server/ppt/limits');
+assert.equal(TWO_HOURS,7200000);assert.equal(runTimeoutMs(),7200000);assert.equal(runTimeoutMs({timeoutMs:99999999}),7200000);
+const source=fs.readFileSync('server/ppt/public/ppt.js','utf8');const ctx=vm.createContext({outlineEditing:()=>false});
+vm.runInContext("let outlineViewing=false,step=3,method='auto',showHtmlPreview=false,current={status:'running',run:{phase:'outline'}};"+source.slice(source.indexOf('function workflowSteps(){'),source.indexOf('function frame(){')),ctx);
+assert.equal(JSON.stringify(vm.runInContext('workflowSteps().labels',ctx)),JSON.stringify(['填写要求','选择方式','生成大纲','生成PPT']));
+for(const [status,phase,active] of [['running','outline',3],['outline','outline',3],['running','html',4],['html-ready','html',4],['running','export',4],['complete','export',4],['failed','export',4]]){vm.runInContext(`current.status='${status}';current.run.phase='${phase}'`,ctx);assert.equal(vm.runInContext('workflowSteps().active',ctx),active);}
+vm.runInContext("current.deliveryMethod='manual';current.status='prepared'",ctx);assert.equal(vm.runInContext('workflowSteps().labels.length',ctx),4);
+for(const file of ['server/ppt/public/ppt.js','server/ppt/public/ppt.html','server/server.js'])assert.ok(!fs.readFileSync(file,'utf8').includes('ppt-website'));
+assert.ok(!source.includes('pptai'));assert.ok(!fs.existsSync('server/ppt/website.js'));
+const view=vm.createContext({window:{}});vm.runInContext(fs.readFileSync('server/ppt/public/ppt-html-view.js','utf8'),view);
+const task={id:'test',status:'html-ready',versions:[],htmlVersions:[{number:1,hash:'h',summary:'HTML',slides:[{title:'Lesson',file:'html/1.html'}]}]};
+const render=()=>view.window.PptHtmlView.render({task,version:task.htmlVersions[0],page:0,draft:'',connected:true});
+let html=render();assert.ok(html.includes('sandbox=""'));assert.ok(html.includes('data-action="confirm-html"'));assert.ok(!html.includes('htmlReviewed'));assert.ok(!html.includes('download-button'));assert.ok(html.includes('/html?version=1&page=0'));assert.ok(html.includes('导出可编辑PPT'));
+assert.ok(!html.replace(/<[^>]+>/g,'').includes('HTML'));assert.ok(!html.includes('页HTML课件'));assert.ok(!html.includes('制作反馈'));assert.ok(!html.includes('教师备注'));assert.ok(html.includes('<summary>本页演讲稿</summary>'));
+task.status='running';task.run={phase:'export'};html=render();assert.ok(html.includes('id="runningProgress"'));assert.ok(html.includes('<iframe'));assert.ok(html.includes('取消本次导出'));
+task.status='failed';task.error='Export failed';html=render();assert.ok(html.includes('Export failed'));assert.ok(html.includes('重试导出'));
+task.status='html-ready';delete task.run;
+task.versions.push({number:1,htmlHash:'h',file:'versions/1/lesson.pptx'});html=render();assert.ok(html.includes('download-button'));assert.ok(!html.includes('data-action="confirm-html"'));
+console.log('PASS: four teacher steps, version-bound export button, preview retained during export, local failure/retry, no HTML implementation terms');

@@ -1,0 +1,7 @@
+{
+  "name": "inclass-local-ui-components",
+  "private": true,
+  "scripts": {"build": "node build.cjs"},
+  "dependencies": {"element-plus": "2.14.0", "vue": "3.5.44"},
+  "devDependencies": {"esbuild": "0.25.11"}
+}

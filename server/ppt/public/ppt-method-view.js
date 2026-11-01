@@ -1,0 +1,5 @@
+'use strict';
+window.PptMethodView={methods({method,connection}){
+ const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+ return `<section class="panel"><div class="panel-heading"><h2>选择制作方式</h2></div><div class="method-grid"><button class="method-card ${method==='manual'?'selected':''}" data-action="method-manual"><span class="method-icon">↗</span><h3>手动调用 WorkBuddy</h3><p>复制完整任务，在独立对话中确认大纲和课件，需要时导出可编辑PPT。</p></button><button class="method-card ${method==='auto'?'selected':''}" data-action="method-auto"><span class="method-icon">⇄</span><h3>平台调用 WorkBuddy</h3><p>在这里确认大纲、预览和修改PPT，需要时导出可编辑文件。</p></button></div><div class="callout">${esc(connection.reason||'正在读取连接状态')}</div><p class="helper">每轮最长等待两小时。课件生成后可继续预览和修改，再按需导出可编辑PPT。</p><div class="savebar"><span></span><button class="primary" data-action="begin" ${method==='auto'&&!connection.ready?'disabled':''}>${method==='manual'?'准备完整任务':'先生成教学大纲'}</button></div></section>`;
+}};

@@ -1,0 +1,16 @@
+'use strict';
+const assert=require('node:assert/strict');
+const make=require('../server/lib/courses');
+const data={courses:[{id:'c1',name:'旧课程'},{id:'c2',name:'第二门'}],students:[{id:'90001',courseId:'c1'}],sessions:[{id:'s1',courseId:'c1',closed:true}],homework:[{id:'h1',courseId:'c1'}],gradebatches:[{id:'g1',hwId:'h1',courseId:'c1',status:'ready'}],settings:{activeCourseId:'c1'}};
+const store={read:(k,d)=>data[k]??d,write:(k,v)=>data[k]=v,uid:()=> 'new'};
+let active=null;const api=make(store,()=>active);
+assert.equal(api.list()[0].count,1);assert.equal(api.list()[0].sessions,1);assert.equal(api.list()[0].assignments,1);
+assert.throws(()=>api.create({name:''}),/课程/);
+const c=api.create({name:' 新课 ',term:'2026 秋',note:'备注'});assert.equal(c.note,'备注');
+api.update(c.id,{name:'新课修改',note:'新备注'});assert.equal(api.list().find(x=>x.id===c.id).note,'新备注');
+assert.throws(()=>api.remove('missing',true),/不存在/);assert.throws(()=>api.remove('c1',false),/确认/);
+active='c1';assert.throws(()=>api.remove('c1',true),/签到/);active=null;
+data.gradebatches[0].status='running';assert.throws(()=>api.remove('c1',true),/批改/);data.gradebatches[0].status='ready';
+api.remove('c1',true);assert(!api.list().some(x=>x.id==='c1'));assert.equal(data.students.length,1);assert.equal(data.sessions.length,1);assert(data.homework[0].deletedAt);assert(data.gradebatches[0].deletedAt);assert(data.courses.find(x=>x.id==='c1').deletedAt);assert.equal(data.settings.activeCourseId,'c2');
+api.create({name:'再创建'});assert(data.courses.some(x=>x.id==='c1'&&x.deletedAt));
+console.log('PASS course management: summaries, notes, validation, active/running guards, linked soft deletion preserves records');

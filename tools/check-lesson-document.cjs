@@ -1,0 +1,40 @@
+'use strict';
+const assert=require('node:assert/strict'),fs=require('node:fs');
+const doc=require('../server/lesson-plan/document');
+const ZIP=require('../server/node_modules/jszip');
+(async()=>{
+ assert.equal(typeof doc.exportDocx,'function','must implement actual native DOCX export');
+ const schema=doc.builtin();
+ assert.equal(schema.sections.length,9);
+ const blank=structuredClone(schema);for(const s of blank.sections)for(const b of s.blocks)if(b.type==='table')b.rows=b.headers.join('/')==='项目/内容'?b.rows.map(r=>[r[0],'']):[b.headers.map(h=>h==='时间'?'10':'')];
+ assert.throws(()=>doc.validate(blank,schema,10,{generated:true}),/空白|未完成/);
+ const plan=structuredClone(schema);
+ for(const section of plan.sections)for(const b of section.blocks){if(b.type==='text')b.text='可核对的教学内容';else b.rows=b.headers.join('/')==='项目/内容'?b.rows.map(r=>[r[0],'待教师填写']):[b.headers.map(h=>h==='时间'?'10':h==='实际记录'?'虚构已完成':'课堂活动')];}
+ const lostFields=structuredClone(plan);lostFields.sections[0].blocks[0].rows.pop();assert.throws(()=>doc.validate(lostFields,schema,10,{generated:true}),/填写|字段/);
+ assert.throws(()=>doc.validate(plan,schema,20),/时间|课时/);
+ const clean=doc.validate(plan,schema,10,{generated:true});
+ const boardEdit=structuredClone(clean),board=boardEdit.sections[6].blocks[0];board.headers.push('说明');board.rows.forEach(r=>r.push('保留备注'));
+ assert.equal(doc.validate(boardEdit,schema,10).sections[6].blocks[0].headers.length,3);
+ for(const title of ['八、板书设计','板书设计']){const customSchema=structuredClone(schema),customPlan=structuredClone(boardEdit);customSchema.sections[6].title=title;customPlan.sections[6].title=title;assert.equal(doc.validate(customPlan,customSchema,10).sections[6].blocks[0].headers.length,3);}
+ assert.throws(()=>doc.validate(boardEdit,schema,10,{generated:true}),/表头/,'model still follows template columns');
+ const boardZip=await ZIP.loadAsync(await doc.exportDocx(doc.validate(boardEdit,schema,10),'板书列调整'));assert.match(await boardZip.file('word/document.xml').async('string'),/保留备注/);
+ board.headers.splice(0,2);board.rows.forEach(r=>r.splice(0,2));assert.equal(doc.validate(boardEdit,schema,10).sections[6].blocks[0].headers[0],'说明');
+ board.headers[0]='';assert.throws(()=>doc.validate(boardEdit,schema,10),/表头不能为空/);
+ assert.equal(clean.sections[8].blocks[0].rows[0][2],'');
+ const overflow=structuredClone(plan);overflow.sections[8].blocks[0].rows[0].push('');assert.equal(doc.validate(overflow,schema,10,{generated:true}).sections[8].blocks[0].rows[0].length,3);assert.throws(()=>doc.validate(overflow,schema,10),/列数/);overflow.sections[8].blocks[0].rows[0][3]='nonempty';assert.throws(()=>doc.validate(overflow,schema,10,{generated:true}),/列数/);
+ const buffer=await doc.exportDocx(clean,'虚构课 <&>\u0000');
+ const zip=await ZIP.loadAsync(buffer),xml=await zip.file('word/document.xml').async('string');
+ assert.match(xml,/w:tbl/);assert.match(xml,/虚构课 &lt;&amp;&gt;/);assert.doesNotMatch(xml,/虚构已完成/);
+ assert.equal((xml.match(/<w:tbl>/g)||[]).length,5);
+ const parsed=await doc.inspectTemplate(buffer);
+ assert.equal(parsed.sections.length,9);assert.equal(doc.timeTables(parsed).length,1);
+ await assert.rejects(()=>doc.inspectTemplate(Buffer.from('bad')),/DOCX|Word/);
+ const bomb=new ZIP();bomb.file('word/document.xml','a'.repeat(13*1024*1024));
+ const bombBuffer=await bomb.generateAsync({type:'nodebuffer',compression:'DEFLATE'});
+ await assert.rejects(()=>doc.inspectTemplate(bombBuffer),/DOCX|Word/);
+ const forgedZip=new ZIP();forgedZip.file('[Content_Types].xml','<Types/>');forgedZip.file('word/document.xml','a'.repeat(13*1024*1024));
+ const forged=await forgedZip.generateAsync({type:'nodebuffer',compression:'DEFLATE'});
+ for(let p=0;p<forged.length-46;p++)if(forged.readUInt32LE(p)===0x02014b50&&forged.subarray(p+46,p+46+forged.readUInt16LE(p+28)).toString()==='word/document.xml')forged.writeUInt32LE(1,p+24);
+ await assert.rejects(()=>doc.inspectTemplate(forged),/解压|过大/);
+ console.log('lesson document: structure, timing, reflection, editable DOCX, template round trip and invalid files PASS');
+})().catch(e=>{console.error(e);process.exitCode=1;});

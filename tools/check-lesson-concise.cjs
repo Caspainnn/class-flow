@@ -1,0 +1,23 @@
+'use strict';
+const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),{EventEmitter}=require('node:events'),{PassThrough}=require('node:stream');
+const {createService}=require('../server/lesson-plan/service'),doc=require('../server/lesson-plan/document');
+const root=path.resolve('.tmp-lesson-concise-'+process.pid);let child;
+const service=createService({root,getSettings:()=>({workbuddy:{enabled:true,path:process.execPath}}),launch:()=>{child=new EventEmitter();child.stdout=new PassThrough();child.stderr=new PassThrough();return child;}});
+(async()=>{
+ let t=service.create({title:'第二章 测试主题',audience:'隔离测试班',minutes:10,content:'隔离教学数据',courseName:'测试课程',textbook:'无指定教材',teacher:'测试教师',location:'测试教室',lessonType:'实践与结果研讨',previousTopic:'第一学时 基础概念'});
+ const unchanged=service.update(t.id,{...t,revision:t.revision});assert.equal(unchanged.revision,t.revision);
+ t=service.start(t.id,{revision:t.revision});const dir=path.join(root,t.id,'runs',t.run.id),input=JSON.parse(fs.readFileSync(path.join(dir,'input.json')));
+ assert.equal(input.requirements.teacher,'测试教师');for(const text of ['以“能”开头','课堂讨论与检测','课后实践与评价','教学准备仅列教师','建议60字以内','已有基础、困难、诊断、支持','一律按不会、尚未学习处理','按教师会准备好且均可用','作业与思考题章节不得展示答案'])assert.ok(input.qualityRules.join('\n').includes(text),text);
+ assert.deepEqual(input.template.sections[3].blocks.map(b=>b.label),['已有基础','困难','诊断','支持']);const prompt=fs.readFileSync(path.join(dir,'prompt.txt'),'utf8');assert.ok(!prompt.includes('对没有提供的学情做假设并标为教师需核对'));
+ const p=structuredClone(input.template);for(const section of p.sections)for(const b of section.blocks)if(b.type==='text')b.text=/教学目标/.test(section.title)?'1）能解释概念\n2）能完成练习':'• 简要说明';else b.rows=b.headers.join('/')==='项目/内容'?b.rows.map(r=>[r[0],'模型擅自改写']):[b.headers.map(h=>h==='时间'?'10':h==='实际记录'?'':'简要内容')];
+ fs.writeFileSync(path.join(dir,'plan.json'),JSON.stringify(p));child.emit('close',0);
+ for(let i=0;i<100&&service.get(t.id).status==='running';i++)await new Promise(r=>setTimeout(r,20));
+ t=service.get(t.id);assert.equal(t.status,'complete',t.error);assert.deepEqual(t.plan.sections[0].blocks[0].rows.map(r=>r[1]),['测试课程','第二章 测试主题','隔离测试班','10分钟','无指定教材','测试教师／测试教室']);assert.equal(t.plan.sections[1].blocks[0].text,'• 能解释概念\n• 能完成练习');
+ const zip=await doc.openPackage(fs.readFileSync(path.join(root,t.id,t.versions[0].file))),xml=await doc.readEntry(zip,'word/document.xml',{bytes:0});
+ assert.ok(xml.includes('1. 知识与理解'));assert.ok(xml.includes('难点与突破策略'));assert.ok(xml.includes('w:eastAsia="等线"'));assert.ok(xml.includes('w:sz w:val="44"'));
+ assert.deepEqual(t.plan.summary,{lessonType:'实践与结果研讨',previousTopic:'第一学时 基础概念'});assert.ok(xml.includes('课型：实践与结果研讨　｜　课时：10分钟　｜　衔接：第一学时 基础概念'));assert.ok(xml.includes('w:color w:val="7F8C9B"'));assert.ok(xml.indexOf('课型：')<xml.indexOf('一、课程基本信息'));assert.ok(xml.includes('<w:tab/>'));assert.ok(xml.includes('<w:ind w:left="1080" w:hanging="360"/>'));assert.ok(input.qualityRules.join('').includes('主要内容列只概括'));assert.ok(input.qualityRules.join('').includes('最多50字'));
+ const withAnswer=structuredClone(t.plan);withAnswer.sections[7].blocks[0].text='• 说明模型作用。\n参考答案：生成样本。';assert.throws(()=>doc.validate(withAnswer,t.template.schema,t.minutes,{generated:true}),/移除答案/);assert.doesNotThrow(()=>doc.validate(withAnswer,t.template.schema,t.minutes));
+ const first=structuredClone(t.plan.sections[0]);first.blocks[0].rows[5][1]='另一测试教师／另一教室';t=service.saveSection(t.id,{revision:t.revision,index:0,section:first});assert.equal(t.teacher,'另一测试教师');assert.equal(t.location,'另一教室');assert.equal(t.versions.length,1);
+ t=await service.saveVersion(t.id,{revision:t.revision,name:'基本信息修改'});t=await service.restore(t.id,{revision:t.revision,version:1});assert.equal(t.teacher,'测试教师');assert.equal(t.location,'测试教室');assert.equal(t.plan.summary.previousTopic,'第一学时 基础概念');
+ console.log('lesson concise: teacher-owned basic info, prompt constraints, objective bullets and Word hierarchy PASS');
+})().catch(e=>{console.error(e);process.exitCode=1;}).finally(()=>fs.rmSync(root,{recursive:true,force:true}));

@@ -1,0 +1,5 @@
+'use strict';
+const http=require('node:http'),fs=require('node:fs'),path=require('node:path');
+const root=path.resolve(__dirname,'..'),port=Number(process.env.DASHBOARD_PREVIEW_PORT||3014);
+const files={'/prototype/dashboard.html':['prototype/dashboard.html','text/html'],'/prototype/dashboard.css':['prototype/dashboard.css','text/css'],'/prototype/dashboard.js':['prototype/dashboard.js','text/javascript']};
+http.createServer((req,res)=>{if(!/^(localhost|127\.0\.0\.1|\[::1\])(?::\d+)?$/.test(req.headers.host||'')){res.writeHead(403);return res.end();}if(!['GET','HEAD'].includes(req.method)){res.writeHead(405);return res.end();}const p=new URL(req.url,'http://localhost').pathname;if(p==='/'){res.writeHead(302,{Location:'/prototype/dashboard.html#overview'});return res.end();}const f=files[p];if(!f){res.writeHead(404);return res.end();}res.writeHead(200,{'Content-Type':f[1]+'; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'});res.end(req.method==='HEAD'?undefined:fs.readFileSync(path.join(root,f[0])));}).listen(port,'127.0.0.1',()=>console.log(`Dashboard prototype http://127.0.0.1:${port}/prototype/dashboard.html#overview`));

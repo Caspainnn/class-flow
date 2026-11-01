@@ -1,0 +1,23 @@
+'use strict';
+const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict'),{spawn}=require('node:child_process'),http=require('node:http');
+const root=path.resolve(__dirname,'..'),dir=fs.mkdtempSync(path.join(root,'.tmp-dashboard-http-')),port=31914,origin='http://127.0.0.1:'+port;
+const save=(n,v)=>fs.writeFileSync(path.join(dir,n+'.json'),JSON.stringify(v));
+save('courses',[{id:'isolated',name:'隔离课程',term:'测试学期'}]);save('students',[{id:'1',courseId:'isolated',name:'隔离学生'}]);save('settings',{});save('sessions',[]);save('homework',[]);save('gradebatches',[]);save('questionnaires',{surveys:[]});
+const child=spawn(process.execPath,[path.join(root,'server/server.js')],{cwd:root,env:{...process.env,DATA_DIR:dir,PORT:String(port),HOST:'127.0.0.1'},windowsHide:true,stdio:['ignore','pipe','pipe']});let log='';child.stdout.on('data',b=>log+=b);child.stderr.on('data',b=>log+=b);
+const foreign=p=>new Promise((resolve,reject)=>http.get(origin+p,{headers:{Host:'evil.example'}},r=>{r.resume();resolve(r.statusCode);}).on('error',reject));
+(async()=>{try{
+ let ready=false;for(let i=0;i<160;i++){try{if((await fetch(origin+'/api/ping')).ok){ready=true;break;}}catch{}await new Promise(r=>setTimeout(r,100));}assert.ok(ready,log);
+ const before=fs.readFileSync(path.join(dir,'sessions.json'),'utf8');
+ const d=await (await fetch(origin+'/api/dashboard?period=all')).json();assert.equal(d.courses[0].id,'isolated');assert.equal(d.sessions.length,0);assert.equal(d.templateCounts.ppt,0);assert.equal(d.templateCounts.plan,1);assert.equal(d.resources.length,0);assert.ok(!JSON.stringify(d).includes('隔离学生'));
+ for(const p of ['/dashboard','/dashboard/style.css','/dashboard/view.js','/dashboard/app.js'])assert.equal((await fetch(origin+p)).status,200,p);
+ const embedded=await (await fetch(origin+'/dashboard',{headers:{'Sec-Fetch-Dest':'iframe'}})).text();assert.ok(embedded.includes('/dashboard/app.js'));assert.ok(!embedded.includes('虚构'));
+ const shell=await (await fetch(origin+'/shell.js')).text();assert.ok(shell.indexOf("t: '数据看板'")>shell.indexOf("t: '工作台'"));assert.ok(!shell.includes("k: 'xq-dash'"));
+ const old=await fetch(origin+'/xueqing?tab=dash&courseId=isolated',{redirect:'manual'});assert.equal(old.status,302);assert.equal(old.headers.get('location'),'/dashboard?courseId=isolated');
+ assert.equal((await fetch(origin+'/api/dashboard?period=custom&from=2026-02-30&to=2026-03-01')).status,400);
+ assert.equal((await fetch(origin+'/api/dashboard',{method:'POST'})).status,405);
+ assert.equal(await foreign('/api/dashboard'),403);assert.equal(await foreign('/dashboard'),403);
+ assert.equal((await fetch(origin+'/api/dashboard',{headers:{'Sec-Fetch-Site':'cross-site'}})).status,403);
+ const xq=await (await fetch(origin+'/xueqing?tab=warn',{headers:{'Sec-Fetch-Dest':'iframe'}})).text();assert.ok(!xq.includes('data-p="p1">数据看板'));
+ assert.equal(fs.readFileSync(path.join(dir,'sessions.json'),'utf8'),before);
+ console.log('PASS dashboard HTTP: isolated true-data source, formal assets, empty states, sidebar/mobile routing, old link migration, validation, readonly and teacher host protections');
+ }finally{child.kill();await new Promise(r=>child.exitCode!==null?r():child.once('exit',r));}})().catch(e=>{console.error(e);process.exitCode=1;});

@@ -1,0 +1,23 @@
+'use strict';
+const assert=require('node:assert/strict'),fs=require('node:fs'),os=require('node:os'),path=require('node:path'),{EventEmitter}=require('node:events');
+const {createService,validateResult,requirements}=require('./questionnaire-ai.cjs');
+const req={goal:'了解GAN课堂的学习困难',audience:'大一学生',focus:'节奏、练习与难点',count:4};
+const output={title:'GAN课堂反馈',description:'请按实际体验填写。',questions:[{type:'single',title:'课堂节奏如何？',required:true,options:['偏快','适中','偏慢']},{type:'multi',title:'需要哪些支持？',required:true,options:['示例','练习']},{type:'scale',title:'对核心概念的理解程度？',required:true,low:'完全不理解',high:'非常理解'},{type:'text',title:'还有什么建议？',required:false}]};
+const root=fs.mkdtempSync(path.join(os.tmpdir(),'inclass-questionnaire-ai-'));let child,dir,args;
+const launch=(cmd,a,opts)=>{args=a;dir=opts.cwd;child=new EventEmitter();child.stdout=new EventEmitter();child.stderr=new EventEmitter();child.kill=()=>{child.emit('close',1);};return child;};
+const service=createService({root,getSettings:()=>({workbuddy:{enabled:true,path:__filename}}),launch});
+(async()=>{
+ assert.throws(()=>requirements({...req,count:0}),/题量/);assert.throws(()=>requirements({...req,goal:''}),/目的/);assert.throws(()=>requirements({...req,count:4.5}),/题量/);
+ assert.equal(validateResult(output,4).questions.length,4);assert.throws(()=>validateResult({...output,questions:output.questions.slice(1)},4),/题量/);
+ assert.throws(()=>validateResult({...output,questions:output.questions.map((q,i)=>i? q:{...q,type:'html'})},4),/题型/);
+ assert.throws(()=>validateResult({...output,questions:output.questions.map((q,i)=>i? q:{...q,options:['相同','相同']})},4),/重复/);
+ assert.throws(()=>validateResult({...output,questions:output.questions.map((q,i)=>i? q:{...q,title:'请填写你的姓名'})},4),/身份/);
+ const job=service.start(req);assert.equal(job.status,'running');assert.ok(!JSON.stringify(job).includes(root));assert.throws(()=>service.start(req),/正在生成/);
+ assert.ok(!args.includes('Bash'));assert.ok(args.includes('Read,Write,Edit'));const input=JSON.parse(fs.readFileSync(path.join(dir,'input.json'),'utf8'));assert.equal(input.requirements.goal,req.goal);assert.ok(!('students' in input));
+ fs.writeFileSync(path.join(dir,'questionnaire.json'),JSON.stringify(output));child.stdout.emit('data',Buffer.from('{"type":"assistant"}\n'));child.emit('close',0);assert.equal(service.get(job.id).status,'complete');assert.equal(service.get(job.id).result.title,output.title);
+ const next=service.start(req);child.emit('close',0);assert.equal(service.get(next.id).status,'failed');assert.match(service.get(next.id).error,/交付/);
+ const cancelled=service.start(req);service.cancel(cancelled.id);assert.equal(service.get(cancelled.id).status,'cancelled');assert.equal(service.get(job.id).status,'complete');
+ const interrupted=service.start(req);const restarted=createService({root,getSettings:()=>({})});assert.equal(restarted.get(interrupted.id).status,'failed');assert.match(restarted.get(interrupted.id).error,/重启/);child.emit('close',1);
+ assert.throws(()=>service.get('../settings'),/不存在/);assert.equal(service.list().length,4);
+ console.log('PASS: requirements, strict draft schema, unsupported types/duplicates/identity rejected, restricted CLI, real file handoff, failure/cancel/restart persistence');
+})().catch(e=>{console.error(e);process.exitCode=1;}).finally(()=>fs.rmSync(root,{recursive:true,force:true}));

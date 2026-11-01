@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>WorkBuddy 设置 · 一堂课</title>
+<link rel="stylesheet" href="/shell.css">
+<style>
+:root{--ink:#17191c;--ink2:#666b73;--ink3:#9aa0a8;--line:#e6e8ec;--line2:#f2f3f5;--blue:#185FA5;--ok:#1D9E75;--amber:#BA7517}
+body{margin:0;font-family:-apple-system,"Segoe UI","Microsoft YaHei",sans-serif;background:#f4f5f7;color:var(--ink);font-size:13px}
+.wrap{max-width:1000px;margin:0 auto;padding:22px 18px 60px}
+h1{font-size:18px;font-weight:500;margin:0}
+.sub{font-size:12px;color:var(--ink2);margin-top:4px}
+.card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:18px 20px;margin-bottom:12px}
+.card h2{font-size:13px;font-weight:500;margin:0 0 14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.card h2 span{font-weight:400;color:var(--ink3);font-size:11.5px}
+.card h2 .rt{margin-left:auto}
+.wsplit{display:flex;gap:14px;align-items:flex-start}
+.wside{flex:0 0 240px;position:sticky;top:0;padding:10px}
+.witem{padding:11px 12px;border-radius:9px;cursor:pointer}
+.witem:hover{background:#f4f6f8}
+.witem.on{background:#eef2f7}
+.witem .wt{font-size:13px;font-weight:500;display:flex;align-items:center;gap:7px}
+.witem .wd{font-size:11px;color:var(--ink3);margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.witem .tag{margin-left:auto}
+.wsec{display:none}.wsec.on{display:block}
+.dotc{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--ok)}
+.wstate{display:flex;align-items:center;gap:9px;background:#f7f9fb;border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:14px;font-size:12.5px}
+.wstate i{width:8px;height:8px;border-radius:50%;background:var(--ok);flex:none;box-shadow:0 0 0 3px rgba(29,158,117,.14)}
+.wstate.off i{background:var(--amber);box-shadow:0 0 0 3px rgba(186,117,23,.14)}
+.wstate b{font-weight:500}
+.wstate .s{margin-left:auto;font-size:11px;color:var(--ink3)}
+.fld{display:flex;flex-direction:column;gap:6px;margin-bottom:12px}
+.fld.g1{flex:1;min-width:170px}
+.fld>label{font-size:11.5px;color:var(--ink3)}
+.row{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px;align-items:center}
+input[type=text],select{font-family:inherit;font-size:12.5px;color:var(--ink);padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:#fff;outline:none;width:100%}
+.pathbox{font-family:ui-monospace,Menlo,monospace;font-size:11.5px;color:var(--ink2);background:#f7f8fa;border:1px solid var(--line);border-radius:8px;padding:9px 11px;word-break:break-all;line-height:1.7}
+.btn{font-family:inherit;font-size:12.5px;padding:8px 14px;border-radius:8px;border:1px solid var(--line);background:#fff;color:var(--ink);cursor:pointer;white-space:nowrap}
+.btn:hover{border-color:#cfd6de;background:#fafbfc}
+.btn.mini{padding:4px 10px;font-size:11.5px}
+.btn.pri{background:var(--ink);border-color:var(--ink);color:#fff}
+.opts{display:flex;flex-direction:column;gap:9px}
+.opt{display:flex;align-items:flex-start;gap:9px;font-size:12.5px;color:var(--ink2);line-height:1.6;cursor:pointer}
+.opt input{margin:3px 0 0;accent-color:var(--blue);flex:none}
+.note{font-size:11.5px;color:var(--ink3);line-height:1.9;margin-top:12px;padding-top:12px;border-top:1px solid var(--line2)}
+.note b{color:var(--ink2);font-weight:500}
+.actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:14px;padding-top:12px;border-top:1px solid var(--line2)}
+.actions .sp{flex:1}
+.hint{font-size:11.5px;color:var(--ink3);line-height:1.85;margin-top:8px}
+.tag{font-size:10.5px;padding:2px 7px;border-radius:5px;background:#f1f2f5;color:var(--ink2)}
+.tag.ok{background:#eaf7f1;color:#0F6E56}
+.tag.warn{background:#fdf3e3;color:#8a5a12}
+@media (max-width:760px){.wsplit{flex-direction:column}.wside{position:static;flex:none;width:100%}}
+.toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);background:#17191c;color:#fff;font-size:12.5px;padding:8px 16px;border-radius:8px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:99;max-width:80vw}
+.toast.on{opacity:1}
+</style>
+<link rel="icon" type="image/svg+xml" href="/assets/logo.svg?v=20261026">
+</head>
+<body class="shelled" data-active="wb">
+<div class="app"><aside class="sh-side" id="shSide"></aside>
+<main class="sh-main">
+<div class="wrap">
+  <div style="margin-bottom:4px">
+    <h1>WorkBuddy 设置</h1>
+    <div class="sub">平台调用 WorkBuddy 的所有功能，左边选功能，右边改参数；以后新功能会出现在左边的列表里</div>
+  </div>
+
+  <div class="wsplit" style="margin-top:16px">
+    <aside class="wside card">
+      <div class="witem on" data-k="link" onclick="wsec('link')">
+        <div class="wt"><span class="dotc" id="dot"></span>连接</div>
+        <div class="wd" id="sideLink">检测中…</div>
+      </div>
+      <div class="witem" data-k="grade" onclick="wsec('grade')">
+        <div class="wt">批改作业<span class="tag ok" id="sideGrade">使用中</span></div>
+        <div class="wd">作业批改由它完成</div>
+      </div>
+      <div class="witem" data-k="quiz" onclick="wsec('quiz')">
+        <div class="wt">出题与讲评<span class="tag" style="border:1px dashed var(--line)">规划中</span></div>
+        <div class="wd">生成随堂题、写讲评稿</div>
+      </div>
+      <div class="witem" data-k="report" onclick="wsec('report')">
+        <div class="wt">学情小结<span class="tag" style="border:1px dashed var(--line)">规划中</span></div>
+        <div class="wd">生成可发家长的一周小结</div>
+      </div>
+    </aside>
+
+    <div style="flex:1;min-width:0">
+      <div class="wsec on" id="wsec-link">
+        <div class="card">
+          <h2>连接 <span>所有功能都跑在这条连接上</span><div class="rt"><span class="tag" id="wbTag">…</span></div></h2>
+          <div class="wstate" id="wstate">
+            <i></i>
+            <div><b id="wTitle">检测中…</b><div style="font-size:11.5px;color:var(--ink3);margin-top:3px" id="wSub"></div></div>
+            <div class="s" id="wLat"></div>
+          </div>
+          <div class="fld"><label>程序位置</label><div class="pathbox" id="wPath">—</div></div>
+          <div class="actions" style="border-top:none;padding-top:6px;margin-top:0">
+            <button class="btn mini" onclick="probe()">重新检测</button>
+            <button class="btn mini" onclick="togglePathInput()">手动指定路径</button>
+            <div class="sp"></div>
+            <button class="btn mini" onclick="disconnect()">断开连接</button>
+          </div>
+          <div class="row" id="pathRow" style="display:none;margin-top:8px">
+            <input type="text" id="pathIn" style="flex:1;min-width:0" placeholder="粘贴 codebuddy 完整路径，例如 E:\software\WorkBuddy\resources\app.asar.unpacked\cli\dist\codebuddy-lite-wb.mjs">
+            <button class="btn mini pri" onclick="manualPath()" style="white-space:nowrap">检测并连接</button>
+          </div>
+          <div class="note">
+            连上它，平台就能<b>用你自己 WorkBuddy 的额度</b>在后台干活，不额外付费。
+            作业原文会交给 WorkBuddy 处理，结果存在本机 <b>data\</b> 目录。<br>
+            WorkBuddy 升级后如果显示未连接，点「重新检测」就行；连不上也可以在批改时改用「手动调用」，功能不受影响。
+          </div>
+          <div class="note" style="margin-top:8px">
+            <b>反复检测都提示「超时无响应」？</b>这说明本机 WorkBuddy 的命令行模式当前不可用（桌面版占用或版本自带的问题），不是平台坏了。可以按顺序试：
+            ① 完全退出 WorkBuddy 桌面版后，再回来点「重新检测」；
+            ② 关闭系统代理（设置 → 网络和 Internet → 代理）后重新检测；
+            ③ 都不行就用批改页的「手动调用」，成绩照样进学情分析。
+          </div>
+        </div>
+      </div>
+
+      <div class="wsec" id="wsec-grade">
+        <div class="card">
+          <h2>批改作业 <span>平台调用 WorkBuddy 逐份批改学生作业时使用这些参数</span></h2>
+          <div class="row">
+            <div class="fld g1"><label for="model">批改用模型</label>
+              <select id="model">
+                <option value="default">default（跟随 WorkBuddy 当前设置）</option>
+                <option value="deep-model">deep-model（更准，慢一点）</option>
+                <option value="fast-model">fast-model（快，适合客观题）</option>
+              </select>
+            </div>
+            <div class="fld" style="width:150px"><label for="timeout">单份超时（秒）</label>
+              <input type="text" id="timeout" value="60">
+            </div>
+          </div>
+          <div class="opts">
+            <label class="opt"><input type="checkbox" id="optBg" checked><span>在后台跑，不弹 WorkBuddy 窗口</span></label>
+            <label class="opt"><input type="checkbox" id="optHist" checked><span>不把批改过程写进 WorkBuddy 的对话历史</span></label>
+            <label class="opt"><input type="checkbox" id="optRaw"><span>保留每次批改的原始返回，方便日后核对</span></label>
+          </div>
+          <div class="actions">
+            <span class="hint" style="margin:0" id="saveHint"></span>
+            <div class="sp"></div>
+            <button class="btn pri" onclick="save()">保存</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="wsec" id="wsec-quiz">
+        <div class="card">
+          <h2>出题与讲评 <span style="font-size:10px;border:1px dashed var(--line);border-radius:4px;padding:0 4px">规划中</span></h2>
+          <div class="hint" style="margin:0">让 WorkBuddy 根据本课知识点生成随堂题、给全班答题写讲评稿。功能上线后，参数会出现在这里。</div>
+        </div>
+      </div>
+
+      <div class="wsec" id="wsec-report">
+        <div class="card">
+          <h2>学情小结 <span style="font-size:10px;border:1px dashed var(--line);border-radius:4px;padding:0 4px">规划中</span></h2>
+          <div class="hint" style="margin:0">把一周的出勤、答题、作业数据交给 WorkBuddy，生成一段可发家长的文字小结。功能上线后，参数会出现在这里。</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</main></div>
+<script src="/shell.js"></script>
+<script>
+'use strict';
+const $ = id => document.getElementById(id);
+
+function wsec(k) {
+  document.querySelectorAll('.witem').forEach(i => i.classList.toggle('on', i.dataset.k === k));
+  document.querySelectorAll('.wsec').forEach(s => s.classList.toggle('on', s.id === 'wsec-' + k));
+}
+
+async function api(p, opt) {
+  const r = await fetch(p, opt);
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.error || ('HTTP ' + r.status));
+  return j;
+}
+
+function render(wb) {
+  const on = !!wb.enabled;
+  $('wbTag').textContent = on ? '已连接' : '未连接';
+  $('wbTag').className = 'tag ' + (on ? 'ok' : 'warn');
+  $('dot').style.background = on ? 'var(--ok)' : 'var(--amber)';
+  $('sideLink').textContent = on ? ('WorkBuddy' + (wb.version ? ' v' + wb.version : '') + ' · 已登录') : '未连接 WorkBuddy';
+  $('wTitle').textContent = on ? '已连接' : '未连接';
+  $('wSub').textContent = (wb.version ? 'WorkBuddy v' + wb.version + ' · ' : '') + (on ? '账号已登录' : (wb.lastError || '点「重新检测」'));
+  $('wLat').textContent = on ? '延迟正常' : '';
+  $('wstate').querySelector('.wstate i, i').style.background = on ? 'var(--ok)' : 'var(--amber)';
+  $('wPath').textContent = wb.path || '（未检测到，点「重新检测」自动查找，或手动指定路径）';
+  $('model').value = wb.model || 'default';
+  $('timeout').value = Math.round((wb.timeoutMs || 60000) / 1000);
+  $('optBg').checked = wb.background !== false;
+  $('optHist').checked = wb.noHistory !== false;
+  $('optRaw').checked = !!wb.keepRaw;
+}
+
+async function load() { render(await api('/api/gb/settings')); }
+async function probe() {
+  $('wTitle').textContent = '检测中…';
+  $('wSub').textContent = '正在逐个尝试候选路径，最多约 30 秒';
+  render(await api('/api/gb/probe', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }));
+}
+function togglePathInput() {
+  const r = $('pathRow');
+  const show = r.style.display === 'none';
+  r.style.display = show ? 'flex' : 'none';
+  if (show) $('pathIn').focus();
+}
+async function manualPath() {
+  const p = $('pathIn').value.trim();
+  if (!p) { toast('先粘贴 codebuddy 的完整路径'); return; }
+  $('wTitle').textContent = '检测中…';
+  $('wSub').textContent = '正在试跑你指定的路径，最多约 30 秒';
+  render(await api('/api/gb/probe', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ path: p }) }));
+}
+async function disconnect() {
+  render(await api('/api/gb/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'disconnect' }) }));
+}
+async function save() {
+  const body = {
+    model: $('model').value,
+    timeoutMs: (Number($('timeout').value) || 60) * 1000,
+    background: $('optBg').checked,
+    noHistory: $('optHist').checked,
+    keepRaw: $('optRaw').checked,
+  };
+  render(await api('/api/gb/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }));
+  $('saveHint').textContent = '已保存';
+  setTimeout(() => $('saveHint').textContent = '', 1500);
+}
+load().catch(e => { $('wTitle').textContent = '加载失败'; $('wSub').textContent = e.message; });
+</script>
+<div class="toast" id="toast"></div>
+<script>
+function toast(t) {
+  const el = document.getElementById('toast');
+  el.textContent = t;
+  el.classList.add('on');
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => el.classList.remove('on'), 2400);
+}
+</script>
+</body>
+</html>

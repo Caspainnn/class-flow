@@ -1,0 +1,15 @@
+'use strict';
+// Explicit real-model check. Creates only isolated fictional data and consumes CLI quota.
+const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict'),{spawn}=require('node:child_process'),Q=require('../prototype/questionnaire-model');
+if(!process.argv.includes('--real')){console.log('Run with --real to verify the connected CLI using fictional survey data (uses model quota).');process.exit(0);}
+const root=path.resolve('.tmp-questionnaire-real-check-'+Date.now()),origin='http://127.0.0.1:31845';fs.mkdirSync(root);const wb=JSON.parse(fs.readFileSync('data/settings.json','utf8')).workbuddy;
+for(const [name,data]of Object.entries({settings:{activeCourseId:'fiction',workbuddy:wb},courses:[{id:'fiction',name:'虚构课程验证'}],students:[],sessions:[]}))fs.writeFileSync(path.join(root,name+'.json'),JSON.stringify(data));
+const child=spawn(process.execPath,[path.resolve('server/server.js')],{env:{...process.env,HOST:'127.0.0.1',PORT:'31845',DATA_DIR:root},windowsHide:true,stdio:['ignore','pipe','pipe']});let logs='';child.stderr.on('data',b=>logs+=b);child.stdout.on('data',b=>logs+=b);
+async function api(p,body,method='POST'){const r=await fetch(origin+p,body?{method,headers:{'Content-Type':'application/json',Origin:origin},body:JSON.stringify(body)}:{});const d=await r.json();assert.ok(r.ok,JSON.stringify(d));return d;}
+(async()=>{try{
+ let ready=false;for(let i=0;i<200;i++){try{if((await fetch(origin+'/api/ping')).ok){ready=true;break;}}catch{}if(child.exitCode!==null)break;await new Promise(r=>setTimeout(r,200));}assert.equal(child.exitCode,null,logs);assert.ok(ready,'Isolated server did not become ready: '+logs);
+ const start=await api('/api/questionnaire-ai',{goal:'虚构验证：了解一节人工智能导论课的学习体验，不测试知识对错',audience:'虚构大一学生',focus:'调查课堂节奏、学习支持需求，最后一道为选填简答建议；不收集身份信息。',count:3});console.log('Real generation started: '+start.id);
+ let job;for(let i=0;i<120;i++){job=await api('/api/questionnaire-ai/'+start.id);if(job.status!=='running')break;if(i%10===0)console.log(job.stage);await new Promise(r=>setTimeout(r,2000));}
+ assert.equal(job.status,'complete',job.error||job.stage);assert.equal(job.result.questions.length,3);let state=await api('/api/questionnaires');const draft=Q.blank('fiction');draft.title=job.result.title;draft.description=job.result.description;draft.aiJobId=job.id;draft.questions=job.result.questions.map(q=>({...Q.question(q.type),...q,options:q.options?q.options.map(text=>({id:Q.uid(),text})):[]}));state.surveys.push(draft);state=await api('/api/questionnaires',state,'PUT');assert.equal(state.surveys[0].status,'draft');assert.equal(state.surveys[0].responses.length,0);
+ fs.writeFileSync(path.join(root,'verification.json'),JSON.stringify({id:job.id,status:job.status,seconds:Math.round((job.finishedAt-job.startedAt)/1000),questionCount:3,importedStatus:'draft',title:job.result.title},null,2));console.log('PASS real formal generation -> validated 3-question draft, not published. Evidence: '+root);
+ }finally{child.kill();await new Promise(r=>child.exitCode!==null?r():child.once('exit',r));}})().catch(e=>{console.error(e);process.exitCode=1;});

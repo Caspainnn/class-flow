@@ -1,0 +1,13 @@
+'use strict';
+const assert=require('node:assert/strict'),Q=require('../prototype/questionnaire-model');
+const state=Q.seed(),anon=state.surveys.find(s=>s.id==='feedback-anon'),named=state.surveys.find(s=>s.id==='prep-named');
+assert.equal(anon.responses.length,36);assert.ok(anon.responses.every(r=>!r.studentId));assert.equal(named.target.length,47);assert.equal(named.responses.length,36);
+let stats=Q.stats(anon);assert.deepEqual(stats[0].counts.map(c=>c.value),[14,18,4]);assert.equal(stats[2].valid,34);assert.equal(stats[2].missing,2);assert.equal(stats[2].mean.toFixed(2),'3.85');assert.ok(stats[1].counts.reduce((n,c)=>n+c.value,0)>36);
+const rows=Q.filter(anon,{questionId:'pace',optionId:'fast'});assert.equal(rows.length,14);assert.equal(Q.stats(anon,rows)[0].counts[0].value,14);assert.equal((named.responses.length/named.target.length*100).toFixed(1),'76.6');
+const blank=Q.blank();assert.equal(blank.mode,'anonymous');assert.match(Q.validate(blank),/标题/);blank.title='合成问卷';assert.match(Q.validate(blank),/题目/);assert.equal(blank.noDeadline,false);assert.ok(Q.validate({...blank,title:'test',questions:[{...blank.questions[0],title:'test'}]},2));blank.noDeadline=true;blank.questions[0].title='测试题';assert.equal(Q.validate(blank,2),'');Q.publish(blank);assert.equal(blank.status,'collecting');
+const payload={requestId:'test-request',client:'test-browser',answers:{[blank.questions[0].id]:blank.questions[0].options[0].id},studentId:'NOT-SAVED',name:'NOT-SAVED'};
+const r=Q.submit(blank,payload);assert.ok(!('studentId' in r));assert.ok(!('name' in r));Q.submit(blank,payload);assert.equal(blank.responses.length,1);assert.throws(()=>Q.submit(blank,{...payload,requestId:'different'}),/浏览器/);
+Q.transition(blank,'stop');assert.throws(()=>Q.submit(blank,{...payload,requestId:'other',client:'other'}),/停止/);Q.transition(blank,'archive');assert.throws(()=>Q.transition(blank,'resume'),/状态/);Q.transition(blank,'unarchive');Q.transition(blank,'resume');
+const n=structuredClone(named);Q.transition(n,'resume');const identity={requestId:'named-test',client:'ignored',studentId:'S037',name:'示例学生37',answers:structuredClone(n.responses[0].answers)};assert.throws(()=>Q.submit(n,{...identity,name:'错误姓名'}),/不匹配/);Q.submit(n,identity);assert.equal(n.responses.length,37);assert.throws(()=>Q.submit(n,{...identity,requestId:'again'}),/学号/);assert.equal(n.target.length,47);
+const empty=state.surveys.find(s=>s.id==='empty-example');assert.ok(Q.stats(empty).every(v=>v.valid===0&&v.mean===null));
+console.log('PASS: synthetic 36/47 cohorts, anonymous identity exclusion, exact distributions and means, multi-select denominators, filters, publish/stop/archive/resume, idempotent submissions, named roster and duplicates, zero-data statistics');

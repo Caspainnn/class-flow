@@ -1,0 +1,23 @@
+'use strict';
+const fs=require('node:fs'),os=require('node:os'),path=require('node:path'),assert=require('node:assert/strict'),vm=require('node:vm');
+const {prepare}=require('../server/ppt/template-visuals');
+const root=fs.mkdtempSync(path.join(os.tmpdir(),'inclass-template-visuals-'));
+(async()=>{try{
+ const input=path.join(root,'template.pptx');fs.copyFileSync('tools/fixtures/ppt-service.pptx',input);
+ const profile={layoutGroups:[{id:'one',name:'Cover',representativeSlide:1},{id:'two',name:'Text',representativeSlide:4}]};let renders=0;
+ const renderSlides=async(file,out)=>{renders++;for(let i=1;i<=2;i++){const b=Buffer.alloc(24);Buffer.from([137,80,78,71,13,10,26,10]).copy(b);b.writeUInt32BE(1280,16);b.writeUInt32BE(720,20);fs.writeFileSync(path.join(out,String(i).padStart(3,'0')+'.png'),b);}};
+ const args={file:input,profile,cacheRoot:path.join(root,'cache'),runDir:path.join(root,'first'),renderSlides};
+ const refs=await prepare(args);assert.equal(renders,1);assert.equal(refs[1].sourceSlide,4);assert.equal(refs[1].layoutId,'two');assert.ok(fs.existsSync(path.join(args.runDir,refs[1].file)));
+ await prepare({...args,runDir:path.join(root,'second')});assert.equal(renders,1,'same template uses cached screenshots');
+ const bad=path.join(root,'bad');await assert.rejects(prepare({...args,cacheRoot:bad,renderSlides:async()=>{}}));
+ const aborted=new AbortController();aborted.abort();await assert.rejects(prepare({...args,signal:aborted.signal}),/取消/);
+ const controller=new AbortController();let finishRender,receivedSignal;
+ const pending=prepare({...args,cacheRoot:path.join(root,'cancel-cache'),signal:controller.signal,renderSlides:async(file,out,{signal})=>{receivedSignal=signal;await new Promise(r=>finishRender=r);await renderSlides(file,out);}});
+ await new Promise(r=>setImmediate(r));controller.abort();finishRender();await assert.rejects(pending,/取消/);assert.equal(receivedSignal,controller.signal);
+ const ctx={window:{}};vm.runInNewContext(fs.readFileSync('server/ppt/public/ppt-html-view.js','utf8'),ctx);
+ const version={number:1,slides:[{title:'One',notes:'Private note',speech:'Teacher speech'}],sources:[],hash:'hash',summary:'Old creation details',speechFile:'speech.md',template:{name:'Old template'}};
+ const html=ctx.window.PptHtmlView.render({task:{id:'test',htmlVersions:[version],versions:[],status:'html-ready'},version,page:0,draft:'',connected:true});
+ for(const removed of ['教师备注','教师使用','下载完整逐页演讲稿','参考模板：','一一对应','可以在这里逐页检查和修改课件','制作反馈','Private note','Old creation details'])assert.ok(!html.includes(removed),removed);
+ assert.match(html,/<details class="slide-notes speech-panel"><summary>本页演讲稿<\/summary>/);assert.match(html,/Teacher speech/);assert.match(html,/下载逐页讲稿（1页）/,'sidebar download remains available');
+ console.log('PASS: screenshot mapping/cache/missing-render rejection; compact HTML preview with native speech disclosure and sidebar download');
+}finally{fs.rmSync(root,{recursive:true,force:true});}})().catch(e=>{console.error(e);process.exitCode=1;});

@@ -1,0 +1,901 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>自动批改 · 一堂课</title>
+<link rel="stylesheet" href="/shell.css">
+<style>
+:root{--ink:#17191c;--ink2:#666b73;--ink3:#9aa0a8;--line:#e6e8ec;--line2:#f2f3f5;--blue:#185FA5;--ok:#1D9E75;--red:#A32D2D;--amber:#BA7517}
+body{margin:0;font-family:-apple-system,"Segoe UI","Microsoft YaHei",sans-serif;background:#f4f5f7;color:var(--ink);font-size:13px}
+.wrap{max-width:1060px;margin:0 auto;padding:22px 18px 60px}
+h1{font-size:18px;font-weight:500;margin:0}
+.sub{font-size:12px;color:var(--ink2);margin-top:4px}
+.tabs{display:flex;gap:6px;margin:16px 0;flex-wrap:wrap}
+.tab{font-family:inherit;font-size:13px;padding:8px 14px;border-radius:9px;border:1px solid var(--line);background:#fff;color:var(--ink2);cursor:pointer}
+.tab.on{background:var(--ink);border-color:var(--ink);color:#fff}
+.pane{display:none}.pane.on{display:block}
+.card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:18px 20px;margin-bottom:12px}
+.card h2{font-size:13px;font-weight:500;margin:0 0 14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.card h2 span{font-weight:400;color:var(--ink3);font-size:11.5px}
+.card h2 .rt{margin-left:auto;display:flex;gap:8px;align-items:center}
+.row{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+.fld{display:flex;flex-direction:column;gap:6px}
+.fld.g1{flex:1;min-width:170px}
+.fld.g2{flex:2;min-width:230px}
+.fld>label{font-size:11.5px;color:var(--ink3)}
+input[type=text],input[type=number],select,textarea{font-family:inherit;font-size:12.5px;color:var(--ink);padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:#fff;outline:none;width:100%}
+textarea{resize:vertical;min-height:60px;line-height:1.7}
+.btn{font-family:inherit;font-size:12.5px;padding:8px 14px;border-radius:8px;border:1px solid var(--line);background:#fff;color:var(--ink);cursor:pointer;white-space:nowrap}
+.btn:hover{border-color:#cfd6de;background:#fafbfc}
+.btn.mini{padding:4px 10px;font-size:11.5px}
+.btn.pri{background:var(--ink);border-color:var(--ink);color:#fff}
+.btn.pri:hover{background:#000}
+.btn.blue{background:var(--blue);border-color:var(--blue);color:#fff}
+.btn.gh{background:none;border-color:transparent;color:var(--ink2)}
+.btn.armed{background:#fdf0ef;border-color:#f0cfcf;color:#c0392b}
+.toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);background:#17191c;color:#fff;font-size:12.5px;padding:8px 16px;border-radius:8px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:99;max-width:80vw}
+.toast.on{opacity:1}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.tag{font-size:10.5px;padding:2px 7px;border-radius:5px;background:#f1f2f5;color:var(--ink2);white-space:nowrap;display:inline-block}
+.tag.ok{background:#eaf7f1;color:#0F6E56}
+.tag.bad{background:#fdf0ef;color:var(--red)}
+.tag.warn{background:#fdf3e3;color:#8a5a12}
+.tag.info{background:#edf3fa;color:var(--blue)}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th{text-align:left;font-weight:400;color:var(--ink3);font-size:11px;padding:0 8px 8px 0;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:8px 8px 8px 0;border-bottom:1px solid var(--line2);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+.mono{font-family:ui-monospace,Menlo,monospace;font-size:11.5px;color:var(--ink2)}
+.hint{font-size:11.5px;color:var(--ink3);line-height:1.85;margin-top:8px}
+.hint b{color:var(--ink2);font-weight:500}
+.drop{border:1.5px dashed #d3d9e0;border-radius:11px;background:#fafbfc;padding:20px 16px;text-align:center;cursor:pointer}
+.drop:hover{border-color:#b8c6d6;background:#f7f9fb}
+.drop .t{font-size:12.5px;color:var(--ink2);margin-top:6px}
+.drop .t b{color:var(--blue);font-weight:400}
+.drop .h{font-size:11px;color:var(--ink3);margin-top:5px;line-height:1.7}
+.qrow{display:flex;align-items:center;gap:10px;background:#fafbfc;border:1px solid var(--line2);border-radius:9px;padding:8px 11px;margin-bottom:8px}
+.qrow .qn{font-size:11px;color:var(--ink3);width:36px;flex:none}
+.qrow input[type=text]{flex:1;border:none;background:transparent;padding:2px 0}
+.qrow .pt{width:86px;flex:none;display:flex;align-items:center;gap:5px}
+.qrow .pt input{padding:5px 8px;text-align:right}
+.qrow .pt i{font-style:normal;font-size:11px;color:var(--ink3)}
+.qrow .del{border:none;background:none;color:var(--ink3);cursor:pointer;font-size:14px;padding:2px 4px}
+.qrow .del:hover{color:var(--red)}
+.stats{display:flex;gap:30px;flex-wrap:wrap;align-items:flex-end}
+.stat b{display:block;font-size:24px;font-weight:500;line-height:1.15;font-variant-numeric:tabular-nums}
+.stat span{font-size:11.5px;color:var(--ink3)}
+.rec{cursor:pointer}.rec:hover td{background:#f8f9fb}
+.rec td:first-child{border-left:3px solid transparent;padding-left:9px}
+.rec.g td:first-child{border-left-color:#bfe5d6}
+.rec.r td:first-child{border-left-color:#f0cfcf}
+.rec.y td:first-child{border-left-color:#ecd3a3}
+.sc{font-size:14px;font-weight:500;font-variant-numeric:tabular-nums}
+.sc.g{color:#0F6E56}.sc.r{color:var(--red)}.sc.n{color:var(--ink3);font-size:12px;font-weight:400}
+.clip{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;color:var(--ink2);line-height:1.7}
+.exp{display:none}.exp.on{display:table-row}
+.exp>td{background:#fafbfc;padding:0}
+.expin{padding:14px 16px}
+.qitem{display:flex;gap:10px;align-items:flex-start;font-size:12.5px;line-height:1.75;padding:5px 0}
+.qitem .qi{width:34px;flex:none;font-size:11px;color:var(--ink3)}
+.qitem .qb{flex:1;color:var(--ink2)}
+.qitem .qp{width:56px;flex:none;text-align:right;font-variant-numeric:tabular-nums;font-weight:500}
+.cmt{background:#fff;border:1px solid var(--line);border-radius:9px;padding:10px 13px;font-size:12.5px;color:var(--ink2);line-height:1.8;margin:10px 0}
+.pbox{background:#fafbfc;border:1px solid var(--line);border-radius:9px;padding:12px 14px;font-family:ui-monospace,Menlo,monospace;font-size:11.5px;line-height:1.9;color:var(--ink2);white-space:pre-wrap;word-break:break-all;max-height:220px;overflow:auto}
+.log{background:#141618;color:#c9d1d9;border-radius:9px;padding:12px 14px;font-family:ui-monospace,Menlo,monospace;font-size:11.5px;line-height:1.8;max-height:260px;overflow:auto;white-space:pre-wrap}
+.prog{display:flex;align-items:center;gap:12px;margin-bottom:8px}
+.prog .track{flex:1;height:8px;border-radius:5px;background:var(--line2);overflow:hidden}
+.prog .fill{height:100%;border-radius:5px;background:var(--blue);transition:width .3s}
+.prog .pc{font-size:12px;color:var(--ink2);font-variant-numeric:tabular-nums;flex:none}
+.ways{display:flex;gap:12px;flex-wrap:wrap}
+.way{flex:1;min-width:260px;border:1px solid var(--line);border-radius:12px;padding:14px 16px;cursor:pointer;transition:.15s;background:#fff}
+.way:hover{border-color:#d3d9e0;background:#fbfcfd}
+.way.on{border-color:#b8c6d6;background:#f7f9fb;box-shadow:0 0 0 3px #eef2f7}
+.way .wt{font-size:13px;font-weight:500;display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.way .wd{font-size:11.5px;color:var(--ink3);line-height:1.85;margin-top:6px}
+.way.dis{opacity:.55;cursor:not-allowed}
+.actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:14px;padding-top:12px;border-top:1px solid var(--line2)}
+.actions .sp{flex:1}
+.empty{text-align:center;color:var(--ink3);font-size:12.5px;padding:28px 0}
+.batchrow{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line2);font-size:12.5px}
+.batchrow:last-child{border-bottom:none}
+.batchrow b{font-weight:500}
+@media (max-width:860px){.tabs{display:flex}}
+
+.rubric-methods{display:flex;gap:6px;margin:0 0 16px}.rubric-methods .on{color:var(--blue);background:#edf4fc;border-color:#c8dbef}.rubric-template-head{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 12px}.rubric-template-head .hint{margin:0!important}.rubric-drop{border:1px dashed #b8cbe1;background:#f7faff;text-align:center;padding:20px;border-radius:9px;cursor:pointer;color:var(--blue);font-size:13px;margin-bottom:16px}.rubric-drop span{display:block;font-size:11px;color:#8997a9;margin-top:6px}.rubric-drop:hover,.rubric-drop.dragging{border-color:var(--blue);background:#edf5ff}.rubric-drop[aria-disabled=true]{opacity:.5;cursor:default}.sh-main .batch-questions .qrow{display:grid;grid-template-columns:36px minmax(0,1fr) 86px 24px;align-items:center;padding:14px 0}.q-rubric{grid-column:2/4;min-width:0}.q-rubric label{display:block;font-size:12px;color:var(--ink2);margin:6px 0}.q-rubric textarea{width:100%;min-height:88px;resize:vertical;border:1px solid var(--line);border-radius:8px;padding:9px 11px;line-height:1.65;background:#fbfcfe;font-size:13px}.sh-main .batch-questions .rubric-help{margin:0 0 8px}.rubric-methods .btn{font-size:12px}.qrow input[type=text]{width:100%;min-width:0}#rubricMessage{color:var(--blue);line-height:1.7;margin-bottom:6px}@media(max-width:560px){.sh-main .batch-questions .qrow{grid-template-columns:30px minmax(0,1fr) 70px 22px;gap:7px}.q-rubric{grid-column:1/5}.q-rubric textarea{min-height:105px}}
+
+
+#rubricEditActions[hidden],#qlist[hidden],#rubricEditHelp[hidden],#rubricPreview[hidden]{display:none!important}.rubric-preview{border:1px solid var(--line);border-radius:10px;padding:16px 18px;background:#fcfdff}.rubric-preview-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:10px}.rubric-preview-head strong{font-size:14px;overflow-wrap:anywhere}.rubric-preview-head span{font-size:12px;color:var(--blue);white-space:nowrap}.rubric-preview-question{padding:14px 0;border-top:1px solid var(--line)}.rubric-preview-question:last-child{padding-bottom:0}.rubric-preview-question h4{display:flex;justify-content:space-between;gap:16px;margin:0 0 8px;font-size:13px;font-weight:600}.rubric-preview-question h4 span{font-weight:400;color:var(--ink2);white-space:nowrap}.rubric-preview-question p{font-size:13px;color:#525964;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.8;margin:0}.rubric-preview>.hint{margin:0 0 12px!important}
+
+
+.review-grid{display:grid;grid-template-columns:180px minmax(250px,1fr) 290px;gap:14px;margin-top:18px;align-items:stretch}
+.review-column{min-width:0;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#fff}
+.review-heading{padding:13px 14px;background:#fafbfc;border-bottom:1px solid var(--line);font-weight:500;font-size:13px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.review-list{max-height:660px;overflow:auto;padding:6px}
+.review-person{display:block;width:100%;text-align:left;border:1px solid transparent;border-radius:8px;background:#fff;padding:11px 10px;cursor:pointer;font:inherit;margin-bottom:3px}
+.review-person.on{background:#edf3fa;border-color:#c4d7ea;color:var(--blue)}
+.review-person small{display:block;margin-top:5px;color:var(--ink3);font-size:11px}
+.review-document{min-height:560px;max-height:720px;overflow:auto;background:#f5f6f8;padding:20px}
+.review-document pre{margin:0;background:#fff;border:1px solid var(--line);border-radius:6px;padding:24px;white-space:pre-wrap;overflow-wrap:anywhere;font:14px/1.95 -apple-system,"Segoe UI","Microsoft YaHei",sans-serif;color:var(--ink)}
+.review-document iframe{width:100%;height:650px;border:0;background:#fff}
+.review-toolbar{display:flex;gap:8px;padding:10px 14px;align-items:center;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.review-toolbar select{flex:1;min-width:100px;font-size:12px}
+.review-score{padding:15px;max-height:720px;overflow:auto}
+.review-score label{display:block;font-size:12px;color:var(--ink2);margin:12px 0 6px}
+.review-score .btn{margin-top:10px;width:100%}
+.review-score .qitem{border-bottom:1px solid var(--line2);padding:10px 0}
+.review-score .qb{overflow-wrap:anywhere}.review-score .qp{width:44px}
+.review-score .cmt{padding:10px;margin:10px 0;overflow-wrap:anywhere}
+.review-nav{display:flex;align-items:center;gap:8px;margin-top:14px;justify-content:flex-end}
+.review-nav span{margin-right:auto;color:var(--ink3);font-size:12px}
+.question-dialog{width:min(760px,calc(100vw - 32px));max-height:85vh;padding:0;border:1px solid var(--line);border-radius:14px;color:var(--ink);box-sizing:border-box;box-shadow:0 20px 80px #0002}
+.question-dialog::backdrop{background:#12182066}
+.question-dialog-head{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:18px 22px;border-bottom:1px solid var(--line);position:sticky;top:0;background:#fff}
+.question-dialog-head h2{font-size:16px;font-weight:500;margin:0}
+.question-dialog-body{padding:0 22px 20px}
+.question-detail{padding:20px 0;border-bottom:1px solid var(--line)}
+.question-detail:last-child{border-bottom:0}
+.question-detail h3{display:flex;justify-content:space-between;gap:16px;margin:0 0 12px;font-size:14px}
+.question-detail p{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.85;margin:8px 0;color:var(--ink2)}
+.question-detail h4{font-size:12px;font-weight:500;color:var(--ink3);margin:14px 0 4px}
+@media(min-width:1150px){body[data-active=grading] .sh-main{max-width:none}}
+@media(max-width:1100px){.review-grid{grid-template-columns:150px minmax(220px,1fr)}.review-grid>.review-column:last-child{grid-column:1/-1}.review-score{max-height:none}.review-document{min-height:430px}}
+@media(max-width:650px){.review-grid{grid-template-columns:minmax(0,1fr)}.review-list{max-height:160px}.review-grid>.review-column:last-child{grid-column:auto}.review-document{padding:10px;min-height:300px}.review-document pre{padding:16px}.review-document iframe{height:450px}}
+</style>
+<link rel="icon" type="image/svg+xml" href="/assets/logo.svg?v=20261026">
+</head>
+<body class="shelled" data-active="gb">
+<div class="app"><aside class="sh-side" id="shSide"></aside>
+<main class="sh-main">
+<div class="wrap">
+  <div class="head" style="display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;margin-bottom:4px">
+    <div><h1>自动批改</h1>
+    <div class="sub">选择已有作业，完成收取、批改与成绩复核</div></div>
+  </div>
+
+  <div class="grading-context">
+    <label for="currentCourse">选择课程</label>
+    <select id="currentCourse" aria-label="选择课程"><option value="">加载中…</option></select>
+    <label for="currentBatch">选择作业</label>
+    <select id="currentBatch" aria-label="选择作业" disabled><option value="">请先选择课程</option></select>
+    <span class="tag" id="batchStatus"></span>
+    <a class="btn" id="manageAssignment" href="/homework">返回作业列表</a>
+  </div>
+  <div id="workspaceMessage" class="card" role="status" hidden></div>
+  <div class="flow-navigation" id="steps">
+    <nav class="flow-steps" aria-label="作业批改步骤">
+    <button class="tab flow-step on" data-s="1" onclick="go(1)" aria-current="step"><i class="flow-number">1</i>题目与标准</button>
+    <button class="tab flow-step" data-s="2" onclick="go(2)"><i class="flow-number">2</i>收取作业</button>
+    <button class="tab flow-step" data-s="3" onclick="go(3)"><i class="flow-number">3</i>自动批改</button>
+    <button class="tab flow-step" data-s="4" onclick="go(4)"><i class="flow-number">4</i>成绩复核</button>
+    </nav>
+
+  </div>
+
+  <div class="grading-summary" id="gradingSummary" hidden></div>
+
+  <!-- ① 题目与标准 -->
+  <div class="pane on" id="p1">
+    <div class="card batch-editor">
+      <h2>题目与标准 <span>配置后保存，继续收取作业</span></h2>
+      <div class="batch-columns">
+      <section class="batch-basics" aria-labelledby="basicHeading">
+      <h3 id="basicHeading">基本信息</h3>
+      <div class="row">
+        <div class="fld g1"><label for="course">课程</label><select id="course" disabled></select></div>
+        <div class="fld g2"><label for="name">作业名称</label><input type="text" id="name" placeholder="如：第 3 章 跨境电商平台作业"></div>
+        <div class="fld" style="width:110px"><label for="pass">及格线</label><input type="number" id="pass" value="60"></div>
+      </div>
+      <div class="row">
+        <div class="fld g1"><label for="scale">评分尺度</label>
+          <select id="scale"><option value="std">标准</option><option value="strict">严格</option><option value="loose">宽松</option></select>
+        </div>
+        <div class="fld g2"><label for="extra">补充要求（可留空）</label><input type="text" id="extra" placeholder="如：不足 300 字扣 5 分"></div>
+      </div>
+      </section>
+      <section class="batch-questions" aria-labelledby="questionHeading">
+      <h3 id="questionHeading">题目与评分标准</h3>
+      <div class="rubric-methods" role="group" aria-label="评分标准录入方式"><button type="button" class="btn mini on" id="rubricManual" onclick="rubricMethod(false)">直接录入</button><button type="button" class="btn mini" id="rubricTemplate" onclick="rubricMethod(true)">模板上传</button></div>
+      <div id="rubricImportPanel" hidden>
+        <div class="rubric-template-head"><a class="btn mini" id="rubricDownload" href="#" download>下载评分标准模板</a><span class="hint">填写后上传，解析预览后再保存</span></div>
+        <div class="rubric-drop" id="rubricDrop" role="button" tabindex="0" aria-label="点击或拖拽上传评分标准模板">点击或将填写好的模板拖到这里<span>仅支持 .xlsx，最大5MB</span></div>
+        <input type="file" id="rubricFile" accept=".xlsx" hidden>
+      </div>
+      <p class="hint rubric-help" id="rubricEditHelp">每题填写参考答案、得分点或扣分条件，批改时逐题执行。</p>
+      <div id="rubricMessage" role="status" class="hint"></div>
+      <p class="hint" id="rubricEmpty" hidden>尚未设置题目，可直接添加题目，或下载模板填写后上传。</p><div id="qlist"></div>
+      <div id="rubricEditActions" style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;font-size:11.5px;color:var(--ink2)">
+        <button class="btn mini" id="addQBtn" onclick="addQ()">+ 加一题</button>
+        <span>合计 <b id="qsum">100</b> 分 · 共 <b id="qn">3</b> 题</span>
+      </div>
+      <div id="rubricPreview" class="rubric-preview" hidden aria-label="评分标准只读预览"></div>
+      </section>
+      </div>
+      <div class="actions batch-create">
+        <button class="btn pri" id="saveStandardsBtn" onclick="saveStandards()">保存标准，去收作业 →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ② 收取作业 -->
+  <div class="pane" id="p2">
+    <div class="card">
+      <h2>收取作业 <span id="p2info"></span>
+        <div class="rt"><label class="btn mini" style="cursor:pointer">选择文件<input type="file" id="fpick" multiple style="display:none" accept=".docx,.doc,.pdf,.txt,.md,.zip"></label></div>
+      </h2>
+      <div class="drop" onclick="document.getElementById('fpick').click()">
+        <div class="t">把全班作业<b>一次性拖进下面的选择框</b>，或点击选择多个文件</div>
+        <div class="h">支持 docx / pdf / txt / md / zip · 文件按「学号+姓名」命名能自动对上名单</div>
+      </div>
+      <div id="files" style="margin-top:14px"></div>
+      <div class="hint" id="matchHint"></div>
+    </div>
+    <div class="actions">
+      <button class="btn gh" onclick="go(1)">← 上一步</button>
+      <div class="sp"></div>
+      <button class="btn" onclick="rematch()">重新自动匹配</button>
+      <button class="btn pri" onclick="prepare()">准备批改目录 →</button>
+    </div>
+  </div>
+
+  <!-- ③ 批改 -->
+  <div class="pane" id="p3">
+    <div class="card">
+      <h2>自动批改工作台 <span>两种方式结果都回到同一份作业</span>
+        <div class="rt"><span class="tag" id="wbTag">…</span></div>
+      </h2>
+      <div class="ways">
+        <div class="way on" id="wayA" onclick="pick('A')">
+          <div class="wt">平台自动调用 <span class="tag" id="tagModel">模型 …</span><span class="tag" id="tagTo">超时 …</span><span class="tag info">推荐</span></div>
+          <div class="wd">平台调用本机 WorkBuddy，沿用设置中的模型与超时配置，结果回到本次成绩表。</div>
+        </div>
+        <div class="way" id="wayB" onclick="pick('B')">
+          <div class="wt">手动调用与导入</div>
+          <div class="wd">平台把作业整理好、提示词生成好，<b>你粘贴到 WorkBuddy 里批</b>，批完把结果 Excel 导回平台。</div>
+        </div>
+      </div>
+    </div>
+
+    <div id="paneA">
+      <div class="card">
+        <h2>批改进度
+          <div class="rt"><button class="btn pri" id="runBtn" onclick="run()">开始自动批改</button></div>
+        </h2>
+        <div class="prog"><div class="track"><div class="fill" id="progFill" style="width:0"></div></div><div class="pc" id="progPc">0 / 0</div></div>
+        <div class="hint" id="runHint">准备好批改目录后，点击「开始自动批改」。运行进度与日志在这里显示。</div>
+        <div class="log" id="runLog" style="margin-top:12px;display:none"></div>
+        <div class="hint" id="runLogEmpty">启动后在这里查看运行日志。</div>
+      </div>
+    </div>
+
+    <div id="paneB" style="display:none">
+      <div class="card">
+        <h2>① 复制提示词，粘贴到 WorkBuddy</h2>
+        <div class="pbox" id="promptBox">（先在第②步点「准备批改目录」）</div>
+        <div class="actions" style="border-top:none;padding-top:12px;margin-top:0">
+          <button class="btn pri" onclick="copyPrompt()">复制提示词</button>
+          <button class="btn" onclick="openDir()">打开批改目录</button>
+        </div>
+        <div class="hint"><b>备注：</b>批改目录里作业已按「学号+姓名」重命名；识别不出的在 <b>_待确认\</b>；未交名单在 <b>_未交名单.txt</b>。粘进 WorkBuddy 直接回车即可。</div>
+      </div>
+      <div class="card">
+        <h2>② 批完把结果导回平台
+          <div class="rt"><label class="btn mini" style="cursor:pointer">选择 WorkBuddy 生成的 xlsx<input type="file" id="xlpick" style="display:none" accept=".xlsx,.xlsm"></label></div>
+        </h2>
+        <div class="drop" onclick="document.getElementById('xlpick').click()">
+          <div class="t">把 <b>作业批改结果.xlsx</b> 拖到上面的选择框</div>
+          <div class="h">只要有「姓名 / 得分 / 作业情况」三列就能认 · 列名不完全一致也能自动对应</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="btn gh" onclick="go(2)">← 上一步</button>
+      <div class="sp"></div>
+      <button class="btn pri" onclick="go(4)">去成绩复核 →</button>
+    </div>
+  </div>
+
+  <!-- ④ 成绩表 -->
+  <div class="pane" id="p4">
+    <div class="card">
+      <h2>本次成绩 <span id="gsum"></span>
+        <div class="rt">
+          <button class="btn" onclick="exportX()">导出 xlsx</button>
+          <button class="btn pri" onclick="archive(this)">归档到学情分析</button>
+        </div>
+      </h2>
+      <div class="stats" id="gstats" style="margin-bottom:14px"></div>
+      <div class="hint" style="margin:0 0 8px;display:flex;gap:14px;flex-wrap:wrap">
+        <span><span class="tag ok">优秀</span> 满分的90%以上</span><span><span class="tag">及格</span> 达到及格线</span>
+        <span><span class="tag bad">不及格</span> 及格线以下</span><span><span class="tag warn">异常</span> 内容与本人不符 / 无法评定</span>
+        <span style="margin-left:auto">总览查看全班成绩，详细模式对照原件复核</span>
+      </div>
+      <div id="grades"></div>
+      <div class="hint">复核归档后更新同一份作业；已有手动录分和补交状态会保留。旧作业满分非100时，分析按百分制折算。</div>
+    </div>
+    <div class="actions">
+      <button class="btn gh" onclick="go(3)">← 上一步</button>
+    </div>
+  </div>
+</div>
+</main></div>
+
+<input type="file" id="dirpick" webkitdirectory style="display:none">
+<dialog id="questionScoreDialog" class="question-dialog" aria-labelledby="questionScoreTitle">
+  <div class="question-dialog-head"><h2 id="questionScoreTitle">小题评分与依据</h2><button class="btn mini" type="button" autofocus onclick="document.getElementById('questionScoreDialog').close()" aria-label="关闭小题评分弹窗">关闭</button></div>
+  <div id="questionScoreBody" class="question-dialog-body"></div>
+</dialog>
+<script src="/shell.js"></script>
+<script>
+'use strict';
+const $ = id => document.getElementById(id);
+let CUR = null;          // 当前批次 id
+let COURSES = [];
+let pickMode = 'A';
+let pollTimer = null;
+let batchChoices = [];
+let selectedCourse = '';
+let standardsDirty = false;
+let workbuddyEnabled = false;
+let contextVersion = 0, batchBusy = false, batchOpening = false;
+async function batchAction(action) {
+  if (!CUR || batchBusy || batchOpening) { toast('请等待当前作业操作完成'); return; }
+  const id = CUR;
+  batchBusy = true; updateContextControls();
+  try { return await action(id); }
+  catch (e) { toast(e.message); }
+  finally { batchBusy = false; updateContextControls(); }
+}
+function readFile(file) {
+  return new Promise((resolve,reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(new Error('读取文件失败，请重试'));
+    reader.onabort = () => reject(new Error('文件读取已取消'));
+    reader.readAsDataURL(file);
+  });
+}
+
+/* ---------- 通用 ---------- */
+async function api(p, opt) {
+  const r = await fetch(p, opt);
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.error || ('HTTP ' + r.status));
+  return j;
+}
+const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+function go(n) {
+  if (!CUR) return;
+  if (reviewDirty || reviewSaving) { if(!reviewCanLeave()) return; }
+  if (n !== 1 && standardsDirty) { toast('评分标准有未保存修改，请先保存'); return; }
+  document.querySelectorAll('.pane').forEach(p => p.classList.remove('on'));
+  $('p' + n).classList.add('on');
+  document.querySelectorAll('#steps .tab').forEach(t => {t.classList.toggle('on', +t.dataset.s === n);t.classList.toggle('complete',+t.dataset.s<n);if(+t.dataset.s===n)t.setAttribute('aria-current','step');else t.removeAttribute('aria-current');});
+  if (n === 3 && CUR) loadState(true);
+  if (n === 4 && CUR) loadGrades();
+}
+
+/* ---------- ① 题目与标准 ---------- */
+function addQ(text, points, rubric) {
+  if (!arguments.length) standardsDirty = true;
+  const d = document.createElement('div');
+  d.className = 'qrow';
+  d.innerHTML = `<div class="qn">题 ${$('qlist').children.length + 1}</div>
+    <input type="text" value="${esc(text || '')}" placeholder="题目描述">
+    <div class="pt"><input type="number" value="${points || 0}"><i>分</i></div>
+    <button class="del" title="删除">✕</button>
+    <div class="q-rubric"><label>评分标准</label><textarea maxlength="10000" placeholder="例如：概念准确10分；分析过程完整15分；结论正确5分。">${esc(rubric || '')}</textarea></div>`;
+  d.querySelector('.del').onclick = () => { standardsDirty = true; d.remove(); renum(); };
+  d.querySelector('.pt input').oninput = sumQ;
+  $('qlist').appendChild(d);
+  renum();
+}
+function renum() {
+  [...$('qlist').children].forEach((r, i) => { r.querySelector('.qn').textContent = '题 ' + (i + 1); r.querySelector('textarea').setAttribute('aria-label','第'+(i+1)+'题评分标准'); });
+  $('qn').textContent = $('qlist').children.length;
+  $('rubricEmpty').hidden=$('qlist').children.length>0;
+  sumQ();
+}
+function sumQ() {
+  $('qsum').textContent = [...$('qlist').querySelectorAll('.pt input')].reduce((a, i) => a + (Number(i.value) || 0), 0);
+}
+function readQ() {
+  return [...$('qlist').children].map(r => ({
+    text: r.querySelector('input[type=text]').value.trim(),
+    points: Number(r.querySelector('.pt input').value) || 0,
+    rubric: r.querySelector('textarea').value.trim(),
+  }));
+}
+
+async function loadBatches() {
+  const response = await api('/api/homework');
+  batchChoices = response.items.filter(b => b.mode === 'file' && b.batchId);
+  renderBatchChoices();
+}
+function updateContextControls() {
+  $('currentCourse').disabled = batchBusy || batchOpening;
+  $('currentBatch').disabled = batchBusy || batchOpening || !selectedCourse;
+}
+function renderBatchChoices() {
+  const choices = batchChoices.filter(b => b.courseId === selectedCourse);
+  $('currentCourse').value = selectedCourse;
+  $('currentBatch').innerHTML = '<option value="">' + (!selectedCourse ? '请先选择课程' : choices.length ? '请选择要批改的作业' : '该课程暂无文件批改作业') + '</option>' + choices.map(b =>
+    `<option value="${esc(b.batchId)}">${esc(b.name)}</option>`).join('');
+  $('currentBatch').value = CUR || '';
+  updateContextControls();
+}
+function showWorkspace(show, message) {
+  $('steps').hidden = !show;
+  $('steps').style.display = show ? '' : 'none';
+  document.querySelectorAll('.pane').forEach(p => p.classList.remove('on'));
+  $('workspaceMessage').hidden = show;
+  $('gradingSummary').hidden = !show;
+  if (!show) $('workspaceMessage').textContent = message;
+}
+async function openBatch(id, preferredStep, internal = false) {
+  if ((batchBusy || batchOpening) && !internal) { $('currentBatch').value = CUR || ''; toast('请等待文件或成绩操作完成后再切换作业'); return; }
+  if ((reviewDirty || reviewSaving) && !internal) { $('currentBatch').value = CUR || ''; reviewCanLeave(); return; }
+  if (standardsDirty) { $('currentBatch').value = CUR || ''; toast('评分标准有未保存修改，请先保存'); return; }
+  const version = ++contextVersion;
+  if (!id) { CUR = null; state = null; poll(false); $('batchStatus').textContent = ''; $('manageAssignment').href = '/homework'; $('manageAssignment').textContent = '返回作业列表'; history.replaceState(null, '', '/grading'); showWorkspace(false, selectedCourse ? '请选择该课程的作业；暂无作业时，可到作业列表新建文件批改作业。' : '请先选择课程，再选择要批改的作业。'); return; }
+  batchOpening = true; updateContextControls();
+  poll(false); CUR = id; state = null;
+  try {
+    const st = await loadState(true);
+    if (version !== contextVersion) return;
+    if (!st) throw new Error('作业不存在或无法读取，请返回作业列表重试');
+    selectedCourse = st.courseId;
+    renderBatchChoices();
+    $('currentBatch').value = id;
+    $('course').value = st.courseId;
+    $('name').value = st.name;
+    $('pass').value = st.pass;
+    $('scale').value = st.scale || 'std';
+    $('extra').value = st.extra || '';
+    $('qlist').replaceChildren();
+    (st.questions || []).forEach(q => addQ(q.text, q.points, q.rubric));
+    renum();
+    $('rubricEmpty').hidden=$('qlist').children.length>0;
+    standardsDirty = false;
+    const hasResults = Object.keys(st.results || {}).length > 0;
+    const locked = hasResults || st.status === 'running';
+    $('qlist').querySelectorAll('input,button').forEach(el => el.disabled = locked);
+    $('addQBtn').disabled = locked;
+    $('qlist').querySelectorAll('textarea').forEach(el=>el.disabled=st.status==='running');
+    $('rubricDrop').setAttribute('aria-disabled',String(locked));
+    $('rubricFile').disabled=locked;
+    $('rubricDownload').href='/api/gb/'+encodeURIComponent(id)+'/rubric-template.xlsx';
+    $('rubricMessage').textContent=hasResults?'已有成绩，题目和分值不可修改。':'';
+    $('saveStandardsBtn').disabled = st.status === 'running';
+    if(rubricSourceBatch!==id){rubricSourceBatch=id;rubricFileLabel='';rubricUploadMode=false;}
+    rubricMethod(rubricUploadMode);
+    $('manageAssignment').href = '/homework?id=' + encodeURIComponent(st.hwId || id);
+    $('manageAssignment').textContent = '管理这份作业';
+    $('batchStatus').textContent = { collect:'收取作业中',ready:'待批改',running:'批改中',done:'待复核',archived:'已归档' }[st.status] || st.status;
+    showWorkspace(true);
+    history.replaceState(null, '', '/grading?id=' + encodeURIComponent(id));
+    const missingRubric=(st.questions||[]).some(q=>!String(q.rubric||'').trim());
+    go(preferredStep || (hasResults ? 4 : st.status === 'collect'||missingRubric ? 1 : 3));
+  } catch (e) { if (version === contextVersion) { CUR = null; state = null; poll(false); showWorkspace(false, e.message); } }
+  finally { if (version === contextVersion) { batchOpening = false; updateContextControls(); } }
+}
+async function saveStandards() {
+  if (!state || !CUR) return;
+  const homeworkId = state.hwId || CUR;
+  const body = {name:$('name').value,questions:readQ(),pass:$('pass').value,scale:$('scale').value,extra:$('extra').value};
+  if(!body.questions.length||body.questions.some(q=>!q.text||!q.rubric||q.points<=0)){toast('请填写每道题的题目、正数分值和评分标准');return;}
+  const button = $('saveStandardsBtn'); button.disabled = true;
+  await batchAction(async id => {
+    await api('/api/homework/' + encodeURIComponent(homeworkId), {method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    standardsDirty = false;
+    await loadBatches();
+    await openBatch(id, 2, true);
+    toast('评分标准已保存');
+  });
+  button.disabled = state && state.status === 'running';
+}
+$('currentBatch').addEventListener('change',e => openBatch(e.target.value));
+$('currentCourse').addEventListener('change',async e => {
+  const courseId = e.target.value;
+  if (batchBusy || batchOpening || standardsDirty || reviewDirty || reviewSaving) {
+    $('currentCourse').value = selectedCourse;
+    if (reviewDirty || reviewSaving) reviewCanLeave();
+    else toast(standardsDirty ? '评分标准有未保存修改，请先保存' : '请等待当前操作完成后再切换课程');
+    return;
+  }
+  selectedCourse = courseId;
+  await openBatch('');
+  renderBatchChoices();
+});
+$('p1').addEventListener('input',e => {if(e.target.type!=='file')standardsDirty = true;});
+$('p1').addEventListener('change',e => {if(e.target.type!=='file')standardsDirty = true;});
+
+
+let rubricUploadMode=false,rubricFileLabel='',rubricSourceBatch=null;
+function rubricMethod(upload){rubricUploadMode=upload;$('rubricImportPanel').hidden=!upload;$('rubricManual').classList.toggle('on',!upload);$('rubricTemplate').classList.toggle('on',upload);$('qlist').hidden=upload;$('rubricEditActions').hidden=upload;$('rubricEditHelp').hidden=upload;$('rubricEmpty').hidden=upload||$('qlist').children.length>0;$('rubricPreview').hidden=!upload;if(upload)renderRubricPreview()}
+function renderRubricPreview(){
+ const qs=readQ();
+ if(!rubricFileLabel){$('rubricPreview').innerHTML='<p class="hint">上传填写好的模板后，在这里核对解析结果，无需重复填写。</p>';return}
+ $('rubricPreview').innerHTML='<div class="rubric-preview-head"><strong>'+esc(rubricFileLabel)+'</strong><span>'+qs.length+' 题 · 总分 '+qs.reduce((n,q)=>n+q.points,0)+' 分</span></div><p class="hint">以下为模板解析结果，只需核对后保存；如需修改，可重新上传或切换到直接录入。</p>'+qs.map((q,i)=>'<section class="rubric-preview-question"><h4>第'+(i+1)+'题 · '+esc(q.text)+'<span>'+esc(q.points)+' 分</span></h4><p>'+esc(q.rubric)+'</p></section>').join('');
+}
+async function importRubric(files){
+ if(!files||!files.length||batchBusy||batchOpening)return;
+ const file=files[0];
+ if(files.length!==1||!/\.xlsx$/i.test(file.name)||file.size>5*1024*1024){$('rubricMessage').textContent='请选择一份5MB以内的xlsx模板';return}
+ if(!state||state.status==='running'||Object.keys(state.results||{}).length){toast('已有结果或正在批改，不能导入新的题目结构');return}
+ const controls=[...$('p1').querySelectorAll('input,textarea,button')].map(el=>[el,el.disabled]);controls.forEach(([el])=>el.disabled=true);
+ $('rubricMessage').textContent='正在解析模板…';
+ try {await batchAction(async id=>{
+   const data=await readFile(file);
+   const result=await api('/api/gb/'+encodeURIComponent(id)+'/rubric-import',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({fileName:file.name,fileBase64:String(data).split(',')[1]})});
+   $('qlist').replaceChildren();result.questions.forEach(q=>addQ(q.text,q.points,q.rubric));standardsDirty=true;
+   rubricFileLabel=file.name;rubricSourceBatch=id;rubricMethod(true);
+   $('rubricMessage').textContent='模板已解析，可直接保存，无需逐题重复填写。';go(1);
+ });}finally{controls.forEach(([el,disabled])=>{if(el.isConnected)el.disabled=disabled});$('rubricFile').value='';if($('rubricMessage').textContent==='正在解析模板…')$('rubricMessage').textContent='解析失败，原有题目和评分标准已保留，请检查模板后重试。'}
+}
+$('rubricDrop').onclick=()=>{if(!batchBusy&&!batchOpening&&!$('rubricFile').disabled)$('rubricFile').click()};
+$('rubricDrop').onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();$('rubricDrop').click()}};
+$('rubricFile').onchange=e=>importRubric(e.target.files);
+let rubricDrag=0;
+$('rubricDrop').ondragenter=e=>{e.preventDefault();rubricDrag++;$('rubricDrop').classList.add('dragging')};
+$('rubricDrop').ondragover=e=>{e.preventDefault();if(e.dataTransfer)e.dataTransfer.dropEffect='copy'};
+$('rubricDrop').ondragleave=e=>{e.preventDefault();if(--rubricDrag<=0){rubricDrag=0;$('rubricDrop').classList.remove('dragging')}};
+$('rubricDrop').ondrop=e=>{e.preventDefault();rubricDrag=0;$('rubricDrop').classList.remove('dragging');importRubric(e.dataTransfer.files)};
+
+/* ---------- ② 收取作业 ---------- */
+async function loadCourses() {
+  const all = await api('/api/all');
+  COURSES = all.courses || [];
+  $('currentCourse').innerHTML = '<option value="">请选择课程</option>' + COURSES.map(c => `<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('');
+  $('course').innerHTML = COURSES.map(c => `<option value="${c.id}">${esc(c.name)}</option>`).join('');
+}
+$('fpick').addEventListener('change', async e => {
+  const files = [...e.target.files];
+  await batchAction(async id => {
+    for (const file of files) {
+      try {
+        const fileBase64 = await readFile(file);
+        await api(`/api/gb/batches/${id}/files`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({fileName:file.name,fileBase64})});
+      } catch (error) { toast(file.name + '：' + error.message); }
+    }
+    if (CUR === id) await loadState(true);
+  });
+  e.target.value = '';
+});
+
+function renderFiles(st) {
+  const fl = st.files || [];
+  const matched = fl.filter(f => f.status === 'matched').length;
+  $('gradingSummary').textContent = `已匹配 ${matched} 份 · 待确认 ${fl.length-matched} 份 · 共 ${(st.questions||[]).length} 道题`;
+  $('p2info').textContent = fl.length ? `已收 ${fl.length} 份` : '';
+  $('files').innerHTML = fl.length ? `<table><thead><tr><th style="width:34%">文件</th><th style="width:24%">匹配到名单</th><th style="width:12%">状态</th><th>备注</th></tr></thead><tbody>${
+    fl.map((f, i) => `<tr>
+      <td class="clip">${esc(f.orig)}</td>
+      <td>${sidSelect(f, i)}</td>
+      <td><span class="tag ${f.status === 'matched' ? 'ok' : 'warn'}">${f.status === 'matched' ? '已匹配' : '待确认'}</span></td>
+      <td class="hint" style="margin:0">${esc(f.note || '')}</td></tr>`).join('')}</tbody></table>`
+    : '<div class="empty">还没有收到文件</div>';
+  matchHint(st);
+}
+let ROSTER = [];
+async function loadRoster(courseId, version = contextVersion) { const response = await api('/api/students?courseId=' + encodeURIComponent(courseId)); const roster = Array.isArray(response) ? response : response.students || []; if (version === contextVersion) ROSTER = roster; }
+function sidSelect(f) {
+  const opts = ['<option value="">（未指定）</option>'].concat(ROSTER.map(s =>
+    `<option value="${s.id}" ${f.sid === s.id ? 'selected' : ''}>${esc(s.id + ' ' + s.name)}</option>`)).join('');
+  return `<select data-orig="${esc(f.orig)}" onchange="manualMatch(this)">${opts}</select>`;
+}
+async function manualMatch(sel) {
+  const files = [{orig:sel.dataset.orig,sid:sel.value || null}];
+  await batchAction(async id => {
+    await api(`/api/gb/batches/${id}/match`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({files})});
+    if (CUR === id) await loadState();
+  });
+}
+function matchHint(st) {
+  const fl = st.files || [];
+  const ok = fl.filter(f => f.status === 'matched').length;
+  const pend = fl.length - ok;
+  $('matchHint').innerHTML = fl.length
+    ? `名单 ${ROSTER.length} 人 · 已匹配 <b>${ok}</b> · 待确认 <b>${pend}</b> · 未交 <b>${ROSTER.length - ok}</b>（未交的不用传文件，批改时按名单算）`
+    : '';
+}
+async function rematch() {
+  await batchAction(async id => {
+    await api(`/api/gb/batches/${id}/match`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({files:[]})});
+    if (CUR === id) await loadState();
+  });
+}
+async function prepare() {
+  await batchAction(async id => {
+    const st = await loadState(true);
+    if (!st) throw new Error('作业不存在或无法读取');
+    if (!(st.files || []).length) throw new Error('还没收到作业文件，请先上传');
+    const result = await api(`/api/gb/batches/${id}/prepare`, {method:'POST'});
+    if (CUR !== id) return;
+    $('promptBox').textContent = result.prompt;
+    go(3); loadWbInfo();
+  });
+}
+
+/* ---------- ③ 批改 ---------- */
+function pick(k) {
+  if (k === 'A' && !$('wayA')) return;
+  if (k === 'A' && !workbuddyEnabled) { toast('请先连接 WorkBuddy，或使用手动调用与导入'); return; }
+  pickMode = k;
+  $('wayA').classList.toggle('on', k === 'A');
+  $('wayB').classList.toggle('on', k === 'B');
+  $('paneA').style.display = k === 'A' ? '' : 'none';
+  $('paneB').style.display = k === 'B' ? '' : 'none';
+}
+async function loadWbInfo() {
+  try {
+    const wb = await api('/api/gb/settings');
+    workbuddyEnabled = !!wb.enabled;
+    const tag = $('wbTag');
+    tag.textContent = wb.enabled ? '本机 WorkBuddy 已连接' : '未连接 · 只能手动调用';
+    tag.className = 'tag ' + (wb.enabled ? 'ok' : 'warn');
+    $('tagModel').textContent = '模型 ' + (wb.model || 'default');
+    $('tagTo').textContent = '超时 ' + Math.round((wb.timeoutMs || 60000) / 1000) + ' 秒';
+    $('wayA').classList.toggle('dis', !wb.enabled);
+    if (!wb.enabled) pick('B'); else pick(pickMode);
+  } catch {}
+}
+async function run() {
+  if (!CUR || standardsDirty) { toast('请先选择作业并保存评分标准'); return; }
+  if (!workbuddyEnabled) { toast('请先连接 WorkBuddy'); return; }
+  await batchAction(async id => {
+    $('runBtn').disabled = true;
+    try { await api(`/api/gb/batches/${id}/run`, {method:'POST'}); if (CUR === id) poll(true); }
+    catch (e) { if (CUR === id) $('runBtn').disabled = false; throw e; }
+  });
+}
+async function loadState(reset) {
+  if (!CUR) return null;
+  const id = CUR, version = contextVersion;
+  try {
+    const st = await api(`/api/gb/batches/${id}/state`);
+    if (id !== CUR || version !== contextVersion) return null;
+    await loadRoster(st.courseId, version);
+    if (id !== CUR || version !== contextVersion) return null;
+    state = st;
+    renderFiles(st);
+    if (st.prompt) $('promptBox').textContent = st.prompt;
+    if (st.status === 'running') {
+      poll(true);
+    } else {
+      poll(false);
+      $('runBtn').disabled = !workbuddyEnabled || st.status !== 'ready';
+      const n = Object.keys(st.results || {}).length;
+      $('runLogEmpty').hidden = !!(st.runLog && st.runLog.length);
+      if (!st.runLog || !st.runLog.length) { $('runLog').style.display = 'none'; $('runLog').textContent = ''; }
+      $('progFill').style.width = st.status === 'done' || st.status === 'archived' ? '100%' : '0';
+      $('progPc').textContent = st.status === 'done' || st.status === 'archived' ? `${n} / ${n}` : '0 / ' + (st.files || []).filter(f => f.status === 'matched').length;
+      if (st.runLog && st.runLog.length) {
+        $('runLog').style.display = '';
+        $('runLog').textContent = st.runLog.map(l => new Date(l.t).toLocaleTimeString() + '  ' + l.msg).join('\n');
+      }
+    }
+    return st;
+  } catch { return null; }
+}
+let state = null;
+function poll(on) {
+  clearInterval(pollTimer);
+  if (!on || !CUR) return;
+  const id = CUR, version = contextVersion;
+  pollTimer = setInterval(async () => {
+    const st = await api(`/api/gb/batches/${id}/state`).catch(() => null);
+    if (!st || id !== CUR || version !== contextVersion) return;
+    state = st;
+    $('runLogEmpty').hidden = !!(st.runLog && st.runLog.length);
+    const total = (st.files || []).filter(f => f.status === 'matched').length;
+    const done = Object.keys(st.results || {}).length;
+    $('progFill').style.width = (total ? Math.min(96, done / total * 100) : 8) + '%';
+    $('progPc').textContent = done + ' / ' + total;
+    if (st.runLog && st.runLog.length) {
+      $('runLog').style.display = '';
+      $('runLog').textContent = st.runLog.map(l => new Date(l.t).toLocaleTimeString() + '  ' + l.msg).join('\n');
+      $('runLog').scrollTop = $('runLog').scrollHeight;
+    }
+    if (st.status !== 'running') {
+      clearInterval(pollTimer);
+      $('runBtn').disabled = false;
+      if (st.status === 'done') { $('progFill').style.width = '100%'; }
+    }
+  }, 2000);
+}
+function copyPrompt() {
+  navigator.clipboard.writeText($('promptBox').textContent)
+    .then(() => toast('提示词已复制，去 WorkBuddy 粘贴并回车'))
+    .catch(() => toast('复制失败，请手动全选复制'));
+}
+function openDir() { api('/api/gb/open', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: CUR }) }).catch(e => toast(e.message)); }
+$('xlpick').addEventListener('change', async e => {
+  const file = e.target.files[0]; if (!file) return;
+  await batchAction(async id => {
+    const fileBase64 = await readFile(file);
+    const result = await api(`/api/gb/batches/${id}/import`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({fileBase64})});
+    if (CUR !== id) return;
+    toast('导入 ' + result.count + ' 份' + (result.unknown && result.unknown.length ? '；名单里没有：' + result.unknown.join('、') : ''));
+    go(4);
+  });
+  e.target.value = '';
+});
+
+/* ---------- ④ 成绩表 ---------- */
+async function loadGrades() {
+  const id = CUR, version = contextVersion;
+  const st = await api(`/api/gb/batches/${id}/state`);
+  if (id !== CUR || version !== contextVersion) return;
+  await loadRoster(st.courseId, version);
+  if (id !== CUR || version !== contextVersion) return;
+  const results = st.results || {};
+  const total = st.questions ? st.questions.reduce((a, q) => a + q.points, 0) : 100;
+  const pass = st.pass == null ? 60 : st.pass;
+  const vals = Object.values(results).filter(r => !r.abnormal && r.total != null);
+  const avg = vals.length ? (vals.reduce((a, r) => a + r.total, 0) / vals.length) : 0;
+  const exc = vals.filter(r => r.total >= total * .9).length;
+  const fail = vals.filter(r => r.total < pass).length;
+  $('gsum').textContent = `已批 ${vals.length + Object.values(results).filter(r => r.abnormal).length} 份 · ${st.status === 'archived' ? '已归档' : '未归档'} · 满分 ${total}${total !== 100 ? '（分析按百分制折算）' : ''}`;
+  $('gstats').innerHTML = `
+    <div class="stat"><b>${vals.length ? Math.round(avg * 10) / 10 : '—'}</b><span>平均分</span></div>
+    <div class="stat"><b>${vals.length ? Math.max(...vals.map(r => r.total)) : '—'}</b><span>最高</span></div>
+    <div class="stat"><b>${vals.length ? Math.min(...vals.map(r => r.total)) : '—'}</b><span>最低</span></div>
+    <div class="stat"><b style="color:#0F6E56">${vals.length ? Math.round(exc / vals.length * 100) + '%' : '—'}</b><span>优秀率</span></div>
+    <div class="stat"><b style="color:var(--red)">${vals.length ? Math.round(fail / vals.length * 100) + '%' : '—'}</b><span>不及格率</span></div>
+    <div class="stat"><b style="color:#8a5a12">${Object.values(results).filter(r => r.abnormal).length}</b><span>异常件</span></div>`;
+
+  const sameBatch = reviewState && reviewState.id === st.id;
+  if(!sameBatch)reviewMode='overview';
+  reviewState = st;
+  if (!sameBatch || !ROSTER.some(s => s.id === reviewSid)) reviewSid = (ROSTER.find(s => (st.files||[]).some(f => f.sid===s.id)) || ROSTER[0] || {}).id || null;
+  renderReview();
+}
+let reviewState=null, reviewSid=null, reviewDirty=false, reviewSaving=false, previewVersion=0, reviewMode='overview';
+function reviewModes() {
+  return `<div role="group" aria-label="成绩查看模式" style="display:flex;gap:6px;margin:16px 0"><button type="button" class="btn ${reviewMode==='overview'?'pri':''}" aria-pressed="${reviewMode==='overview'}" onclick="switchReviewMode('overview')">总览</button><button type="button" class="btn ${reviewMode==='detail'?'pri':''}" aria-pressed="${reviewMode==='detail'}" onclick="switchReviewMode('detail')">详细</button></div>`;
+}
+function switchReviewMode(mode) {
+  if(!['overview','detail'].includes(mode)||mode===reviewMode||!reviewCanLeave())return;
+  reviewMode=mode;renderReview();
+}
+function openDetailedReview(index) {
+  if(!ROSTER[index]||!reviewCanLeave())return;
+  reviewSid=ROSTER[index].id;reviewMode='detail';renderReview();
+}
+function renderReviewOverview() {
+  const total=reviewState.questions.reduce((n,q)=>n+q.points,0)||100, pass=reviewState.pass==null?60:reviewState.pass;
+  $('grades').innerHTML=reviewModes()+`<div style="overflow:auto"><table><thead><tr><th>姓名 / 学号</th><th>提交情况</th><th class="num">得分</th><th>等级</th><th>评分摘要</th><th>操作</th></tr></thead><tbody>${ROSTER.map((s,i)=>{
+    const r=(reviewState.results||{})[s.id], files=reviewFiles(s.id);
+    const label=!r?'待批改':r.abnormal?'异常':r.total>=total*.9?'优秀':r.total<pass?'不及格':'及格';
+    const cls=r&&r.abnormal?'warn':r&&r.total>=total*.9?'ok':r&&r.total<pass?'bad':'';
+    return `<tr><td><b>${esc(s.name)}</b><div class="mono">${esc(s.id)}</div></td><td>${files.length?'已提交 '+files.length+' 份':r?'无提交原件':'未交'}</td><td class="num"><span class="sc">${r&&!r.abnormal&&r.total!=null?r.total:'—'}${r&&r.modified?' *':''}</span></td><td><span class="tag ${cls}">${!r&&!files.length?'未交':label}</span></td><td><span class="clip" style="max-width:360px">${r?esc(r.abnormal||(r.items||[]).map((q,k)=>`题${k+1} ${q.score}/${q.max}`).join(' · ')+(r.comment?' — '+r.comment:'')):'暂无评分'}</span></td><td><button class="btn mini" type="button" onclick="openDetailedReview(${i})">详细复核</button></td></tr>`;
+  }).join('')}</tbody></table></div>`;
+}
+function reviewCanLeave() {
+  if(reviewSaving){toast('正在保存，请稍候');return false;}
+  if(reviewDirty){toast('评分尚未保存，请先保存或撤销修改');return false;}
+  return true;
+}
+function reviewFiles(sid) {return (reviewState.files||[]).map((f,index)=>({...f,index})).filter(f=>f.sid===sid);}
+function reviewOriginalUrl(index) {return `/api/gb/batches/${encodeURIComponent(reviewState.id)}/files/${index}/original`;}
+function renderReview() {
+  previewVersion++;
+  if(!reviewState || !reviewSid){$('grades').innerHTML='<div class="empty">暂无学生名单</div>';return;}
+  if(reviewMode==='overview'){renderReviewOverview();return;}
+  const student=ROSTER.find(s=>s.id===reviewSid), r=(reviewState.results||{})[reviewSid];
+  const files=reviewFiles(reviewSid), position=ROSTER.findIndex(s=>s.id===reviewSid);
+  const total=reviewState.questions.reduce((n,q)=>n+q.points,0)||100;
+  $('grades').innerHTML=reviewModes()+`<div class="review-grid">
+    <section class="review-column"><div class="review-heading">提交清单 <span class="hint" style="margin:0">${ROSTER.length} 人</span></div><div class="review-list">${ROSTER.map((s,i)=>{const result=(reviewState.results||{})[s.id],submitted=reviewFiles(s.id).length;return `<button type="button" class="review-person ${s.id===reviewSid?'on':''}" aria-current="${s.id===reviewSid?'true':'false'}" onclick="selectReview(${i})">${esc(s.name)}<small>${esc(s.id)}</small><small>${submitted?result?(result.abnormal?'异常待复核':result.total+' 分'):'已交 · 待批改':'无提交原件'}</small></button>`}).join('')}</div></section>
+    <section class="review-column"><div class="review-heading"><span>${esc(student.name)}的作业</span><span class="tag">${files.length} 份提交</span></div><div class="review-toolbar">${files.length?`<select id="reviewFile" aria-label="提交文件" onchange="loadReviewOriginal()">${files.map(f=>`<option value="${f.index}">${esc(f.orig)}</option>`).join('')}</select><a class="btn mini" id="reviewDownload" href="${reviewOriginalUrl(files[0].index)}?download=1" download>下载原件</a>`:'<span class="hint" style="margin:0">未关联提交文件</span>'}</div><div class="review-document" id="reviewDocument" aria-live="polite"></div></section>
+    <section class="review-column"><div class="review-heading">评分与复核 <span class="hint" style="margin:0">满分 ${total}</span></div><div class="review-score">${r?`${r.abnormal?`<div class="cmt">异常：${esc(r.abnormal)}</div>`:''}<label for="reviewTotal">复核总分</label><input id="reviewTotal" type="number" min="0" max="${total}" step="0.1" value="${r.total==null?'':r.total}" oninput="reviewDirty=true"><label for="reviewReason">改分原因</label><textarea id="reviewReason" maxlength="200" placeholder="填写复核意见" oninput="reviewDirty=true">${esc(r.modifyReason||'')}</textarea><p class="hint">调整总分不改变下方模型逐题评分。</p><button type="button" class="btn pri" onclick="saveReview(false)">保存评分</button><button type="button" class="btn" onclick="saveReview(true)" ${position===ROSTER.length-1?'disabled':''}>保存并下一位</button><button type="button" class="btn gh" onclick="discardReview()">撤销未保存修改</button><div class="cmt"><b>总评</b><br>${esc(r.comment||'暂无总评')}</div><button type="button" class="btn" onclick="openQuestionScores()">查看小题评分与依据</button>`:'<p class="hint">暂无批改结果，可先核对提交原件。完成自动批改后在这里复核。</p>'}</div></section>
+  </div><div class="review-nav"><span>第 ${position+1} / ${ROSTER.length} 位</span><button class="btn" type="button" onclick="moveReview(-1)" ${position===0?'disabled':''}>上一位</button><button class="btn" type="button" onclick="moveReview(1)" ${position===ROSTER.length-1?'disabled':''}>下一位</button></div>`;
+  loadReviewOriginal();
+}
+async function loadReviewOriginal() {
+  const version=++previewVersion, batch=CUR, sid=reviewSid;
+  const target=$('reviewDocument'), selector=$('reviewFile');
+  if(!selector){target.textContent='该学生暂无可查看的提交原件。';return;}
+  const index=Number(selector.value), file=reviewState.files[index], url=reviewOriginalUrl(index);
+  $('reviewDownload').href=url+'?download=1';
+  if(/\.pdf$/i.test(file.orig)){target.innerHTML=`<iframe title="${esc(file.orig)}" src="${url}"></iframe>`;return;}
+  target.textContent='正在加载原件…';
+  try {
+    const data=await api(url+'?preview=1');
+    if(version!==previewVersion||batch!==CUR||sid!==reviewSid)return;
+    target.innerHTML=(data.note?`<p class="hint" style="margin:0 0 10px">${esc(data.note)}</p>`:'')+'<pre>'+esc(data.text||'（正文为空）')+'</pre>';
+  }catch(e){if(version===previewVersion&&batch===CUR&&sid===reviewSid)target.textContent=e.message;}
+}
+function openQuestionScores() {
+  const student=ROSTER.find(s=>s.id===reviewSid), result=reviewState&&(reviewState.results||{})[reviewSid];
+  if(!student||!result)return;
+  $('questionScoreTitle').textContent=student.name+' · 小题评分与依据';
+  $('questionScoreBody').innerHTML=(result.items||[]).map((item,i)=>{
+    const question=(reviewState.questions||[])[i]||{};
+    return `<section class="question-detail"><h3><span>第 ${i+1} 题</span><span>${esc(item.score)} / ${esc(item.max)} 分</span></h3>${question.text?`<p>${esc(question.text)}</p>`:''}<h4>给分依据</h4><p>${esc(item.note||'暂无评分说明')}</p><h4>评分标准</h4><p>${esc(question.rubric||'未设置')}</p></section>`;
+  }).join('')||'<p class="hint">本次结果没有逐题评分明细。</p>';
+  const dialog=$('questionScoreDialog');
+  if(!dialog.open)dialog.showModal();
+}
+function selectReview(index) {
+  if(!reviewCanLeave() || !ROSTER[index])return;
+  reviewSid=ROSTER[index].id;renderReview();
+}
+function moveReview(delta){selectReview(ROSTER.findIndex(s=>s.id===reviewSid)+delta);}
+function discardReview(){if(reviewSaving)return;reviewDirty=false;renderReview();}
+async function saveReview(next) {
+  if(reviewSaving || !reviewState || reviewState.id!==CUR)return;
+  const input=$('reviewTotal'), reason=$('reviewReason');if(!input)return;
+  const total=input.value, max=reviewState.questions.reduce((n,q)=>n+q.points,0)||100;
+  if(total===''||!Number.isFinite(Number(total))||Number(total)<0||Number(total)>max){toast('请输入0到'+max+'之间的分数');return;}
+  const sid=reviewSid, id=CUR;
+  reviewSaving=true;
+  const controls=Array.from(document.querySelectorAll('.review-score button,.review-person,.review-nav button'),b=>[b,b.disabled]);
+  controls.forEach(([b])=>b.disabled=true);
+  input.disabled=true;reason.disabled=true;
+  let saved=false;
+  await batchAction(async batch=>{
+    if(batch!==id)return;
+    await api('/api/gb/score',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({batchId:id,sid,total,reason:reason.value})});
+    if(CUR!==id)return;
+    saved=true;reviewDirty=false;
+    Object.assign(reviewState.results[sid],{total:Number(total),modifyReason:reason.value,modified:true,abnormal:''});
+    if(next){const i=ROSTER.findIndex(s=>s.id===sid);if(ROSTER[i+1])reviewSid=ROSTER[i+1].id;}
+    await loadGrades();toast('评分已保存');
+  });
+  reviewSaving=false;
+  if(saved && CUR===id)renderReview();
+  if(!saved){controls.forEach(([b,disabled])=>b.disabled=disabled);input.disabled=false;reason.disabled=false;}
+}
+async function archive(btn) {
+  if(!reviewCanLeave())return;
+  if (!btn.classList.contains('armed')) {
+    btn.classList.add('armed'); btn.textContent = '再点一次确认归档';
+    setTimeout(() => { btn.classList.remove('armed'); btn.textContent = '归档到学情分析'; }, 2600);
+    return;
+  }
+  await batchAction(async id => {
+    const result = await api('/api/gb/batches/archive', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({batchId:id})});
+    if (CUR !== id) return;
+    toast('已更新 ' + result.written + ' 份成绩，手动维护成绩会保留。可到作业分析查看。');
+    btn.classList.remove('armed');btn.textContent='归档到学情分析';
+    await loadGrades();
+  });
+}
+function exportX() { location.href = `/api/gb/batches/${CUR}/export`; }
+
+/* ---------- 启动 ---------- */
+if (typeof window !== 'undefined') window.appCanNavigate = () => {
+  if(batchBusy||batchOpening){toast('操作进行中，请稍候');return false;}
+  if(standardsDirty){toast('评分标准有未保存修改，请先保存');return false;}
+  return reviewCanLeave();
+};
+(async function init() {
+  showWorkspace(false, '正在读取作业…');
+  try {
+    await loadCourses();
+    await loadBatches();
+    await loadWbInfo();
+    const qid = new URLSearchParams(location.search).get('id');
+    const choice = qid;
+    if (choice) await openBatch(choice);
+    else showWorkspace(false, '请先选择课程，再选择要批改的作业。');
+  } catch (e) { showWorkspace(false, '加载失败：' + e.message + '。请返回作业列表重试。'); }
+})();
+</script>
+<div class="toast" id="toast"></div>
+<script>
+function toast(t) {
+  const el = document.getElementById('toast');
+  el.textContent = t;
+  el.classList.add('on');
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => el.classList.remove('on'), 2400);
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,6 @@
+'use strict';
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
+const source=fs.readFileSync('server/ppt/public/ppt.js','utf8'),start=source.indexOf('async function perform(fn)'),end=source.indexOf('function startNew()',start);
+const editable={disabled:false,isConnected:true},alreadyDisabled={disabled:true,isConnected:true},oldNode={disabled:false,isConnected:true},modal={open:false};
+const context=vm.createContext({document:{querySelectorAll:()=>[editable,alreadyDisabled,oldNode]},$:()=>modal,error:()=>{}});vm.runInContext('let actionPending=false;'+source.slice(start,end),context);
+(async()=>{let release,entered=false;const pending=context.perform(async()=>{entered=true;assert.equal(editable.disabled,true);assert.equal(alreadyDisabled.disabled,true);await new Promise(r=>release=r);oldNode.isConnected=false;});assert.equal(entered,true);let duplicate=false;await context.perform(async()=>duplicate=true);assert.equal(duplicate,false);release();await pending;assert.equal(editable.disabled,false);assert.equal(alreadyDisabled.disabled,true);assert.equal(oldNode.disabled,true);console.log('PASS: pending template save/upload freezes editing, duplicate actions blocked, prior disabled state restored, detached controls ignored');})().catch(e=>{console.error(e);process.exitCode=1;});

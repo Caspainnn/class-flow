@@ -3,205 +3,251 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>选课 · 课中签到</title>
+<title>工作台 · 一堂课</title>
+<link rel="stylesheet" href="/shell.css">
 <style>
-:root{--ink:#1F1D1A;--ink2:#5F5E5A;--ink3:#8A867E;--ink4:#B8B4AC;
-  --line:#E2DED6;--line2:#ECE8E0;--fill:#F5F3EE;--accent:#B5502E;--ok:#1D9E75}
-*{box-sizing:border-box;margin:0;padding:0}
-body{background:#F7F6F3;color:var(--ink);min-height:100vh;
-  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei","PingFang SC",sans-serif;
-  display:flex;align-items:center;justify-content:center;padding:24px}
-.sheet{width:100%;max-width:404px;background:#fff;border-radius:14px;padding:18px 18px 14px;
-  border:0.5px solid var(--line);box-shadow:0 1px 3px rgba(31,29,26,.04)}
+.head{display:flex;align-items:flex-start;gap:12px;margin-bottom:18px}
+.head h1{font-size:18px;font-weight:500;margin:0}
+.head .sub{font-size:12px;color:var(--ink2);margin-top:4px}
+.head .r{margin-left:auto;display:flex;gap:8px;flex:none}
+.btn{font-family:inherit;font-size:12.5px;padding:8px 14px;border-radius:8px;border:1px solid var(--line);
+  background:#fff;color:var(--ink);cursor:pointer;white-space:nowrap;text-decoration:none;display:inline-block}
+.btn:hover{border-color:#b9bec6}
+.btn.pri{background:var(--ink);border-color:var(--ink);color:#fff}
+.btn.pri:hover{background:#2c2f33}
+.btn.mini{padding:5px 10px;font-size:11.5px}
+.card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:18px 20px;margin-bottom:12px}
+.card h2{font-size:13px;font-weight:500;margin:0 0 14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.card h2 span{font-weight:400;color:var(--ink3);font-size:11.5px}
+.card h2 .more{margin-left:auto;font-size:11.5px;color:var(--blue);cursor:pointer;font-weight:400;text-decoration:none}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px}
+.stat{background:#fff;border:1px solid var(--line);border-radius:13px;padding:14px 16px;text-decoration:none;color:inherit;display:block}
+.stat b{display:block;font-size:24px;font-weight:500;line-height:1.15;font-variant-numeric:tabular-nums}
+.stat span{font-size:11.5px;color:var(--ink3);display:block;margin-top:2px}
+a.stat:hover{border-color:#c9ced6}
+.todo{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line2);font-size:12.5px}
+.todo:last-child{border-bottom:none}
+.todo .d{width:7px;height:7px;border-radius:50%;flex:none}
+.todo .go{margin-left:auto;font-size:11.5px;color:var(--blue);text-decoration:none;white-space:nowrap}
+.crow{display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:10px;border:1px solid transparent}
+.crow:hover{background:#f8f9fb}
+.crow .k{width:22px;height:22px;border-radius:6px;background:#f1f2f5;color:var(--ink3);font-size:11.5px;
+  display:flex;align-items:center;justify-content:center;flex:none}
+.crow .nm{font-size:13.5px;font-weight:500}
+.crow .meta{font-size:11.5px;color:var(--ink3);margin-top:2px}
+.crow .rt{margin-left:auto;font-size:11px;color:var(--ink3);display:flex;align-items:center;gap:10px}
+.tag{font-size:10.5px;padding:2px 7px;border-radius:5px;background:#f1f2f5;color:var(--ink2);white-space:nowrap}
+.tag.info{background:#edf3fa;color:var(--blue)}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.fn{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px 15px;
+  display:flex;align-items:center;gap:10px;text-decoration:none;color:inherit}
+.fn:hover{border-color:#c9ced6;box-shadow:0 2px 8px rgba(23,25,28,.04)}
+.fn .fi{width:26px;height:26px;border-radius:7px;background:#f4f6f8;display:flex;align-items:center;
+  justify-content:center;font-size:12px;color:var(--ink2);flex:none}
+.fn .ft{font-size:12.5px;font-weight:500}
+.fn .fd{font-size:10.5px;color:var(--ink3);margin-top:1px}
+.empty{font-size:12.5px;color:var(--ink3);padding:12px 0;line-height:1.9}
+.two{display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap}
+@media (max-width:1180px){.stats{grid-template-columns:1fr 1fr}.grid3{grid-template-columns:1fr 1fr}}
 
-.hd{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
-.hd .t{font-size:15px;font-weight:500}
-.hd .kbd{font-size:11px;color:var(--ink4);flex:none}
-.sub{font-size:12px;color:var(--ink3);margin-top:3px;margin-bottom:14px}
+/* Workbench visual hierarchy; scoped to this page so other modules stay stable. */
+body[data-active=home] .sh-main{padding:30px 32px 44px}
+body[data-active=home] .head{align-items:center;gap:20px;margin-bottom:25px;padding:3px 0 5px}
+body[data-active=home] .head h1{font-size:28px;font-weight:650;letter-spacing:-.7px;line-height:1.4}
+body[data-active=home] .head .sub{font-size:12px;color:#8291a2;margin-top:8px;line-height:1.8}
+body[data-active=home] .btn{border-radius:8px;border-color:#dce5ee;color:#536a80;padding:9px 15px;transition:background .15s,border-color .15s}
+body[data-active=home] .btn.pri{background:#185fa5;border-color:#185fa5;color:white;box-shadow:0 3px 8px #185fa512}
+body[data-active=home] .btn.pri:hover{background:#114f8c}
+body[data-active=home] a:focus-visible{outline:2px solid #185fa5;outline-offset:4px}
+body[data-active=home] .sh-main .stats{grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;padding:0;border:0;background:transparent;border-radius:0;margin-bottom:24px}
+body[data-active=home] .sh-main .stat{position:relative;border:1px solid #e1e7ef;border-radius:13px;background:#fff;padding:20px 22px 18px;box-shadow:0 3px 12px #203c5903;min-width:0}
+body[data-active=home] .sh-main .stat:last-child{border-right:1px solid #e1e7ef}
+body[data-active=home] .sh-main .stat .stat-label{margin:0 48px 13px 0;font-size:12px;line-height:1.6;color:#6d8196}
+body[data-active=home] .sh-main .stat b{font-size:36px;font-weight:650;line-height:1.15;letter-spacing:-1px;color:#233e58}
+.stat-icon{position:absolute;right:20px;top:18px;display:grid;place-items:center;width:36px;height:36px;border-radius:10px;background:#edf4fc;color:#467fac}
+.stat-icon svg,.fi svg{width:20px;height:20px}
+body[data-active=home] .sh-main .stat .stat-note{font-size:11px;color:#93a0ad;margin-top:15px;padding-top:12px;border-top:1px solid #edf1f5;line-height:1.6}
+body[data-active=home] .sh-main .stat:first-child{background:linear-gradient(120deg,#1e4d78,#286d9e);border-color:#25628f;box-shadow:0 5px 14px #20598415}
+body[data-active=home] .sh-main .stat:first-child b{color:#fff}
+body[data-active=home] .sh-main .stat:first-child .stat-label{color:#d8e7f2}
+body[data-active=home] .sh-main .stat:first-child .stat-note{color:#b6d0e4;border-color:#ffffff20}
+body[data-active=home] .stat:first-child .stat-icon{color:#e2f0fc;background:#ffffff17}
+body[data-active=home] .stat:nth-child(2) .stat-icon{background:#edf7f3;color:#438d7d}
+body[data-active=home] .stat:nth-child(3) .stat-icon{background:#f1f0f8;color:#8b80b0}
+body[data-active=home] .stat:nth-child(4) .stat-icon{background:#fcf3e7;color:#b58d42}
+body[data-active=home] .sh-main .home-columns{gap:20px;margin-bottom:24px;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr)}
+body[data-active=home] .home-primary{display:flex;flex-direction:column;gap:18px}
+body[data-active=home] .card{padding:22px 24px;border-radius:13px;border:1px solid #e1e7ef;box-shadow:0 3px 12px #203c5903;margin-bottom:20px;min-width:0}
+body[data-active=home] .sh-main .home-primary #lastCard,body[data-active=home] .sh-main .home-primary .home-todos{border:1px solid #e1e7ef;border-radius:13px;padding:22px 24px}
+body[data-active=home] .card h2{font-size:15px;font-weight:600;line-height:1.6;margin-bottom:18px;letter-spacing:-.2px;color:#294159}
+body[data-active=home] .card h2 span{font-size:11px;color:#91a0ae;letter-spacing:0}
+body[data-active=home] .card h2 .more{font-size:11px}
+body[data-active=home] .todo{padding:13px 0;line-height:1.8;gap:12px;color:#5a7085;border-color:#edf1f5}
+body[data-active=home] .todo>span:nth-child(2){min-width:0;overflow-wrap:anywhere}
+body[data-active=home] .todo .d{width:6px;height:6px;box-shadow:0 0 0 4px #f1f5f9}
+body[data-active=home] .empty{padding:18px 0;color:#94a2b0;font-size:12px}
+body[data-active=home] .crow{padding:13px 0;gap:12px;border-bottom:1px solid #f0f3f6;border-radius:0}
+body[data-active=home] .crow:last-child{border-bottom:0}
+body[data-active=home] .crow:hover{background:#fbfcfe}
+body[data-active=home] .crow .k{width:32px;height:36px;border-radius:8px;background:#edf4fb;color:#5583ab;font-weight:600;font-variant-numeric:tabular-nums}
+body[data-active=home] .crow>div:nth-child(2){min-width:0}
+body[data-active=home] .crow .nm{font-size:13px;color:#35536e;line-height:1.6;overflow-wrap:anywhere}
+body[data-active=home] .crow .meta{font-size:11px;line-height:1.8;color:#91a1af}
+body[data-active=home] .crow .rt{flex:none;gap:8px;font-size:10px}
+body[data-active=home] .grid3{gap:14px}
+body[data-active=home] .fn{background:#fbfcfe;border:1px solid #e8edf3;border-radius:10px;padding:16px 18px;gap:13px;min-width:0;transition:background .15s,border-color .15s}
+body[data-active=home] .fn:hover{background:#f3f8fd;border-color:#bcd2e7;box-shadow:none}
+body[data-active=home] .fn .fi{width:38px;height:38px;border-radius:10px;background:#eaf2fb;color:#4d80ae}
+body[data-active=home] .fn:nth-child(3n+2) .fi{background:#edf5f2;color:#568f80}
+body[data-active=home] .fn:nth-child(3n) .fi{background:#f2f0f8;color:#8f81ac}
+body[data-active=home] .fn .ft{font-size:13px;font-weight:550;color:#35506a}
+body[data-active=home] .fn .fd{font-size:11px;color:#8e9ead;line-height:1.7;margin-top:4px}
+body[data-active=home] .last-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.last-metric{font-size:11px;color:#8799aa;line-height:1.8}.last-metric b{display:block;font-size:22px;font-weight:600;color:#2f4d67}.last-question{font-size:11px;line-height:1.8;color:#8b9dad;padding-top:14px;margin-top:14px;border-top:1px solid #edf1f5;overflow-wrap:anywhere}
+@media(max-width:1100px){body[data-active=home] .sh-main .home-columns{grid-template-columns:1fr}body[data-active=home] .sh-main .stats{grid-template-columns:repeat(2,minmax(0,1fr))}body[data-active=home] .crow .rt{gap:10px}}
+@media(max-width:700px){body[data-active=home] .sh-main{padding:20px 16px 32px}body[data-active=home] .head{flex-wrap:wrap;margin-bottom:20px}body[data-active=home] .head h1{font-size:25px}body[data-active=home] .head .r{margin-left:0}body[data-active=home] .sh-main .stats{gap:12px}body[data-active=home] .sh-main .stat,body[data-active=home] .sh-main .stat:nth-child(2){padding:16px;border:1px solid #e1e7ef}body[data-active=home] .sh-main .stat b{font-size:30px}.stat-icon{width:29px;height:29px;right:12px;top:13px}.stat-icon svg{width:17px;height:17px}body[data-active=home] .sh-main .stat .stat-label{margin-right:30px;font-size:11px}body[data-active=home] .card,body[data-active=home] .sh-main .home-primary .home-todos,body[data-active=home] .sh-main .home-primary #lastCard{padding:18px}body[data-active=home] .grid3{grid-template-columns:1fr 1fr;gap:10px}body[data-active=home] .fn{padding:13px 10px;gap:9px}body[data-active=home] .fn .fi{width:30px;height:32px}body[data-active=home] .fn .fd{font-size:10px}body[data-active=home] .crow{flex-wrap:wrap}body[data-active=home] .crow .rt{margin-left:44px;width:calc(100% - 44px)}body[data-active=home] .last-metrics{grid-template-columns:1fr 1fr}body[data-active=home] .todo{flex-wrap:wrap}body[data-active=home] .todo .go{margin-left:18px}}
 
-.banner{display:none;align-items:center;gap:9px;background:#FBF3EF;border:0.5px solid #EBD8CE;
-  border-radius:10px;padding:9px 11px;margin-bottom:12px;cursor:pointer}
-.banner.on{display:flex}
-.banner .dot{width:6px;height:6px;border-radius:50%;background:var(--accent);flex:none}
-.banner .txt{flex:1;font-size:12px;color:#8C4526;line-height:1.5}
-.banner .go{font-size:12px;color:var(--accent);flex:none}
-
-.list{display:flex;flex-direction:column;gap:4px}
-.row{display:flex;align-items:center;gap:11px;padding:9px 11px;border-radius:10px;
-  cursor:pointer;transition:background .12s;border:0.5px solid transparent}
-.row:hover{background:#FAF9F6}
-.row.sel{background:var(--fill);border-color:var(--line)}
-.row .k{width:21px;height:21px;flex:none;border-radius:6px;background:#F2F0EB;color:var(--ink3);
-  font-size:12px;display:flex;align-items:center;justify-content:center;font-variant-numeric:tabular-nums}
-.row.sel .k{background:var(--ink);color:#fff}
-.row .mid{flex:1;min-width:0}
-.row .nm{font-size:14px;font-weight:500;line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.row .meta{font-size:12px;color:var(--ink3);margin-top:1px}
-.row .meta.warn{color:#946013}
-.row .rt{font-size:11px;color:var(--ink4);flex:none}
-.row.empty{opacity:.6}
-.row.empty .nm{color:var(--ink2)}
-
-.ft{display:flex;align-items:center;justify-content:space-between;gap:10px;
-  border-top:0.5px solid var(--line2);margin-top:12px;padding-top:11px}
-.ft .tip{font-size:12px;color:var(--ink4)}
-.link{font-family:inherit;font-size:12px;color:var(--ink3);background:none;border:none;
-  padding:5px 2px;cursor:pointer;text-decoration:none}
-.link:hover{color:var(--ink)}
-
-.blank{padding:20px 4px 12px;text-align:center}
-.blank .t{font-size:13px;color:var(--ink2);margin-bottom:6px}
-.blank .s{font-size:12px;color:var(--ink3);line-height:1.7}
 </style>
+<link rel="icon" type="image/svg+xml" href="/assets/logo.svg?v=20261026">
 </head>
-<body>
-<div class="sheet">
-  <div class="hd">
-    <span class="t">今天上哪门课</span>
-    <span class="kbd">数字键直选</span>
-  </div>
-  <div class="sub" id="sub">—</div>
-
-  <div class="banner" id="banner">
-    <span class="dot"></span>
-    <span class="txt" id="bannerTxt">有一场点名还没结束</span>
-    <span class="go">回到投影页 →</span>
-  </div>
-
-  <div class="list" id="list"></div>
-
-  <div class="ft">
-    <span class="tip" id="tip">↑↓ 选择 · 回车开始</span>
-    <a class="link" href="/admin">名单管理</a>
-  </div>
-</div>
-
-<script>
-const $ = id => document.getElementById(id);
-const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-
-let COURSES = [];
-let SEL = 0;
-let ACTIVE = null;
-
-function fmtToday() {
-  const d = new Date();
-  const p = n => String(n).padStart(2, '0');
-  return `${d.getMonth() + 1}月${d.getDate()}日 周${'日一二三四五六'[d.getDay()]} ${p(d.getHours())}:${p(d.getMinutes())}`;
-}
-
-function ago(ts) {
-  if (!ts) return '还没上过';
-  const diff = Date.now() - ts;
-  const day = 86400000;
-  if (diff < day) {
-    const h = Math.floor(diff / 3600000);
-    return h < 1 ? '刚上过' : h + ' 小时前';
-  }
-  const d = Math.floor(diff / day);
-  if (d === 1) return '昨天上过';
-  if (d < 7) return d + ' 天前';
-  if (d < 30) return Math.floor(d / 7) + ' 周前';
-  return Math.floor(d / 30) + ' 个月前';
-}
-
-function paint() {
-  const rows = $('list').querySelectorAll('.row');
-  rows.forEach((el, i) => el.classList.toggle('sel', i === SEL));
-}
-
-function go(c) {
-  if (!c) return;
-  if (!c.count) {
-    alert(`「${c.name}」还没有名单。\n先去后台把名单粘进去，才能开始点名。`);
-    location.href = '/admin';
-    return;
-  }
-  location.href = '/compose?courseId=' + encodeURIComponent(c.id);
-}
-
-function render() {
-  if (!COURSES.length) {
-    $('list').innerHTML = `<div class="blank">
-      <div class="t">还没有课程</div>
-      <div class="s">先去后台建一门课，把名单粘进去。</div>
-    </div>`;
-    $('tip').textContent = '';
-    return;
-  }
-  $('list').innerHTML = COURSES.map((c, i) => `
-    <div class="row ${i === SEL ? 'sel' : ''} ${c.count ? '' : 'empty'}" data-i="${i}">
-      <span class="k">${i + 1}</span>
-      <div class="mid">
-        <div class="nm">${esc(c.name)}</div>
-        <div class="meta ${c.count ? '' : 'warn'}">${c.count ? `${c.count} 人${c.term ? ' · ' + esc(c.term) : ''}` : '名单还没录入'}</div>
+<body data-active="home">
+<div class="app">
+  <aside class="sh-side" id="shSide"></aside>
+  <main class="sh-main">
+    <div class="head">
+      <div>
+        <h1>工作台</h1>
+        <div class="sub" id="sub">—</div>
       </div>
-      <div class="rt">${ago(c.lastAt)}</div>
-    </div>`).join('');
+      <div class="r">
+        <a class="btn" href="/courses">导入名单</a>
+        <a class="btn pri" href="/session">签到管理</a>
+      </div>
+    </div>
 
-  $('list').querySelectorAll('.row').forEach(el => {
-    const i = Number(el.dataset.i);
-    el.onmouseenter = () => { SEL = i; paint(); };
-    el.onclick = () => go(COURSES[i]);
+    <div class="stats" id="stats"></div>
+
+    <div class="two home-columns">
+      <div class="home-primary">
+      <div class="card home-todos">
+        <h2>待处理事项 <span>教学事务，一目了然</span></h2>
+        <div id="todos"></div>
+      </div>
+      <div class="card" style="margin-bottom:0" id="lastCard">
+      <h2>最近一次点名</h2>
+      <div id="last"></div>
+    </div>
+      </div>
+      <div class="card home-courses">
+        <h2>我的课程 <span id="courseSub"></span></h2>
+        <div id="courses"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>常用功能</h2>
+      <div class="grid3">
+        <a class="fn" href="/session"><span class="fi" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><path d="m8 12 3 3 5-6"/></svg></span><div><div class="ft">签到管理</div><div class="fd">发起签到 · 记录管理</div></div></a>
+        <a class="fn" href="/dashboard"><span class="fi" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg></span><div><div class="ft">数据看板</div><div class="fd">教学概览 · 关键趋势</div></div></a>
+        <a class="fn" href="/xueqing?tab=warn"><span class="fi" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22V3h13l-3 5 3 5H6"/></svg></span><div><div class="ft">预警名单</div><div class="fd" id="fnWarn">按规则自动列出</div></div></a>
+        <a class="fn" href="/xueqing?tab=stu"><span class="fi" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 22v-3a8 8 0 0 1 16 0v3"/></svg></span><div><div class="ft">个体画像</div><div class="fd">按人看出勤/答题/作业</div></div></a>
+        <a class="fn" href="/xueqing?tab=prac"><span class="fi" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h5M8 16h6"/></svg></span><div><div class="ft">练习分析</div><div class="fd">课堂题 + 作业</div></div></a>
+        <a class="fn" href="/homework"><span class="fi" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4H4v17h16V4h-5M9 3h6v4H9zM8 14l3 3 5-6"/></svg></span><div><div class="ft">作业管理</div><div class="fd">作业列表 · 自动批改 · 成绩维护</div></div></a>
+        <a class="fn" href="/courses"><span class="fi" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h7l2 2h9v12H3z"/></svg></span><div><div class="ft">课程管理</div><div class="fd">建课 · 导名单</div></div></a>
+        <a class="fn" href="/preparation?type=ppt"><span class="fi" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M12 17v4M8 21h8M7 9h4M7 12h8"/></svg></span><div><div class="ft">PPT管理</div><div class="fd">课件制作 · 模板复用</div></div></a>
+        <a class="fn" href="/questionnaires"><span class="fi" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="m7 9 1 1 2-2M13 9h4M7 14h3M13 14h4M7 18h10"/></svg></span><div><div class="ft">问卷管理</div><div class="fd">课堂回收 · 反馈分析</div></div></a>
+      </div>
+    </div>
+
+  </main>
+</div>
+<script src="/shell.js"></script>
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const fmt = ts => { const d = new Date(ts), p = n => String(n).padStart(2, '0'); return `${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`; };
+const ago = ts => {
+  if (!ts) return '还没上过';
+  const diff = Date.now() - ts, day = 86400000;
+  if (diff < day) { const h = Math.floor(diff / 3600000); return h < 1 ? '刚上过' : h + ' 小时前'; }
+  const d = Math.floor(diff / day);
+  return d === 1 ? '昨天' : (d < 30 ? d + ' 天前' : Math.floor(d / 30) + ' 个月前');
+};
+const today = () => { const d = new Date(); return `${d.getMonth() + 1}月${d.getDate()}日 周${'日一二三四五六'[d.getDay()]}`; };
+
+async function api(u) { try { const r = await fetch(u, { cache: 'no-store' }); return await r.json(); } catch { return null; } }
+
+(async function boot() {
+  const all = await api('/api/all');
+  if (!all) { $('#sub').textContent = '连不上本地服务，双击「课中签到.bat」重新启动'; return; }
+  const ses = ((await api('/api/sessions')) || {}).sessions || [];
+  const courses = all.courses || [], students = all.students || [];
+  const activeCourseId = (all.settings && all.settings.activeCourseId) || (courses[0] || {}).id || '';
+
+  let xq = null;
+  if (activeCourseId) xq = await api('/api/xq/data?courseId=' + encodeURIComponent(activeCourseId));
+
+  const cnt = id => students.filter(s => s.courseId === id).length;
+  const lastOf = id => ses.filter(s => s.courseId === id).sort((a, b) => b.startedAt - a.startedAt)[0] || null;
+  const weekSes = ses.filter(s => Date.now() - s.startedAt < 7 * 86400000).length;
+  const warns = xq ? xq.overall.warns : 0;
+  const hwTodo = xq ? (xq.homework || []).filter(h => h.sub < h.total) : [];
+  const activeSes = all.active ? ses.find(s => s.id === all.active) : null;
+  const curCourse = courses.find(c => c.id === activeCourseId);
+
+  $('#sub').textContent = `${today()} · ${courses.length} 门课 · ${students.length} 名学生` +
+    (activeSes ? ' · 有一场签到正在进行' : '');
+
+  const icon = path => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${path}</svg>`;
+  const statItems=[
+    {value:courses.length,label:'课程总览',note:'管理课程与教学名单',path:'<path d="M3 6h7l2 2h9v12H3zM3 6V4h7l2 2"/>'},
+    {value:students.length,label:'学生总数',note:'来自已录入的课程名单',path:'<circle cx="9" cy="8" r="3"/><path d="M3 20v-2a6 6 0 0 1 12 0v2M16 5a3 3 0 0 1 0 6M21 20v-2a5 5 0 0 0-4-5"/>'},
+    {value:weekSes,label:'近7天课次',note:'回顾近期课堂活动',path:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 3v4M17 3v4M3 10h18M8 14h3M8 17h7"/>'},
+    {value:warns,label:'待关注学生',note:curCourse?'当前课程 · '+curCourse.name:'当前课程预警汇总',path:'<path d="M12 3 2 21h20zM12 9v5M12 17h.01"/>',href:'/xueqing?tab=warn',warning:warns>0}
+  ];
+  $('#stats').innerHTML=statItems.map(s=>`<${s.href?'a':'div'} class="stat" ${s.href?'href="'+s.href+'"':''}><i class="stat-icon">${icon(s.path)}</i><span class="stat-label">${s.label}</span><b ${s.warning?'style="color:var(--red)"':''}>${s.value}</b><span class="stat-note">${esc(s.note)}</span></${s.href?'a':'div'}>`).join('');
+  $('#fnWarn').textContent = warns ? warns + ' 人待关注' : '按规则自动列出';
+
+  const todos = [];
+  if (activeSes) {
+    const c = courses.find(x => x.id === activeSes.courseId);
+    todos.push({ c: 'red', txt: `「${c ? c.name : ''}」有一次签到还没结束（${activeSes.present}/${activeSes.total}）`, go: '/session', label: '回到签到 →' });
+  }
+  hwTodo.slice(0, 2).forEach(h => {
+    todos.push({ c: 'amber', txt: `「${h.name}」还有 ${h.total - h.sub} 人没录分`, go: '/homework?id=' + encodeURIComponent(h.id), label: '去维护 →' });
   });
-}
-
-async function boot() {
-  $('sub').textContent = fmtToday();
-  let all = null, sessions = [];
-  try {
-    all = await (await fetch('/api/all', { cache: 'no-store' })).json();
-  } catch (e) {
-    $('sub').textContent = '连不上本地服务，双击「课中签到.bat」重新启动';
-    return;
+  if (warns) {
+    const names = (xq.students || []).filter(s => s.warns.length).slice(0, 2).map(s => s.name).join('、');
+    todos.push({ c: 'blue', txt: `${warns} 名学生命中预警（${names}${warns > 2 ? ' 等' : ''}）`, go: '/xueqing?tab=warn', label: '看名单 →' });
   }
-  try {
-    const r = await (await fetch('/api/sessions', { cache: 'no-store' })).json();
-    sessions = r.sessions || [];
-  } catch (e) {}
+  $('#todos').innerHTML = todos.length ? todos.map(t =>
+    `<div class="todo"><span class="d" style="background:var(--${t.c})"></span><span>${esc(t.txt)}</span>` +
+    `<a class="go" href="${t.go}">${t.label}</a></div>`).join('')
+    : '<div class="empty">暂无待处理事项，可以继续准备下一节课。</div>';
 
-  ACTIVE = all.active || null;
-  if (ACTIVE) {
-    $('banner').classList.add('on');
-    $('banner').onclick = () => { location.href = '/live'; };
+  $('#courseSub').textContent = courses.length ? `${courses.length} 门` : '';
+  $('#courses').innerHTML = courses.length ? courses.map((c, i) => {
+    const last = lastOf(c.id), on = all.active && last && last.id === all.active;
+    return `<div class="crow">
+      <span class="k">${i + 1}</span>
+      <div><div class="nm">${esc(c.name)}</div><div class="meta">${cnt(c.id)} 人${c.term ? ' · ' + esc(c.term) : ''} · ${last ? '出勤 ' + last.rate + '%' : '还没点过名'}</div></div>
+      <div class="rt">${on ? '<span class="tag info">进行中</span>' : ''}<span>${ago(last && last.startedAt)}</span>
+        <a class="btn mini" href="/session?courseId=${c.id}">发起</a></div>
+    </div>`;
+  }).join('') : '<div class="empty">还没有课程。去 <a href="/courses" style="color:var(--blue)">课程管理</a> 建一门。</div>';
+
+  const latest = ses.slice().sort((a, b) => b.startedAt - a.startedAt)[0];
+  if (!latest) {
+    $('#last').innerHTML = '<div class="empty">还没有点名记录。</div>';
+  } else {
+    const c = courses.find(x => x.id === latest.courseId);
+    $('#lastCard').querySelector('h2').innerHTML =
+      `最近一次点名 <span>${fmt(latest.startedAt)} · ${esc(c ? c.name : '')}</span>` +
+      `<a class="more" href="/api/export.xlsx?sessionId=${latest.id}">导出这次 →</a>`;
+    $('#last').innerHTML=`<div class="last-metrics"><div class="last-metric">到课人数<b>${latest.present}<small style="font-size:12px;color:#93a2af;font-weight:400"> / ${latest.total}</small></b></div><div class="last-metric">迟到人数<b style="color:var(--amber)">${latest.late}</b></div><div class="last-metric">缺勤人数<b style="color:${latest.absent?'var(--red)':'#2f4d67'}">${latest.absent}</b></div><div class="last-metric">答对率<b style="color:var(--ok)">${latest.correctRate==null?'—':latest.correctRate+'%'}</b></div></div>${latest.question?`<div class="last-question">课堂题目 · ${esc(latest.question)}</div>`:''}`;
+    if (curCourse) $('#sub').textContent += ` · 学情取「${curCourse.name}」`;
   }
-
-  const lastAt = new Map();
-  sessions.forEach(s => {
-    if (!lastAt.has(s.courseId) || s.startedAt > lastAt.get(s.courseId)) lastAt.set(s.courseId, s.startedAt);
-  });
-
-  const count = new Map();
-  (all.students || []).forEach(s => count.set(s.courseId, (count.get(s.courseId) || 0) + 1));
-
-  COURSES = (all.courses || []).map(c => ({
-    id: c.id,
-    name: c.name,
-    term: c.term || '',
-    count: count.get(c.id) || 0,
-    lastAt: lastAt.get(c.id) || 0,
-    createdAt: c.createdAt || 0
-  })).sort((a, b) => (b.lastAt - a.lastAt) || (b.createdAt - a.createdAt));
-
-  SEL = 0;
-  render();
-}
-
-document.addEventListener('keydown', e => {
-  if (!COURSES.length) return;
-  if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
-    e.preventDefault(); SEL = Math.min(SEL + 1, COURSES.length - 1); paint();
-  } else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
-    e.preventDefault(); SEL = Math.max(SEL - 1, 0); paint();
-  } else if (e.key === 'Enter') {
-    e.preventDefault(); go(COURSES[SEL]);
-  } else if (/^[1-9]$/.test(e.key)) {
-    const i = Number(e.key) - 1;
-    if (COURSES[i]) { SEL = i; paint(); go(COURSES[i]); }
-  }
-});
-
-boot();
+})();
 </script>
 </body>
 </html>

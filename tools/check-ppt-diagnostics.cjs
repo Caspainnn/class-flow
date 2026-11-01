@@ -1,0 +1,16 @@
+'use strict';
+const assert=require('node:assert/strict');
+const {pythonCommandRules,diagnoseLog}=require('../server/ppt/diagnostics');
+const configured='E:\\MyProjects\\Inclass\\.local-ppt-python\\Scripts\\python.exe';
+const command='E:/MyProjects/Inclass/.local-ppt-python/Scripts/python.exe -c "print(1)"';
+const rules=pythonCommandRules(configured);
+assert.ok(rules.includes('Bash(E:/MyProjects/Inclass/.local-ppt-python/Scripts/python.exe:*)'));
+assert.ok(rules.some(rule=>command.startsWith(rule.slice(5,-3)+' ')));
+assert.ok(!rules.includes('Bash'));
+assert.ok(!rules.some(rule=>'powershell -Command anything'.startsWith(rule.slice(5,-3)+' ')));
+const denial=JSON.stringify({type:'user',message:{content:[{type:'tool_result',is_error:true,content:[{type:'text',text:'Error: Permission to use Bash has been denied because this tool requires approval but permission prompts are not available in non-interactive mode.'}]}]}});
+assert.equal(diagnoseLog(denial).code,'script_permission_denied');
+assert.equal(diagnoseLog('{"type":"result","result":"Done"}'),null);
+const upstream=JSON.stringify({type:'result',subtype:'error_during_execution',is_error:true,errors_info:[{category:'empty_model_response',details:'Empty stream: upstream ended the turn with finish_reason=error'}]});
+assert.equal(diagnoseLog(upstream)?.code,'model_empty_response');
+console.log('PASS: same Python executable in both Windows path spellings, no general shell grant, actual denial diagnostic');

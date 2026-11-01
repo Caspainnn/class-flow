@@ -1,0 +1,26 @@
+'use strict';
+// Run: node tools/check-ui-charts.js (no server or teaching data required)
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const source = fs.readFileSync(require('node:path').join(__dirname, '../xueqing/public/analysis.html'), 'utf8');
+const chartSource = source.slice(source.indexOf('function lineChart('), source.indexOf('/* ================= Tab'));
+const ctx = vm.createContext({});
+vm.runInContext(chartSource, ctx);
+const el = { clientWidth: 560, innerHTML: '' };
+const sample = i => ({ sn: i, label: `10-${i + 1}`, rate: 95, corRate: 80 });
+ctx.barPair(el, [sample(1)]);
+const widths = [...el.innerHTML.matchAll(/<rect[^>]*width="([\d.]+)"/g)].map(m => +m[1]);
+assert.equal(widths.length, 2);
+assert.ok(widths.every(w => w > 0 && w <= 32), 'Single class bars must stay narrow');
+assert.ok(el.innerHTML.includes('viewBox="0 0 560 200"'), 'Use container width so chart text stays readable');
+ctx.barPair(el, Array.from({ length: 12 }, (_, i) => sample(i)));
+assert.equal([...el.innerHTML.matchAll(/<rect /g)].length, 16, 'Show the latest eight classes');
+ctx.barPair(el, []);
+assert.ok(el.innerHTML.includes('还没有点名记录'));
+ctx.lineChart(el, [], ['10-22']);
+assert.ok(el.innerHTML.includes('至少有两次课'));
+ctx.lineChart(el, [{ name: '出勤率', color: '#185FA5', data: [95, null, 90] }], ['10-20', '10-21', '10-22']);
+assert.ok(el.innerHTML.includes('viewBox="0 0 560 210"'));
+assert.ok(!el.innerHTML.includes('NaN'));
+console.log('PASS: single/many/empty classes, readable chart viewport, missing trend values');

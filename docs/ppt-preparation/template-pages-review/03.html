@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>练习与总结</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 1280px; height: 720px; overflow: hidden; }
+  body {
+    width: 1280px;
+    height: 720px;
+    background: #FFFFFF;
+    font-family: "Microsoft YaHei", "\5FAE\8F6F\96C5\9ED1", sans-serif;
+    color: #24364D;
+    position: relative;
+  }
+  .accent { position: absolute; left: 48px; top: 34px; width: 6px; height: 46px; background: #0E3F8C; }
+  .title { position: absolute; left: 68px; top: 32px; font-size: 32px; font-weight: bold; color: #24364D; letter-spacing: 1px; }
+  .subtitle { position: absolute; left: 70px; top: 72px; font-size: 15px; color: #788291; }
+  .meta { position: absolute; right: 48px; top: 40px; font-size: 15px; color: #788291; text-align: right; line-height: 24px; }
+  .meta b { color: #0E3F8C; font-size: 17px; }
+  .rule { position: absolute; left: 48px; top: 98px; width: 1184px; height: 2px; background: #D6DCE5; }
+
+  .card {
+    position: absolute;
+    top: 116px;
+    height: 352px;
+    background: #FFFFFF;
+    border: 1px solid #D6DCE5;
+    border-top: 4px solid #0E3F8C;
+    padding: 13px;
+  }
+  #cA { left: 48px;  width: 368px; background: #F5F8FC; border: 2px solid #0E3F8C; border-top: 4px solid #0E3F8C; }
+  #cB { left: 456px; width: 368px; }
+  #cC { left: 864px; width: 368px; }
+
+  .chead { height: 32px; display: flex; align-items: center; }
+  .letter {
+    width: 32px; height: 32px;
+    text-align: center; line-height: 32px;
+    font-size: 19px; font-weight: bold;
+    margin-right: 10px;
+  }
+  .letter.ok { background: #0E3F8C; color: #FFFFFF; }
+  .letter.no { background: #FFC107; color: #24364D; }
+  .ctitle { font-size: 19px; font-weight: bold; color: #24364D; letter-spacing: 1px; }
+
+  .fig { margin-top: 4px; }
+  .verdict { margin-top: 4px; font-size: 19px; font-weight: bold; letter-spacing: 1px; }
+  .verdict.ok { color: #0E3F8C; }
+  .verdict.no { color: #C0392B; }
+  .reason { margin-top: 4px; font-size: 15px; color: #4A5568; line-height: 22px; }
+
+  .box {
+    position: absolute;
+    top: 484px;
+    height: 160px;
+    background: #FFFFFF;
+    border: 1px solid #D6DCE5;
+    border-top: 4px solid #0E3F8C;
+    padding: 11px 14px;
+  }
+  #b1 { left: 48px;  width: 380px; }
+  #b2 { left: 450px; width: 380px; background: #D5DFED; border: 1px solid #0E3F8C; border-top: 4px solid #0E3F8C; }
+  #b3 { left: 852px; width: 380px; }
+  .bh { font-size: 14px; font-weight: bold; color: #788291; letter-spacing: 1px; }
+  .box h3 { font-size: 19px; color: #0E3F8C; font-weight: bold; margin: 2px 0 6px; letter-spacing: 1px; }
+  .box h3 .big { font-size: 30px; }
+
+  .step { font-size: 15px; color: #243858; line-height: 24px; }
+  .step .sn {
+    display: inline-block;
+    width: 20px; height: 20px;
+    background: #0E3F8C; color: #FFFFFF;
+    font-size: 13px; font-weight: bold;
+    text-align: center; line-height: 20px;
+    margin-right: 6px;
+  }
+  .step.last { margin-top: 6px; color: #0E3F8C; font-weight: bold; }
+  .res { font-size: 15px; line-height: 24px; color: #24364D; }
+  .res.ok { color: #0E3F8C; }
+  .res.no { color: #C0392B; }
+  .fnote { margin-top: 6px; font-size: 14px; color: #4A5568; line-height: 20px; }
+
+  .hint { position: absolute; left: 48px; top: 656px; font-size: 15px; color: #788291; line-height: 22px; }
+  .hint b { color: #0E3F8C; }
+  .next { position: absolute; right: 48px; top: 656px; font-size: 15px; color: #788291; line-height: 22px; text-align: right; }
+  .next b { color: #0E3F8C; }
+
+  .foot { position: absolute; left: 48px; top: 694px; font-size: 13px; color: #8B97A8; }
+  .foot2 { position: absolute; right: 48px; top: 694px; font-size: 13px; color: #8B97A8; }
+</style>
+</head>
+<body>
+
+<div class="accent"></div>
+<div class="title">练习与总结</div>
+<div class="subtitle">认识三角形 · 小学三年级 · 20 分钟微课</div>
+<div class="meta">第 <b>3</b> 页 / 共 3 页<br>本页教学约 5 分钟</div>
+<div class="rule"></div>
+
+<div class="card" id="cA">
+  <div class="chead"><span class="letter ok">A</span><span class="ctitle">三条线段，首尾相接</span></div>
+  <svg class="fig" width="340" height="200" viewBox="0 0 340 200">
+    <polygon points="46,150 294,150 170,26" fill="#D5DFED" stroke="#0E3F8C" stroke-width="7" stroke-linejoin="round"></polygon>
+    <circle cx="46" cy="150" r="9" fill="#1E4FA8"></circle>
+    <circle cx="294" cy="150" r="9" fill="#1E4FA8"></circle>
+    <circle cx="170" cy="26" r="9" fill="#1E4FA8"></circle>
+    <text x="170" y="190" font-family="Microsoft YaHei" font-size="15" fill="#0E3F8C" text-anchor="middle">三条线段 · 首尾相接</text>
+  </svg>
+  <div class="verdict ok">✓ 是三角形</div>
+  <div class="reason">三条边都是线段，端点挨着端点，围成了一圈。</div>
+</div>
+
+<div class="card" id="cB">
+  <div class="chead"><span class="letter no">B</span><span class="ctitle">三条线段，留有缺口</span></div>
+  <svg class="fig" width="340" height="200" viewBox="0 0 340 200">
+    <line x1="46" y1="150" x2="250" y2="150" stroke="#0E3F8C" stroke-width="7" stroke-linecap="round"></line>
+    <line x1="250" y1="150" x2="200" y2="34" stroke="#0E3F8C" stroke-width="7" stroke-linecap="round"></line>
+    <line x1="46" y1="150" x2="140" y2="96" stroke="#0E3F8C" stroke-width="7" stroke-linecap="round"></line>
+    <circle cx="46" cy="150" r="9" fill="#0E3F8C"></circle>
+    <circle cx="250" cy="150" r="9" fill="#0E3F8C"></circle>
+    <circle cx="200" cy="34" r="9" fill="#0E3F8C"></circle>
+    <circle cx="140" cy="96" r="9" fill="#0E3F8C"></circle>
+    <path d="M140 96 L200 34" fill="none" stroke="#FFC107" stroke-width="5" stroke-dasharray="7 5" stroke-linecap="round"></path>
+    <circle cx="140" cy="96" r="13" fill="none" stroke="#FFC107" stroke-width="3"></circle>
+    <circle cx="200" cy="34" r="13" fill="none" stroke="#FFC107" stroke-width="3"></circle>
+    <text x="216" y="60" font-family="Microsoft YaHei" font-size="16" font-weight="bold" fill="#A67300">缺口</text>
+    <text x="216" y="80" font-family="Microsoft YaHei" font-size="14" fill="#A67300">没接上</text>
+    <text x="170" y="190" font-family="Microsoft YaHei" font-size="15" fill="#4A5568" text-anchor="middle">端点没接上，有缺口</text>
+  </svg>
+  <div class="verdict no">✗ 不是三角形</div>
+  <div class="reason">三条边是线段，但没围起来，中间留着缺口。</div>
+</div>
+
+<div class="card" id="cC">
+  <div class="chead"><span class="letter no">C</span><span class="ctitle">有一条边是曲线</span></div>
+  <svg class="fig" width="340" height="200" viewBox="0 0 340 200">
+    <path d="M46 150 L294 150 L226 30 Q 56 96 46 150 Z" fill="#F5F8FC"></path>
+    <line x1="46" y1="150" x2="294" y2="150" stroke="#0E3F8C" stroke-width="7" stroke-linecap="round"></line>
+    <line x1="294" y1="150" x2="226" y2="30" stroke="#0E3F8C" stroke-width="7" stroke-linecap="round"></line>
+    <path d="M226 30 Q 56 96 46 150" fill="none" stroke="#1A2230" stroke-width="8" stroke-linecap="round"></path>
+    <circle cx="46" cy="150" r="8" fill="#0E3F8C"></circle>
+    <circle cx="294" cy="150" r="8" fill="#0E3F8C"></circle>
+    <circle cx="226" cy="30" r="8" fill="#0E3F8C"></circle>
+    <line x1="82" y1="79" x2="110" y2="107" stroke="#C0392B" stroke-width="7" stroke-linecap="round"></line>
+    <line x1="110" y1="79" x2="82" y2="107" stroke="#C0392B" stroke-width="7" stroke-linecap="round"></line>
+    <text x="170" y="190" font-family="Microsoft YaHei" font-size="15" fill="#C0392B" text-anchor="middle">这条边是曲线，不是线段</text>
+  </svg>
+  <div class="verdict no">✗ 不是三角形</div>
+  <div class="reason">围成了一圈，但这条边是曲线，不是线段。</div>
+</div>
+
+<div class="box" id="b1">
+  <div class="bh">小结</div>
+  <h3>判断三角形：两步</h3>
+  <div class="step"><span class="sn">1</span>三条边都是线段吗？（直直的）</div>
+  <div class="step"><span class="sn">2</span>首尾相接、围成一圈了吗？</div>
+  <div class="step last">两步都满足，才是三角形</div>
+</div>
+
+<div class="box" id="b2">
+  <div class="bh">参考答案</div>
+  <h3>选 <span class="big">A</span></h3>
+  <div class="res ok">A ✓ 三条线段首尾相接，围成一圈</div>
+  <div class="res no">B ✗ 有缺口，没有围成一圈</div>
+  <div class="res no">C ✗ 边是曲线，不是线段</div>
+</div>
+
+<div class="box" id="b3">
+  <div class="bh">回扣目标</div>
+  <h3>这节课你做到了吗？</h3>
+  <div class="res ok">① 知道什么样的图形是三角形</div>
+  <div class="res ok">② 能判断一个图形是不是三角形</div>
+  <div class="fnote">课后找一找：教室里哪些物体的面是三角形？</div>
+</div>
+
+<div class="hint">活动：独立判断 1 分钟 → 同桌交流 → 指名汇报说理由 → 全班齐读<b>「三条边、首尾接、围起来」</b>。</div>
+<div class="next">本课小结完成：<b>先看边是不是线段，再看有没有围成一圈</b>。</div>
+
+<div class="foot">认识三角形</div>
+<div class="foot2">3 / 3</div>
+
+</body>
+</html>

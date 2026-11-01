@@ -1,0 +1,16 @@
+'use strict';
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
+const html=fs.readFileSync('server/backup/public/index.html','utf8');assert.ok(html.includes('/vendor/element-upload.js'));assert.ok(!html.includes('/server/public/'));
+const els=new Map(),events={},memory=new Map(),calls=[],rid='a'.repeat(24),iid='b'.repeat(24),jid='c'.repeat(24);
+function el(s){if(!els.has(s))els.set(s,{innerHTML:'',textContent:'',hidden:true,disabled:false,checked:false,open:false,showModal(){this.open=true;},close(){this.open=false;},focus(){},addEventListener(){},append(){}});return els.get(s);}
+const counts={courses:1,students:2,sessions:0,homework:0,ppt:0,plan:0,surveys:0,responses:0};
+const state={counts,totalBytes:100,files:5,parts:{ppt:0,grading:0,plan:0,other:100},busy:[],maintenance:false,dataPath:'E:/isolated/data',backupPath:'E:/isolated/backups',records:[{id:rid,name:'真实接口测试记录',createdAt:Date.now(),bytes:500,type:'manual',counts}],current:null};
+const checked={id:iid,type:'inspect',status:'complete',name:'uploaded.zip',bytes:500,counts,currentCounts:counts,requiredBytes:1000};
+const ctx=vm.createContext({document:{querySelector:el,addEventListener:(n,f)=>events[n]=f,createElement:()=>el('new')},window:{scrollTo(){},addEventListener(){},InclassUpload:{mount(){return ()=>{};}}},navigator:{clipboard:{writeText:async()=>{}}},localStorage:{getItem:k=>memory.get(k),setItem:(k,v)=>memory.set(k,v),removeItem:k=>memory.delete(k)},setTimeout:()=>0,clearTimeout(){},Date,fetch:async(url,options={})=>{calls.push({url,options});let value;if(url.endsWith('/status'))value=state;else if(url.endsWith('/inspect'))value={...checked,status:'running'};else if(url.endsWith('/jobs/'+iid))value=checked;else if(url.endsWith('/restore'))value={id:jid,type:'restore',status:'running'};else if(url.endsWith('/jobs/'+jid))value={id:jid,type:'restore',status:'complete',record:state.records[0]};else throw Error('Unexpected '+url);return {ok:true,json:async()=>value};},console});
+const flush=()=>new Promise(r=>setImmediate(r));const click=async a=>{events.click({target:{closest:()=>({dataset:{action:a,id:rid},disabled:false})}});await flush();await flush();};
+(async()=>{vm.runInContext(fs.readFileSync('server/backup/public/app.js','utf8'),ctx);await flush();assert.match(el('#view').innerHTML,/真实接口测试记录/);assert.ok(!el('#view').innerHTML.includes('模拟'));
+await click('record-restore');await flush();assert.match(el('#view').innerHTML,/检查通过/);await click('confirm-page');assert.match(el('#view').innerHTML,/确认恢复范围/);await click('ask-restore');assert.ok(!el('#dialog').open);
+el('#ack').checked=true;el('#ack').onchange();await click('ask-restore');assert.ok(el('#dialog').open);await click('close-dialog');assert.ok(!calls.some(x=>x.url.endsWith('/restore')));
+await click('ask-restore');await click('restore');await flush();assert.ok(calls.some(x=>x.url.endsWith('/restore')&&JSON.parse(x.options.body).confirmed===true));assert.match(el('#view').innerHTML,/恢复完成/);assert.ok(!memory.has('inclass.backup.active-job'));
+console.log('PASS formal backup UI: backend-only counts/records, checked inspection, explicit acknowledgment+modal, safe cancel performs no restore, confirmed request and persisted-job completion');
+})().catch(e=>{console.error(e);process.exitCode=1;});

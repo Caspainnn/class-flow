@@ -1,0 +1,40 @@
+{
+  "id": "d1b0b36f149ce17e09fb5235",
+  "htmlVersion": 1,
+  "template": {
+    "id": "ecb52cc11ef8d2540598f5d6",
+    "name": "第2章_生成对抗网络的安全应用_授课版.pptx",
+    "sha256": "21b2ffed5f7e5ab472c91932e8a0dd3df984a245a38d8c70c7cbdf26f9805c78"
+  },
+  "pages": [
+    {
+      "number": 1,
+      "title": "学习目标与三角形的定义",
+      "speechCharacters": 706,
+      "htmlSha256": "3d08153f5b5f0ab92fab3b2864904b237bf94cb989ff7d54050df68ff0548977"
+    },
+    {
+      "number": 2,
+      "title": "判断与反例",
+      "speechCharacters": 652,
+      "htmlSha256": "6d251c79762c6d654b2065fcc3a4ff355db29892acb7ace07806e64ba00a12e6"
+    },
+    {
+      "number": 3,
+      "title": "练习与总结",
+      "speechCharacters": 569,
+      "htmlSha256": "4aa56423cc5786592994b38ee253cf3c8dc1ccb8adec955e71b20de0a98e7b1b"
+    }
+  ],
+  "htmlElapsedSeconds": 783,
+  "speechFile": "html/e81b70ae9703286bec2ecdc7/逐页演讲稿.md",
+  "run": "export",
+  "finalStatus": "ready",
+  "native": {
+    "version": 1,
+    "pages": 3,
+    "sha256": "c22c260b62007c9df939ff8c056c3fd41de424b9b4b68ea88c3de7ee1ae1070d",
+    "assistedRecovery": true,
+    "unattendedExportSucceeded": false
+  }
+}

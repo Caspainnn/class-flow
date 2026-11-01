@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>工作台 · 一堂课</title>
+<style>
+:root{--ink:#17191c;--ink2:#666b73;--ink3:#9aa0a8;--line:#e6e8ec;--line2:#f2f3f5;
+  --bg:#f4f5f7;--blue:#185FA5;--ok:#1D9E75;--red:#A32D2D;--amber:#BA7517}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei","PingFang SC",sans-serif;font-size:13px}
+.app{display:flex;height:100vh;overflow:hidden}
+
+/* 侧边栏 */
+.side{width:212px;flex:none;background:#fff;border-right:1px solid var(--line);
+  display:flex;flex-direction:column;padding:16px 10px 10px}
+.brand{display:flex;align-items:center;gap:8px;padding:2px 8px 12px}
+.logo{width:24px;height:24px;border-radius:7px;background:var(--ink);color:#fff;font-size:12px;
+  display:flex;align-items:center;justify-content:center;flex:none}
+.brand .t{font-size:13.5px;font-weight:500}
+.brand .v{font-size:10px;color:var(--ink3);margin-left:auto}
+.nav{flex:1;overflow:auto;margin:0 -4px;padding:0 4px 6px}
+.grp{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--ink3);
+  padding:12px 10px 6px;letter-spacing:.3px}
+.grp b{font-weight:500;color:var(--ink2);font-size:11px}
+.grp .ln{flex:1;height:1px;background:var(--line2)}
+.nav a{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:8px;
+  color:var(--ink2);text-decoration:none;font-size:12.5px;margin-bottom:1px;cursor:pointer}
+.nav a:hover{background:#f4f6f8;color:var(--ink)}
+.nav a.on{background:#eef2f7;color:var(--blue);font-weight:500}
+.nav a .ico{width:14px;text-align:center;font-size:11.5px;flex:none;opacity:.75}
+.nav a .n{margin-left:auto;font-size:10.5px;color:var(--red)}
+.nav a .soon{margin-left:auto;font-size:10px;color:var(--ink3);border:1px dashed var(--line);border-radius:4px;padding:0 4px}
+.nav a.sub{padding-left:30px;font-size:12px}
+.nav a.par{color:var(--ink);font-weight:500}
+.sideFt{border-top:1px solid var(--line2);padding:9px 10px 2px;font-size:11px;color:var(--ink3);
+  display:flex;align-items:center;gap:6px}
+.sideFt i{width:6px;height:6px;border-radius:50%;background:var(--ok);display:inline-block}
+
+/* 内容区 */
+.main{flex:1;overflow:auto;padding:24px 26px 48px}
+.crumb{font-size:11.5px;color:var(--ink3);margin-bottom:6px}
+.head{display:flex;align-items:flex-start;gap:12px;margin-bottom:18px}
+.head h1{font-size:18px;font-weight:500}
+.head .sub{font-size:12px;color:var(--ink2);margin-top:4px;line-height:1.6;max-width:560px}
+.head .r{margin-left:auto;display:flex;gap:8px;flex:none}
+.btn{font-family:inherit;font-size:12.5px;padding:8px 14px;border-radius:8px;border:1px solid var(--line);
+  background:#fff;color:var(--ink);cursor:pointer;white-space:nowrap}
+.btn:hover{border-color:#b9bec6}
+.btn.pri{background:var(--ink);border-color:var(--ink);color:#fff}
+.btn.pri:hover{background:#2c2f33}
+.btn.mini{padding:5px 10px;font-size:11.5px}
+
+.card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:18px 20px;margin-bottom:12px}
+.card h2{font-size:13px;font-weight:500;margin-bottom:14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.card h2 span{font-weight:400;color:var(--ink3);font-size:11.5px}
+.card h2 .more{margin-left:auto;font-size:11.5px;color:var(--blue);cursor:pointer;font-weight:400}
+
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px}
+.stat{background:#fff;border:1px solid var(--line);border-radius:13px;padding:14px 16px}
+.stat b{display:block;font-size:24px;font-weight:500;line-height:1.15;font-variant-numeric:tabular-nums}
+.stat span{font-size:11.5px;color:var(--ink3);display:block;margin-top:2px}
+.stat.link{cursor:pointer}
+.stat.link:hover{border-color:#c9ced6}
+
+.crow{display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:10px;cursor:pointer;border:1px solid transparent}
+.crow:hover{background:#f8f9fb}
+.crow.on{background:#f4f7fb;border-color:#dbe5f0}
+.crow .k{width:22px;height:22px;border-radius:6px;background:#f1f2f5;color:var(--ink3);font-size:11.5px;
+  display:flex;align-items:center;justify-content:center;flex:none}
+.crow .nm{font-size:13.5px;font-weight:500}
+.crow .meta{font-size:11.5px;color:var(--ink3);margin-top:2px}
+.crow .rt{margin-left:auto;font-size:11px;color:var(--ink3);display:flex;align-items:center;gap:10px}
+.tag{font-size:10.5px;padding:2px 7px;border-radius:5px;background:#f1f2f5;color:var(--ink2);white-space:nowrap}
+.tag.ok{background:#eaf7f1;color:#0F6E56}
+.tag.bad{background:#fdf0ef;color:var(--red)}
+.tag.warn{background:#fdf3e3;color:#8a5a12}
+.tag.info{background:#edf3fa;color:var(--blue)}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th{text-align:left;font-weight:400;color:var(--ink3);font-size:11px;padding:0 8px 8px 0;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:8px 8px 8px 0;border-bottom:1px solid var(--line2)}
+tr:last-child td{border-bottom:none}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+input,select,textarea{font-family:inherit;font-size:13px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:#fbfcfd;outline:none;color:var(--ink);width:100%}
+input:focus,select:focus,textarea:focus{border-color:var(--blue);background:#fff}
+textarea{min-height:80px;line-height:1.7;resize:vertical;font-family:ui-monospace,Menlo,monospace;font-size:12px}
+.row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px;align-items:flex-end}
+.col{display:flex;flex-direction:column;gap:5px;flex:1;min-width:130px}
+.col label{font-size:11px;color:var(--ink3)}
+.todo{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line2);font-size:12.5px}
+.todo:last-child{border-bottom:none}
+.todo .d{width:7px;height:7px;border-radius:50%;flex:none}
+.todo .go{margin-left:auto;font-size:11.5px;color:var(--blue);cursor:pointer}
+.hint{font-size:11.5px;color:var(--ink3);line-height:1.9;margin-top:8px}
+.hint b{color:var(--ink2);font-weight:500}
+.placeholder{background:#fff;border:1px dashed var(--line);border-radius:14px;padding:34px 20px;text-align:center;color:var(--ink3)}
+.placeholder .t{font-size:13px;color:var(--ink2);margin-bottom:6px}
+.placeholder .s{font-size:11.5px;line-height:1.8;max-width:420px;margin:0 auto}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.fn{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px 15px;cursor:pointer;
+  display:flex;align-items:center;gap:10px;transition:border-color .12s,box-shadow .12s}
+.fn:hover{border-color:#c9ced6;box-shadow:0 2px 8px rgba(23,25,28,.04)}
+.fn .fi{width:26px;height:26px;border-radius:7px;background:#f4f6f8;display:flex;align-items:center;
+  justify-content:center;font-size:12px;color:var(--ink2);flex:none}
+.fn .ft{font-size:12.5px;font-weight:500}
+.fn .fd{font-size:10.5px;color:var(--ink3);margin-top:1px}
+.step{font-size:11.5px;padding:5px 11px;border-radius:7px;background:#f4f5f7;color:var(--ink3)}
+.step.done{background:#eaf7f1;color:#0F6E56}
+.step.on{background:var(--ink);color:#fff}
+.arw{font-size:11px;color:var(--ink3)}
+.qr{width:132px;height:132px;background:#fff;border:1px solid var(--line);border-radius:8px;
+  display:grid;grid-template-columns:repeat(9,1fr);gap:2px;padding:8px}
+.qr i{background:#17191c;border-radius:1px}
+.qr i.w{background:transparent}
+.big{font-size:34px;font-weight:500;letter-spacing:3px;font-variant-numeric:tabular-nums}
+@media (max-width:1180px){.stats{grid-template-columns:1fr 1fr}.grid3{grid-template-columns:1fr 1fr}}
+@media (max-width:820px){.side{display:none}.main{padding:18px}}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="side">
+    <div class="brand"><span class="logo">课</span><span class="t">一堂课</span><span class="v">v3</span></div>
+    <nav class="nav" id="nav"></nav>
+    <div class="sideFt"><i></i>服务运行中 · 3000</div>
+  </aside>
+  <main class="main" id="main"></main>
+</div>
+
+<script>
+/* ============ 导航结构：课前 / 课中 / 课后 + 设置 ============ */
+const NAV = [
+  { grp: '概览', items: [{ k: 'home', t: '工作台', ico: '▤' }] },
+  { grp: '课前', items: [
+    { k: 'pre-course', t: '课程与名单', ico: '☰' },
+    { k: 'pre-plan', t: '课堂准备', ico: '✎', soon: true },
+  ]},
+  { grp: '课中', items: [
+    { k: 'live-start', t: '发起签到', ico: '◉', n: '进行中' },
+  ]},
+  { grp: '课后', items: [
+    { k: 'xq-dash', t: '学情分析', ico: '▦', par: true },
+    { k: 'xq-warn', t: '预警名单', sub: true, n: '3' },
+    { k: 'xq-stu', t: '个体画像', sub: true },
+    { k: 'xq-prac', t: '练习分析', sub: true },
+    { k: 'hw', t: '作业录入', ico: '✎' },
+    { k: 'records', t: '签到记录', ico: '↧' },
+    { k: 'export', t: '导出中心', ico: '⇩' },
+  ]},
+  { grp: '设置', items: [
+    { k: 'rules', t: '预警规则', ico: '⚑' },
+    { k: 'sys', t: '系统设置', ico: '⚙' },
+    { k: 'backup', t: '数据与备份', ico: '⛁' },
+  ]},
+];
+const CRUMB = { home:'概览 / 工作台', 'pre-course':'课前 / 课程与名单', 'pre-plan':'课前 / 课堂准备',
+  'live-start':'课中 / 发起签到',
+  'xq-dash':'课后 / 学情分析 / 数据看板', 'xq-warn':'课后 / 学情分析 / 预警名单',
+  'xq-stu':'课后 / 学情分析 / 个体画像', 'xq-prac':'课后 / 学情分析 / 练习分析',
+  hw:'课后 / 作业录入', records:'课后 / 签到记录', export:'课后 / 导出中心',
+  rules:'设置 / 预警规则', sys:'设置 / 系统设置', backup:'设置 / 数据与备份' };
+
+let CUR = 'home';
+
+function renderNav(){
+  document.getElementById('nav').innerHTML = NAV.map(g=>{
+    const items = g.items.map(it=>{
+      const n = it.n ? `<span class="n">${it.n}</span>`:'';
+      const soon = it.soon ? '<span class="soon">规划中</span>':'';
+      const cls = ['', it.sub?'sub':'', it.par?'par':'', it.k===CUR?'on':''].join(' ').trim();
+      return `<a class="${cls}" onclick="go('${it.k}')"><span class="ico">${it.ico||''}</span>${it.t}${n}${soon}</a>`;
+    }).join('');
+    return `<div class="grp"><b>${g.grp}</b><span class="ln"></span></div>${items}`;
+  }).join('');
+}
+
+/* ============ 各板块内容 ============ */
+const C = {};
+
+C.home = {
+  title: '工作台',
+  sub: '10月23日 周五 · 今天 2 节课，还有 3 项待办',
+  right: `<button class="btn" onclick="go('pre-course')">导入名单</button>
+          <button class="btn pri" onclick="go('live-start')">发起签到</button>`,
+  body: `
+  <div class="stats">
+    <div class="stat"><b>2</b><span>今天还有课</span></div>
+    <div class="stat link" onclick="go('xq-warn')"><b style="color:var(--red)">3</b><span>待关注学生</span></div>
+    <div class="stat link" onclick="go('hw')"><b style="color:var(--amber)">1</b><span>作业待录入</span></div>
+    <div class="stat"><b>11</b><span>本周已上课次</span></div>
+  </div>
+
+  <div style="display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap">
+    <div class="card" style="flex:1.4;min-width:320px">
+      <h2>待办 <span>按紧急程度排</span></h2>
+      <div class="todo"><span class="d" style="background:var(--red)"></span><span>「高等数学（上）」第 3 次点名还没结束（43/47）</span><span class="go" onclick="go('live-start')">回到签到 →</span></div>
+      <div class="todo"><span class="d" style="background:var(--amber)"></span><span>线性代数第 2 次作业还没录入得分</span><span class="go" onclick="go('hw')">去录入 →</span></div>
+      <div class="todo"><span class="d" style="background:var(--blue)"></span><span>2 名学生连续缺勤 2 次，课后看一眼画像</span><span class="go" onclick="go('xq-stu')">看画像 →</span></div>
+    </div>
+    <div class="card" style="flex:1;min-width:280px">
+      <h2>今天的课</h2>
+      <div class="crow on" onclick="go('live-start')">
+        <span class="k">1</span>
+        <div><div class="nm">高等数学（上）</div><div class="meta">08:00 · 教三 301 · 47 人</div></div>
+        <div class="rt"><span class="tag info">进行中 43/47</span></div>
+      </div>
+      <div class="crow">
+        <span class="k">2</span>
+        <div><div class="nm">线性代数</div><div class="meta">14:00 · 教二 205 · 40 人</div></div>
+        <div class="rt"><span>5 小时后</span></div>
+      </div>
+      <div class="crow">
+        <span class="k">3</span>
+        <div><div class="nm">概率论与数理统计</div><div class="meta">19:00 · 教三 108 · 38 人</div></div>
+        <div class="rt"><span>今晚</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>常用功能 <span>点一下直达</span></h2>
+    <div class="grid3">
+      <div class="fn" onclick="go('live-start')"><span class="fi">◉</span><div><div class="ft">发起签到</div><div class="fd">选课出题 · 投影扫码</div></div></div>
+      <div class="fn" onclick="go('xq-dash')"><span class="fi">▦</span><div><div class="ft">学情分析</div><div class="fd">数据看板 · 趋势</div></div></div>
+      <div class="fn" onclick="go('xq-warn')"><span class="fi">⚑</span><div><div class="ft">预警名单</div><div class="fd">3 人待关注</div></div></div>
+      <div class="fn" onclick="go('hw')"><span class="fi">✎</span><div><div class="ft">作业录入</div><div class="fd">粘贴学号分数</div></div></div>
+      <div class="fn" onclick="go('records')"><span class="fi">↧</span><div><div class="ft">签到记录</div><div class="fd">历次到课明细</div></div></div>
+      <div class="fn" onclick="go('export')"><span class="fi">⇩</span><div><div class="ft">导出中心</div><div class="fd">Excel 交付</div></div></div>
+      <div class="fn" onclick="go('pre-course')"><span class="fi">☰</span><div><div class="ft">课程与名单</div><div class="fd">建课 · 导名单</div></div></div>
+      <div class="fn" onclick="go('xq-prac')"><span class="fi">▤</span><div><div class="ft">练习分析</div><div class="fd">课堂题 + 作业</div></div></div>
+      <div class="fn" onclick="go('rules')"><span class="fi">⚙</span><div><div class="ft">预警规则</div><div class="fd">阈值设置</div></div></div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:0">
+    <h2>最近一次点名 <span>10-22 20:15 · 高等数学（上）</span></h2>
+    <div style="display:flex;gap:26px;flex-wrap:wrap;font-size:12.5px;color:var(--ink2)">
+      <span>到课 <b style="color:var(--ink)">45</b>/47</span>
+      <span>迟到 <b style="color:var(--amber)">2</b></span>
+      <span>答题 42 人</span>
+      <span>答对率 <b style="color:var(--ok)">71%</b></span>
+      <span style="margin-left:auto"><a href="#" onclick="go('records');return false" style="color:var(--blue);text-decoration:none">查看记录 →</a></span>
+    </div>
+  </div>`
+};
+
+C['pre-course'] = {
+  title: '课程与名单',
+  sub: '课前准备：一门课建一次，名单导入后整学期复用。',
+  right: `<button class="btn">上传 xlsx / csv</button><button class="btn pri">新增课程</button>`,
+  body: `
+  <div class="card">
+    <h2>课程 <span>3 门 · 共 125 人</span></h2>
+    <div class="crow on"><span class="k">1</span><div><div class="nm">高等数学（上）</div><div class="meta">47 人 · 2026 秋 · 已上 11 次</div></div><div class="rt"><span class="tag ok">名单完整</span><button class="btn mini">名单</button></div></div>
+    <div class="crow"><span class="k">2</span><div><div class="nm">线性代数</div><div class="meta">40 人 · 2026 秋 · 已上 6 次</div></div><div class="rt"><span class="tag ok">名单完整</span><button class="btn mini">名单</button></div></div>
+    <div class="crow"><span class="k">3</span><div><div class="nm">概率论与数理统计</div><div class="meta">38 人 · 2026 秋 · 已上 3 次</div></div><div class="rt"><span class="tag warn">2 人姓名待核</span><button class="btn mini">名单</button></div></div>
+  </div>
+  <div class="card">
+    <h2>名单导入 <span>粘贴或上传，学号 + 姓名两列</span></h2>
+    <div class="row"><div class="col" style="flex:1 1 100%"><label>粘贴名单 · 一行一条，逗号 / 空格 / Tab 都认</label>
+      <textarea placeholder="2026110998,杨佳林&#10;2026110999,李晓明"></textarea></div></div>
+    <div class="row" style="margin-bottom:0"><div class="col" style="flex:0 0 auto"><button class="btn pri">导入粘贴的名单</button></div>
+      <div class="col" style="flex:1"></div><div class="col" style="flex:0 0 auto"><button class="btn">清空本课名单</button></div></div>
+  </div>`
+};
+
+C['pre-plan'] = {
+  title: '课堂准备',
+  sub: '课前预置本节要讲的题、想提问的学生，上课时一键调出。',
+  body: `<div class="placeholder">
+    <div class="t">这块还没做</div>
+    <div class="s">规划中的形态：课前把 2–3 道题和想提问的名单先放进来，<br>课上「发起签到」直接选题，不用现场打字。</div>
+  </div>`
+};
+
+C['live-start'] = {
+  title: '发起签到',
+  sub: '一个流程走到底：选题 → 学生扫码 → 结束归档，全程不离开讲台。',
+  body: `
+  <div class="card">
+    <h2>本次签到 <span>高等数学（上） · 47 人 · 08:02 开始</span></h2>
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:16px;flex-wrap:wrap">
+      <span class="step done">① 选题</span><span class="arw">→</span>
+      <span class="step on">② 扫码签到</span><span class="arw">→</span>
+      <span class="step">③ 结束归档</span>
+      <span style="margin-left:auto;font-size:11.5px;color:var(--ink3)">剩余 38 秒 · 二维码每 3 秒刷新</span>
+    </div>
+
+    <div style="display:flex;gap:24px;flex-wrap:wrap;align-items:flex-start">
+      <div class="qr">${Array.from({length:81},(_,i)=>`<i class="${(i*7+i*i)%5<2?'':'w'}"></i>`).join('')}</div>
+      <div style="flex:1;min-width:250px">
+        <div style="font-size:12px;color:var(--ink3)">课堂码</div>
+        <div class="big">4821</div>
+        <div style="font-size:12.5px;color:var(--ink2);margin-top:12px">矩阵 A 可逆的充要条件是？</div>
+        <div style="font-size:11.5px;color:var(--ink3);margin-top:4px">
+          A. |A| = 0　　B. r(A) < n　　<span style="color:var(--ok)">C. |A| ≠ 0（正确）</span>　　D. A 是对称矩阵
+        </div>
+        <div style="display:flex;gap:26px;margin-top:16px;flex-wrap:wrap">
+          <div><div style="font-size:24px;font-weight:500">43<span style="font-size:13px;color:var(--ink3)">/47</span></div><div style="font-size:11px;color:var(--ink3)">已到</div></div>
+          <div><div style="font-size:24px;font-weight:500;color:var(--amber)">2</div><div style="font-size:11px;color:var(--ink3)">迟到</div></div>
+          <div><div style="font-size:24px;font-weight:500;color:var(--ink3)">4</div><div style="font-size:11px;color:var(--ink3)">未到</div></div>
+          <div><div style="font-size:24px;font-weight:500;color:var(--ok)">41</div><div style="font-size:11px;color:var(--ink3)">已答题</div></div>
+        </div>
+      </div>
+      <div style="flex:0 0 210px">
+        <div style="font-size:11.5px;color:var(--ink3);margin-bottom:8px">未到名单（只在老师屏幕显示）</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <span class="tag">杨佳林</span><span class="tag">李晓明</span><span class="tag">陈子豪</span><span class="tag">刘思思</span>
+        </div>
+      </div>
+    </div>
+
+    <div style="border-top:1px solid var(--line2);margin-top:18px;padding-top:14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      <span style="font-size:11.5px;color:var(--ink3);flex:1;min-width:200px">结束后这次记录进入「签到记录」，可随时导出</span>
+      <button class="btn">改题重来</button>
+      <button class="btn pri" onclick="go('records')">结束本次并归档</button>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:0">
+    <h2>选题（下一场用） <span>最近出过的题直接复用，不用现场重打</span></h2>
+    <div class="crow"><div><div class="nm">设 r(A)=2，则 Ax=0 的解空间维数为？</div><div class="meta">10-22 · 答对率 47%</div></div><div class="rt"><button class="btn mini">复用</button></div></div>
+    <div class="crow"><div><div class="nm">下列关于初等变换的说法正确的是？</div><div class="meta">10-20 · 答对率 55%</div></div><div class="rt"><button class="btn mini">复用</button></div></div>
+    <div class="crow"><div><div class="nm">（空着也能签到，只点名不出题）</div><div class="meta">适合赶进度时用</div></div><div class="rt"><button class="btn mini">直接开始</button></div></div>
+  </div>`
+};
+
+C['xq-dash'] = {
+  title: '学情分析 · 数据看板',
+  sub: '课后复盘：这次课效果如何，谁需要关注。',
+  right: `<button class="btn pri">导出全部数据 .xlsx</button>`,
+  body: `
+  <div class="stats">
+    <div class="stat"><b>91.4%</b><span>平均出勤率</span></div>
+    <div class="stat"><b>90.5%</b><span>作业提交率</span></div>
+    <div class="stat link" onclick="go('xq-warn')"><b style="color:var(--red)">3</b><span>预警学生</span></div>
+    <div class="stat"><b>71.6%</b><span>平均答对率（趋势里看）</span></div>
+  </div>
+  <div class="card">
+    <h2>最近 8 次课 <span>左柱=出勤率，右柱=答对率</span></h2>
+    <svg viewBox="0 0 900 180" width="100%">
+      ${[0,1,2,3,4].map(i=>`<line x1="36" y1="${14+i*34}" x2="892" y2="${14+i*34}" stroke="#eef0f3"/>`).join('')}
+      ${[92,96,88,93,86,90,89,94].map((v,i)=>`<rect x="${48+i*104}" y="${14+136*(1-v/100)}" width="22" height="${136*v/100}" rx="4" fill="#185FA5"/>`).join('')}
+      ${[62,70,58,74,55,68,63,78].map((v,i)=>`<rect x="${76+i*104}" y="${14+136*(1-v/100)}" width="22" height="${136*v/100}" rx="4" fill="#1D9E75"/>`).join('')}
+    </svg>
+  </div>
+  <div class="card">
+    <h2>四个子板块</h2>
+    <div class="grid3">
+      <div class="crow" onclick="go('xq-warn')" style="border:1px solid var(--line)"><div><div class="nm">预警名单</div><div class="meta">3 人命中规则</div></div></div>
+      <div class="crow" onclick="go('xq-stu')" style="border:1px solid var(--line)"><div><div class="nm">个体画像</div><div class="meta">按人看出勤/答题/作业</div></div></div>
+      <div class="crow" onclick="go('xq-prac')" style="border:1px solid var(--line)"><div><div class="nm">练习分析</div><div class="meta">课堂题 + 作业</div></div></div>
+    </div>
+  </div>`
+};
+
+C['xq-warn'] = {
+  title: '学情分析 · 预警名单',
+  sub: '规则自动算，老师只需要确认谁值得课后聊一次。',
+  body: `
+  <div class="card">
+    <h2>预警名单 <span>3 人 · 规则在「设置 → 预警规则」里改</span></h2>
+    <table><thead><tr><th>学号</th><th>姓名</th><th>命中规则</th><th class="num">出勤</th><th class="num">答对率</th><th class="num">作业</th></tr></thead>
+    <tbody>
+      <tr><td>2026110998</td><td>杨佳林</td><td><span class="tag bad">连续缺勤 2 次</span></td><td class="num">7/11</td><td class="num">—</td><td class="num">4/5</td></tr>
+      <tr><td>2026111003</td><td>王芳</td><td><span class="tag warn">近5次答题正确率 17%</span></td><td class="num">11/11</td><td class="num">17%</td><td class="num">5/5</td></tr>
+      <tr><td>2026111021</td><td>陈子豪</td><td><span class="tag warn">作业未交 2 次</span></td><td class="num">10/11</td><td class="num">63%</td><td class="num">3/5</td></tr>
+    </tbody></table>
+  </div>`
+};
+
+C['xq-stu'] = {
+  title: '学情分析 · 个体画像',
+  sub: '左边找人，右边看这个人到底怎么了。',
+  body: `
+  <div style="display:flex;gap:12px;align-items:flex-start">
+    <div class="card" style="flex:0 0 200px;margin-bottom:0">
+      <h2 style="margin-bottom:10px">学生 <span>47 人</span></h2>
+      <input placeholder="搜索姓名或学号…">
+      <div style="margin-top:10px;font-size:12.5px">
+        <div class="crow on" style="padding:7px 9px"><span>杨佳林</span><span style="margin-left:auto;color:var(--red);font-size:10px">2 项预警</span></div>
+        <div class="crow" style="padding:7px 9px"><span>李晓明</span><span style="margin-left:auto;color:var(--red);font-size:10px">1 项预警</span></div>
+        <div class="crow" style="padding:7px 9px"><span>王芳</span></div>
+        <div class="crow" style="padding:7px 9px"><span>陈子豪</span></div>
+        <div class="crow" style="padding:7px 9px"><span>孙倩</span></div>
+      </div>
+    </div>
+    <div style="flex:1;min-width:0">
+      <div class="card">
+        <h2>杨佳林 2026110998 <span class="tag bad">连续缺勤 2 次</span></h2>
+        <div style="display:flex;gap:24px;flex-wrap:wrap;margin-bottom:14px">
+          <div><b style="font-size:22px">7/11</b><div style="font-size:11px;color:var(--ink3)">出勤</div></div>
+          <div><b style="font-size:22px">4</b><div style="font-size:11px;color:var(--ink3)">答题次数</div></div>
+          <div><b style="font-size:22px">—</b><div style="font-size:11px;color:var(--ink3)">正确率</div></div>
+          <div><b style="font-size:22px">4/5</b><div style="font-size:11px;color:var(--ink3)">作业提交</div></div>
+        </div>
+        <div style="font-size:11.5px;color:var(--ink3);margin-bottom:6px">出勤轨迹</div>
+        <div style="display:flex;gap:4px;flex-wrap:wrap">
+          ${[1,1,1,1,1,0,0,1,1,1,1].map((d,i)=>`<span style="width:22px;height:22px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;font-size:9.5px;${d?'background:#eaf7f1;border:1px solid #bfe5d6;color:#0F6E56':'background:#fdf0ef;border:1px solid #f0cfcf;color:#A32D2D'}">${i+1}</span>`).join('')}
+        </div>
+      </div>
+      <div class="card" style="margin-bottom:0">
+        <h2>历次作业明细</h2>
+        <table><thead><tr><th>作业</th><th>提交情况</th><th class="num">得分</th></tr></thead>
+        <tbody><tr><td>作业一 · 行列式</td><td><span class="tag ok">按时交</span></td><td class="num">85</td></tr>
+        <tr><td>作业二 · 矩阵运算</td><td><span class="tag ok">按时交</span></td><td class="num">80</td></tr>
+        <tr><td>作业三 · 线性方程组</td><td><span class="tag warn">补交</span></td><td class="num">77</td></tr></tbody></table>
+      </div>
+    </div>
+  </div>`
+};
+
+C['xq-prac'] = {
+  title: '学情分析 · 练习分析',
+  sub: '课堂题看哪个知识点没讲透，作业看整体掌握与未交。',
+  body: `
+  <div class="card">
+    <h2>课堂题目 <span>按课次分组 · 正确率低的排前面</span></h2>
+    <div class="row"><div class="col" style="max-width:240px"><label>课次</label><select><option>第 7 次 · 10-20</option><option>第 5 次 · 10-13</option></select></div></div>
+    <div style="padding:9px 0;border-bottom:1px solid var(--line2);display:flex;align-items:center;gap:10px">
+      <span style="flex:1;font-size:12.5px">矩阵 A 可逆的充要条件是？</span>
+      <div style="width:90px;height:7px;background:#f4f5f7;border-radius:4px;overflow:hidden"><i style="display:block;height:100%;width:38%;background:var(--red)"></i></div>
+      <span style="width:48px;text-align:right;font-size:12.5px;color:var(--red)">38%</span>
+    </div>
+    <div style="padding:9px 0;display:flex;align-items:center;gap:10px">
+      <span style="flex:1;font-size:12.5px">设 r(A)=2，则 Ax=0 的解空间维数为？</span>
+      <div style="width:90px;height:7px;background:#f4f5f7;border-radius:4px;overflow:hidden"><i style="display:block;height:100%;width:47%;background:var(--red)"></i></div>
+      <span style="width:48px;text-align:right;font-size:12.5px;color:var(--red)">47%</span>
+    </div>
+    <div class="hint">第一题错选集中在 <b>B</b>（14 人）——不是粗心，是「可逆等价于行列式非零」没讲透。</div>
+  </div>
+  <div class="card">
+    <h2>作业 <span>点开看得分分布与未交名单</span></h2>
+    <table><thead><tr><th>作业</th><th>截止</th><th class="num">提交</th><th class="num">平均分</th><th style="width:34%">得分分布</th></tr></thead>
+    <tbody>
+      <tr><td>作业四 · 向量空间</td><td>10/31</td><td class="num">39/47</td><td class="num">79</td>
+        <td><div style="display:flex;height:14px;border-radius:4px;overflow:hidden"><i style="display:block;width:26%;background:#1D9E75"></i><i style="display:block;width:44%;background:#185FA5"></i><i style="display:block;width:15%;background:#BA7517"></i><i style="display:block;width:15%;background:#A32D2D"></i></div></td></tr>
+      <tr><td>作业三 · 线性方程组</td><td>10/10</td><td class="num">37/47</td><td class="num">76</td>
+        <td><div style="display:flex;height:14px;border-radius:4px;overflow:hidden"><i style="display:block;width:22%;background:#1D9E75"></i><i style="display:block;width:43%;background:#185FA5"></i><i style="display:block;width:19%;background:#BA7517"></i><i style="display:block;width:16%;background:#A32D2D"></i></div></td></tr>
+    </tbody></table>
+  </div>`
+};
+
+C.hw = {
+  title: '作业录入',
+  sub: '每次作业录一次，点开就能看分布；不录的话作业相关分析都是空的。',
+  body: `
+  <div class="card">
+    <h2>新建作业</h2>
+    <div class="row" style="margin-bottom:0">
+      <div class="col" style="max-width:260px"><label>作业名称</label><input placeholder="作业五 · 特征值"></div>
+      <div class="col" style="max-width:140px"><label>截止日期</label><input placeholder="11/14"></div>
+      <div class="col" style="flex:0 0 auto"><button class="btn pri">新建</button></div>
+    </div>
+  </div>
+  <div class="card">
+    <h2>录入得分 <span>作业四 · 向量空间 · 39/47 已录</span></h2>
+    <div class="row"><div class="col" style="flex:1 1 100%"><label>粘贴 · 每行「学号 分数」，补交加个「补」，写「学号 未交」可清除</label>
+      <textarea placeholder="2026110998 85&#10;2026110999 90 补&#10;2026111003 未交"></textarea></div></div>
+    <div class="row" style="margin-bottom:0"><div class="col" style="flex:0 0 auto"><button class="btn pri">保存录入</button></div>
+      <div class="col" style="flex:1"></div><div class="col" style="flex:0 0 auto"><button class="btn">删除这次作业</button></div></div>
+  </div>`
+};
+
+C.records = {
+  title: '签到记录',
+  sub: '每节课的到课情况，可以按次导出交给教务处。',
+  right: `<button class="btn">导出整门课</button>`,
+  body: `
+  <div class="card">
+    <h2>高等数学（上） <span>11 次点名</span></h2>
+    <table><thead><tr><th>时间</th><th>题目</th><th class="num">到课</th><th class="num">迟到</th><th class="num">出勤率</th><th class="num">答对率</th><th></th></tr></thead>
+    <tbody>
+      <tr><td>10-22 20:15</td><td>矩阵 A 可逆的充要条件是？</td><td class="num">45/47</td><td class="num">2</td><td class="num"><span class="tag ok">96%</span></td><td class="num">71%</td><td style="text-align:right"><button class="btn mini">导出</button></td></tr>
+      <tr><td>10-20 14:02</td><td>设 r(A)=2，则 Ax=0 的解空间维数为？</td><td class="num">41/47</td><td class="num">1</td><td class="num"><span class="tag">87%</span></td><td class="num">47%</td><td style="text-align:right"><button class="btn mini">导出</button></td></tr>
+      <tr><td>10-13 09:58</td><td>下列关于初等变换的说法正确的是？</td><td class="num">43/47</td><td class="num">0</td><td class="num"><span class="tag ok">91%</span></td><td class="num">55%</td><td style="text-align:right"><button class="btn mini">导出</button></td></tr>
+    </tbody></table>
+  </div>`
+};
+
+C.export = {
+  title: '导出中心',
+  sub: '数据都在本机，导出只是为了交给教务处或自己留档。',
+  body: `
+  <div class="grid3">
+    <div class="card" style="margin:0"><h2>签到明细</h2>
+      <div class="hint" style="margin-top:0">单次或整门课，含答案与对错。</div>
+      <div style="margin-top:12px"><button class="btn">导出 .xlsx</button></div></div>
+    <div class="card" style="margin:0"><h2>学情全量</h2>
+      <div class="hint" style="margin-top:0">5 个 sheet：预警 / 汇总 / 出勤 / 答题 / 作业。</div>
+      <div style="margin-top:12px"><button class="btn pri">导出 .xlsx</button></div></div>
+    <div class="card" style="margin:0"><h2>名单</h2>
+      <div class="hint" style="margin-top:0">当前课程的学号姓名表。</div>
+      <div style="margin-top:12px"><button class="btn">导出 .xlsx</button></div></div>
+  </div>`
+};
+
+C.rules = {
+  title: '预警规则',
+  sub: '改完保存，学情分析里立刻生效。',
+  right: `<button class="btn pri">保存</button>`,
+  body: `
+  <div class="card">
+    <h2>四条规则 <span>阈值都可以改</span></h2>
+    <div class="row">
+      <div class="col"><label>连续缺勤几次预警</label><input value="2"></div>
+      <div class="col"><label>答题窗口：最近几次课</label><input value="5"></div>
+      <div class="col"><label>窗口内至少答题几次才判</label><input value="3"></div>
+      <div class="col"><label>答对率低于（%）</label><input value="20"></div>
+    </div>
+    <div class="row" style="margin-bottom:0">
+      <div class="col"><label>作业未交几次预警</label><input value="2"></div>
+      <div class="col"><label>作业低分几次预警</label><input value="2"></div>
+      <div class="col"><label>低分线（分）</label><input value="60"></div>
+      <div class="col"></div>
+    </div>
+  </div>`
+};
+
+C.sys = {
+  title: '系统设置',
+  sub: '二维码刷新、签到窗口这些，改完下一场点名生效。',
+  right: `<button class="btn pri">保存设置</button>`,
+  body: `
+  <div class="card">
+    <h2>签到参数</h2>
+    <div class="row">
+      <div class="col"><label>二维码刷新间隔（毫秒）</label><input value="3000"></div>
+      <div class="col"><label>令牌宽限片数</label><input value="3"></div>
+    </div>
+    <div class="row" style="margin-bottom:0">
+      <div class="col"><label>签到窗口（秒）</label><input value="90"></div>
+      <div class="col"><label>迟到补签宽限（分钟）</label><input value="10"></div>
+    </div>
+  </div>`
+};
+
+C.backup = {
+  title: '数据与备份',
+  sub: '所有数据都在本机 data 文件夹，拷走就是完整备份。',
+  right: `<button class="btn">打开文件夹</button>`,
+  body: `
+  <div class="card">
+    <h2>数据目录 <span>E:\\MyProjects\\Inclass\\data</span></h2>
+    <table><thead><tr><th>文件</th><th class="num">大小</th><th>最近修改</th></tr></thead>
+    <tbody>
+      <tr><td>courses.json</td><td class="num">1.2 KB</td><td>10-22 20:15</td></tr>
+      <tr><td>students.json</td><td class="num">8.6 KB</td><td>10-20 14:02</td></tr>
+      <tr><td>sessions.json</td><td class="num">64 KB</td><td>10-22 20:16</td></tr>
+      <tr><td>homework.json</td><td class="num">2.4 KB</td><td>10-21 21:30</td></tr>
+    </tbody></table>
+    <div class="hint">删掉就全没了。建议每周拷一次到 U 盘或网盘。</div>
+  </div>`
+};
+
+/* ============ 渲染 ============ */
+function go(k){
+  if(!C[k])return;
+  CUR = k; renderNav(); window.scrollTo?.(0,0);
+  const c = C[k];
+  document.getElementById('main').innerHTML = `
+    <div class="crumb">${CRUMB[k]||''}</div>
+    <div class="head">
+      <div><h1>${c.title}</h1><div class="sub">${c.sub||''}</div></div>
+      <div class="r">${c.right||''}</div>
+    </div>${c.body}`;
+}
+window.go = go;
+renderNav(); go('home');
+</script>
+</body>
+</html>

@@ -1,0 +1,21 @@
+{
+  "pages": [
+    {
+      "number": 1,
+      "textChars": 305,
+      "notesChars": 887
+    },
+    {
+      "number": 2,
+      "textChars": 527,
+      "notesChars": 926
+    },
+    {
+      "number": 3,
+      "textChars": 473,
+      "notesChars": 836
+    }
+  ],
+  "fullSpeechesMatch": true,
+  "assistedRecovery": true
+}

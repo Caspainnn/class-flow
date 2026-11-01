@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>学情分析 · 原型</title>
+<style>
+:root{--ink:#17191c;--ink2:#666b73;--ink3:#9aa0a8;--line:#e6e8ec;--blue:#185FA5;--ok:#1D9E75;--red:#A32D2D;--amber:#BA7517}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#f4f5f7;color:var(--ink);font-family:-apple-system,"Segoe UI","Microsoft YaHei",sans-serif;padding:22px 18px 60px}
+.wrap{max-width:1020px;margin:0 auto}
+.top{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+.back{width:34px;height:34px;border-radius:9px;border:1px solid var(--line);background:#fff;cursor:pointer;font-size:15px;color:var(--ink2);font-family:inherit}
+h1{font-size:18px;font-weight:500}
+.sub{font-size:12px;color:var(--ink2);margin-top:3px}
+.demo{font-size:10.5px;padding:3px 8px;border-radius:5px;background:#fdf3e3;color:#8a5a12}
+.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}
+.tab{font-family:inherit;font-size:13px;padding:8px 15px;border-radius:9px;border:1px solid var(--line);background:#fff;color:var(--ink2);cursor:pointer}
+.tab.on{background:var(--ink);border-color:var(--ink);color:#fff}
+.pane{display:none}.pane.on{display:block}
+.card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:18px 20px;margin-bottom:12px}
+.card h2{font-size:13px;font-weight:500;margin-bottom:14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.card h2 span{font-weight:400;color:var(--ink3);font-size:11.5px}
+.stats{display:flex;gap:30px;flex-wrap:wrap}
+.stat b{display:block;font-size:27px;font-weight:500;line-height:1.1;font-variant-numeric:tabular-nums}
+.stat span{font-size:11.5px;color:var(--ink3)}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th{text-align:left;font-weight:400;color:var(--ink3);font-size:11px;padding:0 6px 8px 0;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:8px 6px 8px 0;border-bottom:1px solid #f2f3f5;vertical-align:middle}
+td.mono{font-family:ui-monospace,Menlo,monospace;font-size:11.5px;color:var(--ink2)}
+tr:last-child td{border-bottom:none}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+.btn{font-family:inherit;font-size:12.5px;padding:7px 13px;border-radius:8px;border:1px solid var(--line);background:#fff;color:var(--ink);cursor:pointer;white-space:nowrap}
+.btn.mini{padding:4px 9px;font-size:11.5px}
+.tag{font-size:10.5px;padding:2px 7px;border-radius:5px;background:#f1f2f5;color:var(--ink2);white-space:nowrap}
+.tag.ok{background:#eaf7f1;color:#0F6E56}
+.tag.bad{background:#fdf0ef;color:var(--red)}
+.tag.warn{background:#fdf3e3;color:#8a5a12}
+.tag.info{background:#edf3fa;color:var(--blue)}
+.cur{font-size:12.5px;color:var(--ink2);display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.cur select{font-family:inherit;font-size:13px;padding:7px 10px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink);min-width:200px}
+.hint{font-size:11.5px;color:var(--ink3);line-height:1.9;margin-top:8px}
+.hint b{color:var(--ink2);font-weight:500}
+.chart{width:100%;overflow-x:auto}
+svg{display:block}
+.legend{font-size:11px;color:var(--ink3);margin-top:6px;display:flex;gap:14px;flex-wrap:wrap}
+.legend i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+.bars{display:flex;flex-direction:column;gap:8px;margin:10px 0 4px}
+.brow{display:flex;align-items:center;gap:10px;font-size:12px}
+.brow .lab{width:52px;color:var(--ink2);flex:0 0 auto}
+.brow .track{flex:1;height:18px;background:#f4f5f7;border-radius:5px;overflow:hidden}
+.brow .fill{height:100%;border-radius:5px;display:flex;align-items:center;justify-content:flex-end;padding-right:7px;font-size:10.5px;color:#fff;font-variant-numeric:tabular-nums;min-width:26px}
+.dots{display:flex;gap:5px;flex-wrap:wrap;align-items:center}
+.dot2{width:22px;height:22px;border-radius:6px;background:#eaf7f1;border:1px solid #bfe5d6;font-size:9.5px;line-height:20px;text-align:center;color:#0F6E56;font-variant-numeric:tabular-nums;cursor:default}
+.dot2.abs{background:#fdf0ef;border-color:#f0cfcf;color:var(--red)}
+.dot2.na{background:#f1f2f5;border-color:var(--line);color:var(--ink3)}
+.dot2.late{background:#fdf3e3;border-color:#ecd3a3;color:#8a5a12}
+.kv{display:flex;gap:26px;flex-wrap:wrap;margin-bottom:16px}
+.kv .stat b{font-size:22px}
+.qbar{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #f2f3f5;cursor:pointer}
+.qbar:hover{background:#f8f9fb}
+.qbar .idx{font-size:11px;color:var(--ink3);width:44px;flex:0 0 auto}
+.qbar .qt{flex:1;font-size:12.5px}
+.qbar .pc{font-variant-numeric:tabular-nums;font-size:12.5px;width:52px;text-align:right}
+.meter{width:90px;height:7px;background:#f4f5f7;border-radius:4px;overflow:hidden;flex:0 0 auto}
+.meter i{display:block;height:100%;border-radius:4px}
+.qdetail{display:none;padding:6px 0 14px;border-bottom:1px solid #f2f3f5}
+.qdetail.on{display:block}
+.hwrow{cursor:pointer}
+.hwrow:hover td{background:#f8f9fb}
+.hwdetail{display:none}
+.hwdetail.on{display:table-row}
+.hwdetail>td{background:#fafbfc;padding:14px 10px}
+.seg{display:flex;height:16px;border-radius:5px;overflow:hidden;width:100%}
+.seg i{display:block;height:100%}
+.segwrap{flex:1;display:flex;align-items:center;gap:10px}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.split{display:flex;gap:12px;align-items:flex-start}
+.side{flex:0 0 218px;position:sticky;top:12px;max-height:calc(100vh - 60px);display:flex;flex-direction:column}
+.side input{font-size:12.5px;padding:7px 10px}
+.nameList{overflow:auto;margin-top:10px;flex:1;margin-right:-6px;padding-right:6px}
+.nitem{display:flex;align-items:center;justify-content:space-between;gap:6px;padding:7px 9px;border-radius:7px;font-size:12.5px;color:var(--ink2);cursor:pointer}
+.nitem:hover{background:#f4f6f8}
+.nitem.on{background:var(--ink);color:#fff}
+.nitem .w{font-size:10px;color:var(--red);white-space:nowrap}
+.nitem.on .w{color:#f4b8b8}
+.main{flex:1;min-width:0}
+.stat svg{display:block;margin-bottom:6px}
+@media (max-width:640px){.stats{gap:18px}td,th{padding-right:8px}.split{flex-direction:column}.side{position:static;flex:none;width:100%;max-height:none}.nameList{max-height:220px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <button class="back" onclick="alert('原型：返回后台')">←</button>
+    <div><h1>学情分析</h1><div class="sub">数据全部来自课中签到与作业 · 无需课中额外操作 <span class="demo">原型 · 模拟数据</span></div></div>
+  </div>
+
+  <div class="cur"><span>课程</span><select id="course"><option>线性代数 · 2026 秋</option><option>高等数学（下） · 2026 秋</option></select></div>
+
+  <div class="tabs">
+    <button class="tab on" data-p="p1">数据看板</button>
+    <button class="tab" data-p="p2">预警名单</button>
+    <button class="tab" data-p="p3">个体画像</button>
+    <button class="tab" data-p="p4">练习分析</button>
+  </div>
+
+  <!-- ① 数据看板 -->
+  <div class="pane on" id="p1">
+    <div class="card">
+      <h2>课程总览 <span>已上 11 次课 · 全学期累计</span></h2>
+      <div class="stats">
+        <div class="stat"><svg viewBox="0 0 84 84" width="76" height="76"><circle cx="42" cy="42" r="34" fill="none" stroke="#eef0f3" stroke-width="10"/><circle cx="42" cy="42" r="34" fill="none" stroke="#185FA5" stroke-width="10" stroke-linecap="round" stroke-dasharray="195.3 213.6" transform="rotate(-90 42 42)"/><text x="42" y="47" text-anchor="middle" font-size="15" font-weight="600" fill="#17191c">91.4%</text></svg><span>平均出勤率</span></div>
+        <div class="stat"><svg viewBox="0 0 84 84" width="76" height="76"><circle cx="42" cy="42" r="34" fill="none" stroke="#eef0f3" stroke-width="10"/><circle cx="42" cy="42" r="34" fill="none" stroke="#1D9E75" stroke-width="10" stroke-linecap="round" stroke-dasharray="193.3 213.6" transform="rotate(-90 42 42)"/><text x="42" y="47" text-anchor="middle" font-size="15" font-weight="600" fill="#17191c">90.5%</text></svg><span>作业提交率</span></div>
+        <div class="stat"><b style="color:var(--red);font-size:34px;line-height:76px;display:block">5</b><span>预警学生</span></div>
+      </div>
+    </div>
+    <div class="card">
+      <h2>最近 8 次课 <span>左柱=出勤率，右柱=答对率</span></h2>
+      <div class="chart" id="c1"></div>
+      <div class="legend"><span><i style="background:#185FA5"></i>出勤率</span><span><i style="background:#1D9E75"></i>答对率</span></div>
+    </div>
+    <div class="card">
+      <h2>全学期趋势 <span>横轴为课次 1–11</span></h2>
+      <div class="chart" id="c5"></div>
+      <div class="legend"><span><i style="background:#185FA5"></i>出勤率</span><span><i style="background:#BA7517"></i>答题率</span><span><i style="background:#1D9E75"></i>答对率</span></div>
+      <div class="hint">读法：<b>三条线同步走低</b> = 课程节奏可能偏难；<b>出勤稳但答题率掉</b> = 学生在但不再动手。本例第 7 次出现谷底后回升。</div>
+    </div>
+    <div class="card">
+      <h2>需要留意 <span style="cursor:pointer;color:var(--blue)" onclick="switchPane('p2')">共 5 人，去预警名单 →</span></h2>
+      <div id="c1warn"></div>
+    </div>
+  </div>
+
+  <!-- ② 预警名单 -->
+  <div class="pane" id="p2">
+    <div class="card">
+      <h2>预警名单 <span>命中规则的排前面 · 点姓名看个体画像</span></h2>
+      <div class="scroll"><table><thead><tr>
+        <th>学号</th><th>姓名</th><th>命中规则</th><th class="num">出勤</th><th class="num">答对率</th><th class="num">作业</th><th></th>
+      </tr></thead><tbody id="warnBody"></tbody></table></div>
+    </div>
+  </div>
+
+  <!-- ③ 个体画像 -->
+  <div class="pane" id="p3">
+    <div class="split">
+      <div class="card side">
+        <h2 style="margin-bottom:10px">学生 <span id="sideCount">—</span></h2>
+        <input id="whoSearch" placeholder="搜索姓名或学号…">
+        <div class="nameList" id="nameList"></div>
+      </div>
+      <div class="main">
+        <div class="card">
+          <h2><span id="who">—</span> <span id="whoTag"></span></h2>
+          <div class="kv">
+            <div class="stat"><b id="wRate">—</b><span>出勤次数 / 总课次</span></div>
+            <div class="stat"><b id="wAns">—</b><span>答题次数</span></div>
+            <div class="stat"><b id="wCor">—</b><span>答题正确率</span></div>
+            <div class="stat"><b id="wHw">—</b><span>作业提交</span></div>
+            <div class="stat"><b id="wHwAvg">—</b><span>作业均分</span></div>
+          </div>
+          <h2 style="margin-top:4px">出勤轨迹 <span>每次课一格 · 绿=到 红=缺 灰=未点名</span></h2>
+          <div class="dots" id="wDots" style="margin-bottom:6px"></div>
+          <h2 style="margin-top:18px">作业轨迹 <span>每次作业一格 · 绿=已交(显示得分) 黄=补交 红=未交</span></h2>
+          <div class="dots" id="wHwDots" style="margin-bottom:6px"></div>
+          <div class="hint" id="wNote"></div>
+        </div>
+        <div class="card">
+          <h2>历次答题明细</h2>
+          <table><thead><tr><th>课次</th><th>题目</th><th>所选</th><th>正确答案</th><th>判定</th></tr></thead>
+          <tbody id="wAnsTable"></tbody></table>
+        </div>
+        <div class="card">
+          <h2>历次作业明细</h2>
+          <table><thead><tr><th>课次</th><th>作业内容</th><th>提交情况</th><th class="num">得分</th></tr></thead>
+          <tbody id="wHwTable"></tbody></table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ④ 练习分析 -->
+  <div class="pane" id="p4">
+    <div class="card">
+      <h2>课堂题目 <span>按课次分组 · 正确率低的排前面 · 点题目展开选项分布</span></h2>
+      <div class="cur" style="margin-bottom:6px"><span>课次</span><select id="qSession"></select></div>
+      <div id="qlist"></div>
+      <div class="hint">正确率不足一半且错选集中时，会提示该知识点需要重讲。</div>
+    </div>
+    <div class="card">
+      <h2>作业 <span>点行展开得分分布与未交名单</span></h2>
+      <table><thead><tr>
+        <th>作业</th><th>截止</th><th class="num">提交</th><th class="num">平均分</th><th style="width:34%">得分分布</th>
+      </tr></thead><tbody id="hwBody"></tbody></table>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ================= 模拟数据 ================= */
+const SESSIONS=11;
+const labels=['9/8','9/15','9/22','9/29','10/6','10/13','10/20','10/27','11/3','11/10','11/17'];
+const att=[.93,.96,.91,.88,.95,.90,.86,.93,.89,.94,.97];
+const ans=[.78,.82,.75,.70,.85,.74,.68,.80,.72,.86,.88];
+const cor=[.62,.70,.66,.58,.74,.60,.55,.72,.63,.78,.80];
+
+const QUESTIONS=[
+ {s:1,t:'特征值之和等于矩阵的什么量？',a:'B',cor:.83,opt:{A:4,B:34,C:2,D:2}},
+ {s:2,t:'正交矩阵的行向量组具有什么性质？',a:'C',cor:.71,opt:{A:3,B:6,C:28,D:5}},
+ {s:4,t:'行列式 |AB| = |A||B| 成立需要什么前提？',a:'A',cor:.62,opt:{A:25,B:6,C:4,D:5}},
+ {s:5,t:'下列关于初等变换的说法正确的是？',a:'D',cor:.55,opt:{A:5,B:7,C:10,D:20}},
+ {s:7,t:'矩阵 A 可逆的充要条件是？',a:'C',cor:.38,opt:{A:6,B:14,C:15,D:7}},
+ {s:7,t:'设 r(A)=2，则 Ax=0 的解空间维数为？',a:'B',cor:.47,opt:{A:9,B:19,C:8,D:6}},
+ {s:9,t:'相似矩阵的必要条件是？',a:'D',cor:.68,opt:{A:5,B:4,C:9,D:24}},
+];
+
+const HW=[
+ {sn:1,name:'作业一 · 行列式',due:'9/12',total:40,avg:84,segs:[18,14,4,2],missing:['周敏']},
+ {sn:2,name:'作业二 · 矩阵运算',due:'9/26',total:40,avg:81,segs:[12,18,6,3],missing:['周敏']},
+ {sn:3,name:'作业三 · 线性方程组',due:'10/10',total:40,avg:76,segs:[8,16,7,6],missing:['陈子豪','周敏','李晓明']},
+ {sn:4,name:'作业四 · 向量空间',due:'10/31',total:40,avg:79,segs:[10,17,6,6],missing:['陈子豪']},
+ {sn:5,name:'作业五 · 特征值',due:'11/14',total:40,avg:72,segs:[6,14,8,10],missing:['陈子豪','杨佳林']},
+];
+const SEG=['优秀','良好','及格','不及格'];
+const SEG_COLOR=['#1D9E75','#185FA5','#BA7517','#A32D2D'];
+
+/* 学生档案：hw 每项 = [得分, 'ok'按时交 | 'late'补交 | 'no'未交] */
+const STUDENTS={
+ '杨佳林':{id:'2026110998',rules:['缺勤两次以上'],dots:[1,1,1,1,1,0,0,1,1,1,1],ansD:[],hw:[[85,'ok'],[80,'ok'],[77,'ok'],[82,'ok'],[null,'no']]},
+ '李晓明':{id:'2026110999',rules:['缺勤两次以上'],dots:[1,1,1,1,0,1,0,1,0,0,1],ansD:[],hw:[[78,'ok'],[72,'ok'],[75,'late'],[70,'ok'],[74,'ok']]},
+ '王  芳':{id:'2026111003',rules:['近5次答题正确率 < 20%'],dots:[1,1,1,1,1,1,1,1,1,1,1],ansD:[
+   ['第4次','行列式 |AB| = |A||B| 成立需要什么前提？','B','A','✗'],
+   ['第5次','正交矩阵的行向量组具有什么性质？','C','C','✓'],
+   ['第7次','矩阵 A 可逆的充要条件是？','A','C','✗'],
+   ['第9次','相似矩阵的必要条件是？','B','D','✗']],hw:[[62,'late'],[64,'ok'],[61,'ok'],[60,'late'],[63,'ok']]},
+ '陈子豪':{id:'2026111021',rules:['作业未提交两次以上'],dots:[1,1,1,1,1,1,0,1,1,1,1],ansD:[
+   ['第2次','正交矩阵的行向量组具有什么性质？','C','C','✓'],
+   ['第7次','设 r(A)=2，则 Ax=0 的解空间维数为？','B','B','✓'],
+   ['第9次','相似矩阵的必要条件是？','D','D','✓']],hw:[[84,'ok'],[null,'no'],[88,'ok'],[null,'no'],[90,'ok']]},
+ '刘思思':{id:'2026111017',rules:['作业得分过低两次以上'],dots:[1,1,1,1,1,1,1,0,1,1,1],ansD:[
+   ['第5次','下列关于初等变换的说法正确的是？','B','D','✗'],
+   ['第7次','矩阵 A 可逆的充要条件是？','D','C','✗']],hw:[[72,'ok'],[58,'ok'],[75,'ok'],[50,'ok'],[70,'ok']]},
+ '孙  倩':{id:'2026111005',rules:[],dots:[1,1,1,1,1,1,1,1,1,1,1],ansD:[
+   ['第7次','矩阵 A 可逆的充要条件是？','C','C','✓'],
+   ['第9次','相似矩阵的必要条件是？','D','D','✓']],hw:[[92,'ok'],[88,'ok'],[90,'ok'],[85,'ok'],[91,'ok']]},
+ '周  斌':{id:'2026111009',rules:[],dots:[1,1,1,0,1,1,1,1,1,1,1],ansD:[
+   ['第5次','下列关于初等变换的说法正确的是？','D','D','✓'],
+   ['第7次','设 r(A)=2，则 Ax=0 的解空间维数为？','A','B','✗']],hw:[[80,'ok'],[85,'ok'],[null,'no'],[82,'ok'],[79,'ok']]},
+};
+
+/* 扩充到 100 人：93 个自动生成的普通学生，用于观察名单按钮墙密度 */
+(function(){
+  const SN='王李张刘陈杨赵黄周吴徐孙马朱胡郭何高林罗郑梁谢宋唐许韩冯邓曹彭曾肖田董潘袁蔡蒋余于杜叶程苏魏吕丁任沈姚卢姜崔钟谭陆汪范金石廖贾夏韦付方白邹孟熊秦邱江尹薛闫段雷侯龙史陶黎贺顾毛郝龚邵万钱严覃武戴莫孔向汤'.split('');
+  const G1='雨子浩宇泽涵梓轩博文昊思晓佳静怡欣怡嘉俊'.split('');
+  const G2='华军明芳娟敏丽强磊洋勇艳杰涛超秀兰霞平刚琪轩然远'.split('');
+  for(let i=0;i<93;i++){
+    let nm=SN[i%SN.length]+G1[i%G1.length]+G2[(i*7)%G2.length];
+    while(STUDENTS[nm])nm+='·';
+    const hw=HW.map((h,k)=>{
+      let st='ok'; if((i+k*2)%11===0)st='late'; if(i%7===3&&k===2)st='no';
+      return [st==='no'?null:60+((i*13+k*29)%39),st];
+    });
+    const dots=Array(SESSIONS).fill(1); if(i%9===0)dots[4]=0;
+    STUDENTS[nm]={id:'2026111'+String(101+i),rules:[],dots,
+      ansD:[['第5次','下列关于初等变换的说法正确的是？','D','D',i%3?'✓':'✗']],hw};
+  }
+})();
+
+/* ================= 工具 ================= */
+const $=s=>document.querySelector(s);
+const pct=v=>Math.round(v*100)+'%';
+function lineChart(el,series,labels){
+  const W=920,H=210,L=40,R=14,T=14,B=30,pw=W-L-R,ph=H-T-B;
+  let s='<svg viewBox="0 0 '+W+' '+H+'" width="100%">';
+  for(let i=0;i<=4;i++){const y=T+ph*i/4;
+    s+='<line x1="'+L+'" y1="'+y+'" x2="'+(W-R)+'" y2="'+y+'" stroke="#eef0f3"/><text x="'+(L-6)+'" y="'+(y+4)+'" font-size="10" fill="#9aa0a8" text-anchor="end">'+(100-i*25)+'%</text>';}
+  const X=i=>L+pw*i/(labels.length-1);
+  labels.forEach((lb,i)=>{s+='<text x="'+X(i)+'" y="'+(H-8)+'" font-size="10" fill="#9aa0a8" text-anchor="middle">'+lb+'</text>';});
+  series.forEach(sr=>{
+    const pts=sr.data.map((v,i)=>X(i)+','+(T+ph*(1-v)));
+    s+='<polyline points="'+pts.join(' ')+'" fill="none" stroke="'+sr.color+'" stroke-width="2" stroke-linejoin="round"/>';
+    sr.data.forEach((v,i)=>{s+='<circle cx="'+X(i)+'" cy="'+(T+ph*(1-v))+'" r="3" fill="'+sr.color+'"><title>'+labels[i]+' '+sr.name+' '+Math.round(v*100)+'%</title></circle>';});
+  });
+  return s+'</svg>';
+}
+function barPair(el){
+  const n=8,off=att.length-n,W=920,H=200,L=40,R=14,T=14,B=30,pw=W-L-R,ph=H-T-B,gw=pw/n;
+  let s='<svg viewBox="0 0 '+W+' '+H+'" width="100%">';
+  for(let i=0;i<=4;i++){const y=T+ph*i/4;
+    s+='<line x1="'+L+'" y1="'+y+'" x2="'+(W-R)+'" y2="'+y+'" stroke="#eef0f3"/><text x="'+(L-6)+'" y="'+(y+4)+'" font-size="10" fill="#9aa0a8" text-anchor="end">'+(100-i*25)+'%</text>';}
+  for(let i=0;i<n;i++){
+    const k=off+i,x0=L+gw*i,gwq=gw/2-4,bw=gwq-6;
+    const y1=T+ph*(1-att[k]),y2=T+ph*(1-cor[k]);
+    s+='<rect x="'+(x0+2)+'" y="'+y1+'" width="'+bw+'" height="'+(T+ph-y1)+'" rx="4" fill="#185FA5"><title>'+labels[k]+' 出勤 '+pct(att[k])+'</title></rect>';
+    s+='<rect x="'+(x0+gwq+4)+'" y="'+y2+'" width="'+bw+'" height="'+(T+ph-y2)+'" rx="4" fill="#1D9E75"><title>'+labels[k]+' 答对 '+pct(cor[k])+'</title></rect>';
+    s+='<text x="'+(x0+gw/2)+'" y="'+(H-8)+'" font-size="10" fill="#9aa0a8" text-anchor="middle">'+labels[k]+'</text>';
+  }
+  return s+'</svg>';
+}
+const corColor=c=>c<.5?'var(--red)':(c<.7?'var(--amber)':'var(--ok)');
+
+/* ================= ① 数据看板 ================= */
+$('#c1').innerHTML=barPair($('#c1'));
+$('#c5').innerHTML=lineChart($('#c5'),[
+  {name:'出勤率',data:att,color:'#185FA5'},
+  {name:'答题率',data:ans,color:'#BA7517'},
+  {name:'答对率',data:cor,color:'#1D9E75'},
+],labels);
+$('#c1warn').innerHTML='<table>'+Object.entries(STUDENTS).filter(([n,s])=>s.rules.length).map(([n,s])=>{
+  const hwSub=s.hw.filter(e=>e[1]!=='no').length;
+  return '<tr class="hwrow" onclick="openProfile(\''+n+'\')"><td class="mono">'+s.id+'</td><td><b style="font-weight:500">'+n.replace(/\s+/g,'')+'</b></td>'+
+    '<td>'+s.rules.map(r=>'<span class="tag '+(r.includes('缺勤')?'bad':'warn')+'">'+r+'</span>').join(' ')+'</td>'+
+    '<td class="num">'+s.dots.filter(d=>d).length+'/'+SESSIONS+'</td><td class="num">'+hwSub+'/'+s.hw.length+'</td></tr>';
+}).join('')+'</table>';
+
+/* ================= ② 预警 ================= */
+/* 预警规则在「系统设置」中配置（本原型不呈现） */
+$('#warnBody').innerHTML=Object.entries(STUDENTS).filter(([n,s])=>s.rules.length).map(([n,s])=>{
+  const hwSub=s.hw.filter(e=>e[1]!=='no').length;
+  const hwLow=s.hw.filter(e=>e[1]!=='no'&&e[0]<60).length;
+  return '<tr><td class="mono">'+s.id+'</td>'+
+    '<td><b style="font-weight:500;cursor:pointer;color:var(--blue)" onclick="openProfile(\''+n+'\')">'+n.replace(/\s+/g,'')+'</b></td>'+
+    '<td>'+s.rules.map(r=>'<span class="tag '+(r.includes('缺勤')?'bad':'warn')+'">'+r+'</span>').join(' ')+'</td>'+
+    '<td class="num">'+s.dots.filter(d=>d).length+'/'+SESSIONS+'</td>'+
+    '<td class="num">'+(s.ansD.length?Math.round(s.ansD.filter(x=>x[4]==='✓').length/s.ansD.length*100)+'%':'—')+'</td>'+
+    '<td class="num">'+hwSub+'/'+s.hw.length+(hwLow>=2?' <span class="tag bad">'+hwLow+'次低分</span>':'')+'</td>'+
+    '<td><button class="btn mini" onclick="event.stopPropagation();alert(\'原型：标记为「已跟进」\')">已跟进</button></td></tr>';
+}).join('');
+
+/* ================= ③ 个体画像 ================= */
+let curKey=null;
+function renderList(q){
+  q=(q||'').trim();const all=Object.keys(STUDENTS);
+  const items=Object.entries(STUDENTS).filter(([n,s])=>!q||n.replace(/\s+/g,'').includes(q)||s.id.includes(q));
+  $('#sideCount').textContent=items.length+'/'+all.length+' 人';
+  $('#nameList').innerHTML=items.length?items.map(([n,s])=>{
+    const nm=n.replace(/\s+/g,'');
+    return '<div class="nitem'+(nm===curKey?' on':'')+'" onclick="openProfile(\''+nm+'\')"><span>'+nm+'</span>'+
+      (s.rules.length?'<span class="w">'+s.rules.length+' 项预警</span>':'')+'</div>';
+  }).join(''):'<div class="hint">没有匹配的学生</div>';
+}
+window.openProfile=function(name,stay){
+  const q=(name||'').trim();
+  const key=Object.keys(STUDENTS).find(k=>k.replace(/\s+/g,'')===q||STUDENTS[k].id===q);
+  if(!key)return;const s=STUDENTS[key];
+  const nm=key.replace(/\s+/g,''),q0=$('#whoSearch').value.trim();
+  if(q0&&!nm.includes(q0)&&!s.id.includes(q0))$('#whoSearch').value='';
+  curKey=nm;renderList($('#whoSearch').value);
+  $('#who').textContent=nm+' '+s.id;
+  $('#whoTag').innerHTML=s.rules.length?s.rules.map(r=>'<span class="tag '+(r.includes('缺勤')?'bad':'warn')+'">'+r+'</span>').join(' '):'<span class="tag ok">暂无预警</span>';
+  $('#wRate').textContent=s.dots.filter(d=>d).length+'/'+SESSIONS;
+  $('#wAns').textContent=s.ansD.length;
+  $('#wCor').textContent=s.ansD.length?Math.round(s.ansD.filter(x=>x[4]==='✓').length/s.ansD.length*100)+'%':'—';
+  const hwDone=s.hw.filter(e=>e[1]!=='no');
+  $('#wHw').textContent=hwDone.length+'/'+s.hw.length;
+  $('#wHwAvg').textContent=hwDone.length?Math.round(hwDone.reduce((a,e)=>a+e[0],0)/hwDone.length):'—';
+  $('#wDots').innerHTML=s.dots.map((d,i)=>'<div class="dot2 '+(d?'':'abs')+'" title="第'+(i+1)+'次 '+labels[i]+'">'+(i+1)+'</div>').join('');
+  $('#wHwDots').innerHTML=s.hw.map((e,i)=>{
+    if(e[1]==='no')return '<div class="dot2 abs" title="'+HW[i].name+'：未提交">缺</div>';
+    return '<div class="dot2 '+(e[1]==='late'?'late':'')+'" title="'+HW[i].name+'：'+e[0]+'分'+(e[1]==='late'?'（补交）':'')+'">'+e[0]+'</div>';
+  }).join('');
+  $('#wHwTable').innerHTML=s.hw.map((e,i)=>{
+    const st=e[1]==='ok'?'<span class="tag ok">按时交</span>':(e[1]==='late'?'<span class="tag warn">补交</span>':'<span class="tag bad">未交</span>');
+    return '<tr><td>第'+HW[i].sn+'次</td><td style="max-width:280px">'+HW[i].name+'</td><td>'+st+'</td><td class="num">'+(e[1]==='no'?'—':e[0])+'</td></tr>';
+  }).join('');
+  const absMid=s.dots.slice(2,9).filter(d=>!d).length;
+  $('#wNote').textContent=s.rules.length
+    ?(s.rules.some(r=>r.includes('缺勤'))?'红格集中在中段：缺席不是从头开始的，值得确认原因。':'出勤基本正常，问题出在答题效果或作业上。')
+    :(absMid?'中段有一次缺席，整体状态正常。':'全勤，状态稳定。');
+  $('#wAnsTable').innerHTML=s.ansD.length?s.ansD.map(r=>'<tr><td>'+r[0]+'</td><td style="max-width:300px">'+r[1]+'</td><td class="num">'+r[2]+'</td><td class="num">'+r[3]+'</td><td>'+(r[4]==='✓'?'<span class="tag ok">正确</span>':'<span class="tag bad">错误</span>')+'</td></tr>').join('')
+    :'<tr><td colspan="5" style="color:var(--ink3);padding:14px 0">该生近期未参与答题（与缺席情况一致）</td></tr>';
+  if(!stay)switchPane('p3');
+};
+openProfile('杨佳林',true);
+$('#whoSearch').addEventListener('input',e=>renderList(e.target.value));
+renderList('');
+
+/* ================= ④ 练习分析 · 课堂题 ================= */
+const sessions=[...new Set(QUESTIONS.map(q=>q.s))].sort((a,b)=>a-b);
+const defS=sessions.reduce((best,s)=>{
+  const low=Math.min(...QUESTIONS.filter(q=>q.s===s).map(q=>q.cor));
+  return (best===null||low<best.low)?{s,low}:best;
+},null).s;
+$('#qSession').innerHTML=sessions.map(s=>{
+  const d=labels[s-1],n=QUESTIONS.filter(q=>q.s===s).length;
+  return '<option value="'+s+'"'+(s===defS?' selected':'')+'>第'+s+'次课 · '+d+' · '+n+' 题</option>';
+}).join('');
+function renderQs(){
+  const s=+$('#qSession').value;
+  const qs=QUESTIONS.filter(q=>q.s===s).sort((a,b)=>a.cor-b.cor);
+  $('#qlist').innerHTML=qs.map((q,i)=>{
+    const c=q.cor,total=Object.values(q.opt).reduce((a,b)=>a+b,0);
+    const wrong=Object.entries(q.opt).filter(([k])=>k!==q.a).sort((a,b)=>b[1]-a[1])[0];
+    const note=c<.5?'正确率不足一半，错选集中在 <b>'+wrong[0]+'</b>（'+wrong[1]+' 人）——不是粗心，是该知识点没讲透，建议用 3 分钟针对性重讲。'
+      :('错选分散在 '+Object.entries(q.opt).filter(([k])=>k!==q.a).map(([k])=>k).join('/')+'，掌握尚可。');
+    return '<div class="qbar" onclick="toggleQ('+i+')"><div class="idx">第'+(QUESTIONS.indexOf(q)+1)+'题</div><div class="qt">'+q.t+'</div>'+
+      '<div class="meter"><i style="width:'+c*100+'%;background:'+corColor(c)+'"></i></div><div class="pc" style="color:'+corColor(c)+'">'+pct(c)+'</div></div>'+
+      '<div class="qdetail" id="qd'+i+'"><div class="bars">'+Object.entries(q.opt).map(([k,v])=>{
+        const good=k===q.a;
+        return '<div class="brow"><div class="lab">'+k+(good?'（对）':'')+'</div><div class="track"><div class="fill" style="width:'+Math.max(v/total*100,8)+'%;background:'+(good?'var(--ok)':'#c96f6f')+'">'+v+'人</div></div></div>';
+      }).join('')+'</div><div class="hint" style="margin-top:4px"><b>'+total+'</b> 人提交 · '+note+'</div></div>';
+  }).join('');
+}
+window.toggleQ=function(i){$('#qd'+i).classList.toggle('on')};
+$('#qSession').onchange=renderQs;
+renderQs();
+
+/* ================= ④ 练习分析 · 作业 ================= */
+$('#hwBody').innerHTML=HW.map((h,i)=>{
+  const sub=h.segs.reduce((a,b)=>a+b,0),rate=sub/h.total;
+  const lowN=h.segs[3],lowFlag=lowN>=5?' <span class="tag bad">不及格 '+lowN+' 人</span>':'';
+  return '<tr class="hwrow" onclick="toggleHw('+i+')"><td><b style="font-weight:500">'+h.name+'</b></td><td class="mono">'+h.due+'</td>'+
+    '<td class="num">'+sub+'/'+h.total+'</td><td class="num">'+h.avg+'</td>'+
+    '<td><div class="segwrap"><div class="seg">'+h.segs.map((v,k)=>v?'<i style="width:'+v/sub*100+'%;background:'+SEG_COLOR[k]+'" title="'+SEG[k]+' '+v+'人"></i>':'').join('')+'</div></div>'+lowFlag+'</td></tr>'+
+    '<tr class="hwdetail" id="hd'+i+'"><td colspan="5"><div class="bars">'+h.segs.map((v,k)=>
+      '<div class="brow"><div class="lab">'+SEG[k]+'</div><div class="track"><div class="fill" style="width:'+Math.max(v/sub*100,7)+'%;background:'+SEG_COLOR[k]+'">'+v+'人</div></div></div>').join('')+
+      '</div><div class="hint"><b>未交名单（'+h.missing.length+' 人）：</b></div><div class="chips">'+h.missing.map(m=>'<span class="tag bad">'+m+'</span>').join('')+
+      (h.missing.length===0?'<span class="tag ok">全员提交</span>':'')+'</div>'+
+      '<div class="hint">'+(lowN>=5?'不及格占比偏高，'+h.name.split(' · ')[1]+'相关知识点建议课上再过一遍。':'得分分布正常。')+'</div></td></tr>';
+}).join('');
+window.toggleHw=function(i){
+  const el=$('#hd'+i);
+  document.querySelectorAll('.hwdetail').forEach(x=>{if(x!==el)x.classList.remove('on')});
+  el.classList.toggle('on');
+};
+
+/* ================= Tab ================= */
+function switchPane(id){
+  document.querySelectorAll('.pane').forEach(p=>p.classList.remove('on'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('on',t.dataset.p===id));
+  $('#'+id).classList.add('on');
+}
+document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>switchPane(t.dataset.p));
+</script>
+</body>
+</html>

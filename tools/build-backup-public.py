@@ -1,0 +1,9 @@
+from pathlib import Path
+root=Path(__file__).resolve().parent.parent;out=root/'server/backup/public';out.mkdir(parents=True,exist_ok=True)
+s=(root/'prototype/data-backup.html').read_text(encoding='utf-8');a=s.index('<aside');b=s.index('<main>',a);s=s[:a]+s[b:]
+s=s.replace('数据与备份 · 一堂课原型','数据与备份 · 一堂课').replace('href="data-backup.css"','href="/backup/style.css"').replace('<body>','<body data-active="backup">').replace('交互原型','本机数据')
+a=s.index('<div class="demo-note">');b=s.index('<div id="view">',a)
+s=s[:a]+'<div class="demo-note">备份包含学生信息和教学附件，请妥善保管。仅保存在本机，不上传外部服务；备份ZIP未加密。</div><div id="pageError" class="notice error" role="alert" hidden></div>'+s[b:]
+s=s.replace('<div id="view"></div>','<div id="view"><section class="panel"><p class="caption">正在读取备份信息…</p></section></div>').replace('原型展示 · 未连接正式备份或恢复接口','教学数据与备份独立保存 · 操作记录保留在本机').replace('<script src="data-backup.js"></script>','<script src="/shell.js"></script><script src="/backup/app.js"></script>').replace('/server/public/','/')
+(out/'index.html').write_text(s,encoding='utf-8');(out/'style.css').write_text((root/'prototype/data-backup.css').read_text(encoding='utf-8')+'\nmain{margin-left:0;max-width:none}#pageError{margin:12px 0}.status-strip{margin-top:12px}.operation-note{font-size:11px;color:#8195b0;margin:9px 0}.preview-count{font-size:11px;color:#7690a7}.restore-box .limits{font-size:10px}.capacity i{min-width:1px}.record-actions{display:flex;gap:4px;align-items:center}.record-actions a{font-size:10px;padding:2px 5px;color:#5b79af}.panel .busy-list{font-size:11px;padding-left:17px;color:#a58751}.restore-file-name{word-break:break-all}@media(max-width:760px){main{margin-left:0}}\n',encoding='utf-8')
+(out/'style.css').write_text((out/'style.css').read_text(encoding='utf-8')+'@media(min-width:960px){.layout{grid-template-columns:minmax(0,1.65fr) minmax(280px,1fr)}.right{grid-template-columns:1fr}}',encoding='utf-8')
