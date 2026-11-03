@@ -15,6 +15,7 @@ function createProgress({runDir,phase,startedAt,now=Date.now}){
   const lines=buffer.split(/\r?\n/);buffer=lines.pop();
   for(const line of lines){let value;try{value=JSON.parse(line);}catch{continue;}
    failure=require('./diagnostics').diagnoseLog(line)||failure;
+   if(value.type==='local_export_progress'&&phase==='export'&&Number.isInteger(value.completed)&&Number.isInteger(value.total)&&value.completed>=0&&value.completed<=value.total&&value.total<=150){pageProgress={completed:value.completed,total:value.total,stage:value.stage,message:String(value.message||'').slice(0,200)};mark(value.stage==='delivery'?'delivery':value.stage==='exporting'?'exporting':'reading',pageProgress.message);continue;}
    if(value.type==='system'&&value.subtype==='init')mark('starting','已连接制作工具，正在准备本轮任务');
    const blocks=value.message?.content||[];for(const block of Array.isArray(blocks)?blocks:[]){if(block.type==='tool_use'){lastActivityAt=now();tool(block.name,block.input);}if(block.type==='tool_result')lastActivityAt=now();if(block.type==='text'&&value.type==='assistant'){lastActivityAt=now();finalText=(finalText+'\n'+block.text).slice(-32000);}}
    if(value.type==='stream_event'&&['content_block_start','content_block_delta'].includes(value.event?.type))lastActivityAt=now();
@@ -25,7 +26,7 @@ function createProgress({runDir,phase,startedAt,now=Date.now}){
   let visited=0,sources=0,exports=0,latestChangedAt=0;const found=new Map();
   function walk(dir,depth){if(depth>7||visited>2500)return;let entries;try{entries=fs.readdirSync(dir,{withFileTypes:true});}catch{return;}
    for(const entry of entries){if(++visited>2500)break;if(entry.isSymbolicLink())continue;const full=path.join(dir,entry.name);
-    if(entry.isDirectory()){if(!['node_modules','.git','backup','.cache','input-html','files'].includes(entry.name))walk(full,depth+1);continue;}
+    if(entry.isDirectory()){if(!entry.name.startsWith('browser-')&&!['node_modules','.git','backup','.cache','input-html','files'].includes(entry.name))walk(full,depth+1);continue;}
     if(!entry.isFile()||!(/\.(svg|html|pptx)$/i.test(entry.name)||['outline.json','delivery.json','html-delivery.json'].includes(entry.name)))continue;
     const relative=path.relative(runDir,full).replace(/\\/g,'/');if(relative==='previous.pptx'||relative==='template.pptx'||relative.startsWith('files/')||/^[a-f0-9]{24}-/.test(relative))continue;
     let stat;try{stat=fs.statSync(full);}catch{continue;}if(!stat.size)continue;found.set(relative,stat.mtimeMs+':'+stat.size);if(seen.get(relative)!==found.get(relative))latestChangedAt=Math.max(latestChangedAt,stat.mtimeMs);

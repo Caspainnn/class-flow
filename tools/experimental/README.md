@@ -1,5 +1,7 @@
 # 固定程序导出试验（未接入正式平台）
 
+更新：该试验已提升为平台本机导出，详见 [接入记录](../../docs/ppt-preparation/2026-11-03-本机导出接入.md)。本目录保留当时的独立试验入口，正式代码位于 `server/ppt/local-export*.js` 和 `native-*`。
+
 用途：验证浏览器排版 → 原生 PPT 对象是否能取代 AI 从头编写 SVG 的常规导出工作。用户已授权先备份再试验；当前仅为独立 CLI，不修改正式任务和已确认的 HTML。
 
 依赖：本机 Chrome、Node 20（`--experimental-websocket`）、已有 `.local-ppt-python` 的 python-pptx。可通过 `PPT_BROWSER`、`PPT_PYTHON` 指定本机路径，不增加生产依赖。

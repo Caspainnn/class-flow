@@ -14,11 +14,11 @@ window.PptExecutionView=(()=>{
    const details=target.querySelector('details');details.open=historyOpen.get(run.id)||false;details.addEventListener('toggle',()=>historyOpen.set(run.id,details.open));
    state={runId:run.id,fields,details,events:target.querySelector('.execution-history-events'),steps:[...target.querySelectorAll('li')],historyKey:null};mounted.set(target,state);
   }
-  const p=run.progress||{},last=p.lastActivityAt||run.startedAt,stage={starting:0,reading:1,authoring:2,checking:3,exporting:3,delivery:3}[p.stage]??0,f=state.fields;
+  const p=run.progress||{},last=p.lastActivityAt||run.startedAt,stage={starting:0,reading:1,authoring:2,checking:3,exporting:run.phase==='export'?2:3,delivery:3}[p.stage]??0,f=state.fields;
   state.steps.forEach((node,i)=>{node.classList.toggle('active',i===stage);node.classList.toggle('past',i<stage);});
   f.activity.textContent=teacherText(p.activity)||'任务已提交，等待制作工具返回执行状态';f.elapsed.textContent=duration(now-run.startedAt);f.recent.textContent=duration(now-last)+'前';
   f.process.textContent=p.processAlive===true?'制作进程仍在运行':p.processAlive===false?'正在处理返回结果':'等待状态同步';
-  f.files.hidden=!(p.sourceFiles||p.exportFiles||p.pageProgress?.total);f.files.textContent=p.pageProgress?.total?`已完成 ${p.pageProgress.completed} / ${p.pageProgress.total} 页及对应讲稿；全部完成后统一交付。`:`已发现 ${p.sourceFiles||0} 份页面源文件、${p.exportFiles||0} 份导出文件；文件仍需通过交付校验。`;
+  f.files.hidden=!(p.sourceFiles||p.exportFiles||p.pageProgress?.total);f.files.textContent=p.pageProgress?.total?(run.engine==='local'?`${p.pageProgress.stage==='reading'?'已读取排版':'已导出'} ${p.pageProgress.completed} / ${p.pageProgress.total} 页；全部完成并校验后提供下载。`:`已完成 ${p.pageProgress.completed} / ${p.pageProgress.total} 页及对应讲稿；全部完成后统一交付。`):`已发现 ${p.sourceFiles||0} 份页面源文件、${p.exportFiles||0} 份导出文件；文件仍需通过交付校验。`;
   f.sync.textContent=(p.serverAt?`上次同步：${new Date(p.serverAt).toLocaleTimeString()}`:'正在获取执行状态')+' · 根据真实反馈更新，不推测完成百分比';
   f.limit.textContent=run.timeoutMs?`本轮最长等待 ${Math.round(run.timeoutMs/3600000*10)/10} 小时，可随时取消。`:'本轮等待上限以发起时的设置为准。';f.quiet.hidden=now-last<90000;
   const history=p.history||[],key=JSON.stringify(history);state.details.hidden=!history.length;

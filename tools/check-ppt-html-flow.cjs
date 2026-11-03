@@ -4,7 +4,7 @@ const {createService}=require('../server/ppt/service'),{validateHtml}=require('.
 const root=fs.mkdtempSync(path.join(os.tmpdir(),'inclass-html-ppt-')),skill=path.join(root,'skill');fs.mkdirSync(skill);fs.writeFileSync(path.join(skill,'SKILL.md'),'test');
 const settings={workbuddy:{enabled:true,path:__filename},ppt:{skillPath:skill,timeoutMs:60000}};
 let launches=[];const launch=(exe,args,options)=>{const child=new EventEmitter();child.stdout=new EventEmitter();child.stderr=new EventEmitter();launches.push({child,args,options});return child;};
-const service=createService({root:path.join(root,'tasks'),getSettings:()=>settings,getCourses:()=>[],launch});
+const service=createService({root:path.join(root,'tasks'),getSettings:()=>settings,getCourses:()=>[],launch,exportHtml:({runDir})=>launch(process.execPath,['--local-export'],{cwd:runDir})});
 const html='<html><head><meta charset="utf-8"><style>body{margin:0;background:#fff}</style></head><body><h1>Editable lesson</h1></body></html>';
 const deliver=(run,value=html)=>{fs.writeFileSync(path.join(run.options.cwd,'01.html'),value);fs.writeFileSync(path.join(run.options.cwd,'html-delivery.json'),JSON.stringify({slides:[{title:'Lesson',file:'01.html',notes:'Teacher notes',speech:'A complete spoken explanation for the lesson, including a classroom question and transition.'}],sources:[]}));};
 const settle=async id=>{for(let i=0;i<100;i++){const t=service.get(id);if(t.status!=='running')return t;await new Promise(r=>setTimeout(r,5));}throw Error('Fixture did not settle');};
@@ -22,7 +22,7 @@ async function beginHtml(id,count=1){
  await beginHtml(t.id);let run=launches.at(-1);assert.ok(!run.args[run.args.indexOf('-p')+1].includes('先读取该目录的SKILL.md'));assert.ok(!run.args[run.args.indexOf('--tools')+1].includes('Bash'));
  let current=await settle(t.id);assert.equal(current.status,'html-ready');assert.equal(current.versions.length,0);assert.equal(current.htmlVersions.length,1);
  assert.throws(()=>service.start(t.id,'export',{htmlVersion:1}));
- service.start(t.id,'export',{htmlVersion:1,approved:true});run=launches.at(-1);assert.ok(run.args[run.args.indexOf('--tools')+1].includes('Bash'));assert.equal(fs.readFileSync(path.join(run.options.cwd,'input-html/001.html'),'utf8'),html);
+ service.start(t.id,'export',{htmlVersion:1,approved:true});run=launches.at(-1);assert.deepEqual(run.args,['--local-export']);assert.equal(fs.readFileSync(path.join(run.options.cwd,'input-html/001.html'),'utf8'),html);
  fs.copyFileSync(path.join(__dirname,'fixtures/ppt-service.pptx'),path.join(run.options.cwd,'lesson.pptx'));fs.writeFileSync(path.join(run.options.cwd,'delivery.json'),JSON.stringify({pptx:'lesson.pptx',sources:[]}));run.child.emit('close',0);
  current=await settle(t.id);assert.equal(current.status,'failed');assert.equal(current.versions.length,0);assert.match(current.error,/讲稿/);
  service.start(t.id,'export',{htmlVersion:1,approved:true});run=launches.at(-1);const zip=await require('../server/node_modules/jszip').loadAsync(fs.readFileSync(path.join(__dirname,'fixtures/ppt-service.pptx'))),notePath='ppt/notesSlides/notesSlide1.xml',noteXml=await zip.file(notePath).async('string');zip.file(notePath,noteXml.replace(/<a:t(?:\s[^>]*)?>[\s\S]*?<\/a:t>/,'<a:t>'+current.htmlVersions[0].slides[0].speech+'</a:t>'));fs.writeFileSync(path.join(run.options.cwd,'lesson.pptx'),await zip.generateAsync({type:'nodebuffer'}));fs.writeFileSync(path.join(run.options.cwd,'delivery.json'),JSON.stringify({pptx:'lesson.pptx',sources:[]}));run.child.emit('close',0);

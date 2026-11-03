@@ -1,5 +1,5 @@
 'use strict';
-window.PptHtmlView={render({task,version,page,draft,connected}){
+window.PptHtmlView={render({task,version,page,draft,connected,exportConnected=true,exportReason=''}){
  const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  const file=relative=>`/api/ppt/tasks/${task.id}/file?path=${encodeURIComponent(relative)}`;
  const slide=version.slides[page],latest=version.number===task.htmlVersions.at(-1).number,busy=task.status==='running';
@@ -10,7 +10,8 @@ window.PptHtmlView={render({task,version,page,draft,connected}){
  else if(busy)review='<p>正在后台处理本轮任务，课件会保留。可以切换到其他板块，完成或失败时会在侧栏PPT管理提示。</p><button class="side-action" data-action="run-status">返回执行状态</button>';
  else if(!latest)review='<p>当前是历史版本。可继续查看，导出和修改请使用最新版本。</p>';
  else if(pptx)review=`<p>已导出当前版本。请下载并检查PowerPoint中的排版与可编辑性。</p><label class="ready-check"><input id="reviewed" type="checkbox" ${task.reviewedVersion===pptx.number?'checked':''}>我已核对课件内容与实际呈现</label><button class="primary side-action" data-action="ready" ${task.reviewedVersion!==pptx.number?'disabled':''}>${task.reviewedVersion===pptx.number?'已标记可上课':'标记可上课'}</button>`;
- else review=`${exportIssue?`<p class="error-text" role="alert">${esc(String(task.error||'本次导出已取消，课件已保留。').replace(/HTML/g,'课件').replace(/PPTX/g,'可编辑PPT'))}</p>`:'<p>需要在PowerPoint中编辑或带走使用时，可导出当前版本。</p>'}<button class="primary side-action" data-action="${exportIssue?'retry':'confirm-html'}" ${!connected?'disabled':''}>${exportIssue?'重试导出':'导出可编辑PPT'}</button>${!connected?'<p class="helper">导出工具尚未连接，请先检查连接设置。</p>':''}`;
+ else review=`${exportIssue?`<p class="error-text" role="alert">${esc(String(task.error||'本次导出已取消，课件已保留。').replace(/HTML/g,'课件').replace(/PPTX/g,'可编辑PPT'))}</p>`:'<p>需要在PowerPoint中编辑或带走使用时，可导出当前版本。</p>'}<button class="primary side-action" data-action="${exportIssue?'retry':'confirm-html'}" ${!exportConnected?'disabled':''}>${exportIssue?'重试导出':'导出可编辑PPT'}</button>${!exportConnected?`<p class="helper">${esc(exportReason||'本机导出依赖未就绪，请检查浏览器和 Python 设置。')}</p>`:''}`;
+ review+='<p class="helper">本机直接转换，不调用模型。普通文字和常规形状可编辑，复杂图示按图片保留。</p>';
  const image=slide.image;
  const source=image?.source&&/^https:\/\/commons\.wikimedia\.org\/wiki\//.test(image.source)?`<a href="${esc(image.source)}" target="_blank" rel="noopener noreferrer">查看图片来源</a>`:'';
  const imagePanel=image?`<section class="aside-note image-card"><h3>本页配图</h3><p>${esc(image.subject)}</p><p class="helper">${esc(image.purpose)}</p>${image.status==='ready'?`<p class="helper">${esc(image.author)} · ${esc(image.license)}</p>${source}<p class="helper">图片可缩放，其他页面不增加外部图片。</p><div class="manual-actions"><button data-action="image-replace" ${!latest||busy?'disabled':''}>换一张</button><button data-action="image-remove" ${!latest||busy?'disabled':''}>取消配图</button></div>`:`<p class="helper">${esc(image.message||'本页未使用外部配图。')}</p>`}<p id="imageActionStatus" class="helper" role="status" aria-live="polite"></p></section>`:'';

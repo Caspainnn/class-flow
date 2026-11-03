@@ -162,7 +162,8 @@ node tools/connect-workbuddy.js --path "实际CLI入口路径"
 - **PPT Master skill**：已验证来源为[hugohe3/ppt-master](https://github.com/hugohe3/ppt-master/tree/5832c3a8ca77e22284198407f0a7e4485ada9688/skills/ppt-master)，固定提交`5832c3a8ca77e22284198407f0a7e4485ada9688`。需另行安装技能目录、保留许可，并按该版本说明准备Python依赖；本仓库不包含skill副本、Python环境或账号凭据。
 - 配置读取`data/settings.json`中的`ppt`，未设置时兼容读取项目下`.local-ppt-skills/config.json`。路径应使用本机绝对路径。
 - 原生模板页面截图依赖**Windows、Microsoft PowerPoint与PowerShell COM**。缺少组件时不能获得该路径的真实模板视觉参考，结构示意不能替代原页截图。
-- 可编辑PPTX转换使用技能与Python工具链。PPT任务默认最长两小时，可配置缩短，不能超过两小时。默认不启用更宽的Shell权限，任务目录不是操作系统沙箱。
+- 平台“导出可编辑PPT”使用本机固定程序，读取已确认HTML，不调用模型。需要本机 Chrome 或 Edge、Python 的 `python-pptx` 与 `Pillow`；读取 `ppt.pythonPath`，浏览器自动查找，亦可配置 `ppt.browserPath`。普通文字和常规图形可编辑，复杂SVG图示暂作为图片保留。手动交接流程仍可在外部制作和导回文件。
+- PPT任务默认最长两小时，可配置缩短，不能超过两小时。默认不启用更宽的Shell权限，任务目录不是操作系统沙箱。
 
 PPT专用配置示例（替换路径，不包含账号信息）：
 
@@ -269,6 +270,7 @@ node tools/check-lesson-service.cjs
 - [PPT真实功能与联调记录](docs/ppt-preparation/真实功能验收.md)
 - [更新旧课件：原稿保留与模板翻新](docs/ppt-preparation/2026-11-02-更新课件正式集成.md)
 - [课件中断后继续制作](docs/ppt-preparation/2026-11-02-课件中断续做.md)
+- [本机固定程序导出接入](docs/ppt-preparation/2026-11-03-本机导出接入.md)
 - [教案使用与验证](docs/lesson-plan/使用与验证.md)
 - [问卷正式交付与验收](docs/questionnaire/正式交付与验收.md)
 - [数据看板口径与验收](docs/dashboard/正式交付与验收.md)
