@@ -1,0 +1,30 @@
+'use strict';
+const fs=require('node:fs'),path=require('node:path'),os=require('node:os'),assert=require('node:assert/strict'),vm=require('node:vm');
+const {createService}=require('../server/ppt/service'),ZIP=require('../server/node_modules/jszip');
+const root=fs.mkdtempSync(path.join(os.tmpdir(),'inclass-page-count-'));
+(async()=>{
+ const service=createService({root,getSettings:()=>({}),getCourses:()=>[]});
+ const zip=await ZIP.loadAsync(fs.readFileSync('tools/fixtures/ppt-service.pptx')),slide=await zip.file('ppt/slides/slide1.xml').async('string'),rels=await zip.file('ppt/slides/_rels/slide1.xml.rels').async('string');
+ let presentation=await zip.file('ppt/presentation.xml').async('string'),presentationRels=await zip.file('ppt/_rels/presentation.xml.rels').async('string'),types=await zip.file('[Content_Types].xml').async('string');
+ for(let i=2;i<=15;i++){zip.file(`ppt/slides/slide${i}.xml`,slide);zip.file(`ppt/slides/_rels/slide${i}.xml.rels`,rels);presentation=presentation.replace('</p:sldIdLst>',`<p:sldId id="${300+i}" r:id="test${i}"/></p:sldIdLst>`);presentationRels=presentationRels.replace('</Relationships>',`<Relationship Id="test${i}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide${i}.xml"/></Relationships>`);types=types.replace('</Types>',`<Override PartName="/ppt/slides/slide${i}.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/></Types>`);}
+ zip.file('ppt/presentation.xml',presentation);zip.file('ppt/_rels/presentation.xml.rels',presentationRels);zip.file('[Content_Types].xml',types);
+ let t=service.create({title:'Fixture',audience:'Test',minutes:20,pageCount:5});t=service.attach(t.id,{name:'original.pptx',base64:await zip.generateAsync({type:'base64'})});t=service.update(t.id,{...t,creationMode:'update',sourceFileId:t.files[0].id});
+ const info=await service.sourceInfo(t.id);assert.equal(info.pageCount,15);assert.equal(service.get(t.id).sourcePageCount,15);
+ assert.throws(()=>service.manual(t.id),/确认使用原稿页数还是目标页数/);
+ await assert.rejects(()=>service.pageCountChoice(t.id,{choice:'target',sourceFileId:t.sourceFileId,sourcePages:14,targetPages:5}));
+ const choose=choice=>service.pageCountChoice(t.id,{choice,sourceFileId:t.sourceFileId,sourcePages:15,targetPages:service.get(t.id).pageCount});
+ t=await choose('target');assert.equal(t.pageCountPolicy,'adapt');assert.equal(t.pageCountAcknowledged,`${t.sourceFileId}:15:5`);service.manual(t.id);
+ assert.match(service.prompt(service.get(t.id)),/教师已明确选择按目标5页制作/);
+ t=service.update(t.id,{...service.get(t.id),pageCount:6});assert.equal(t.pageCountAcknowledged,null);assert.equal(t.pageCountPolicy,'preserve');assert.throws(()=>service.manual(t.id));
+ t=await choose('original');assert.equal(t.pageCount,null);assert.equal(t.pageCountPolicy,'preserve');service.manual(t.id);
+ const source=fs.readFileSync('server/ppt/public/ppt.js','utf8'),fields=new Map();
+ for(const [id,value] of Object.entries({title:'Fixture',audience:'Test',minutes:'20',pageCount:'5',content:'',course:'',style:'Simple',extra:''}))fields.set(id,{value,removeAttribute(){},setAttribute(){},focus(){}});fields.set('pageCountError',{});fields.set('formError',{});
+ let modal=null;
+ const context=vm.createContext({$:id=>fields.get(id)||null,current:{id:'test',creationMode:'update',sourceFileId:'source',sourcePageCount:15,files:[{}],pageCountPolicy:'preserve'},templateReview:null,step:1,connection:{},location:{hash:''},endpoint:action=>'/task'+(action?'/'+action:''),showModal:(...args)=>modal=args,render(){},api:async(url,b)=>url.endsWith('source-info')?{sourceFileId:'source',pageCount:15}:url.includes('connection')?{ready:false}:{...context.current,...b}});
+ vm.runInContext(source.slice(source.indexOf('function draft(){'),source.indexOf('async function fileValue(')),context);
+ assert.equal(await vm.runInContext('saveForm(true)',context),false);assert.match(modal[1],/精简/);assert.equal(context.step,1);assert.match(modal[2],/按原稿 15 页/);assert.match(modal[2],/按目标 5 页/);
+ fields.get('pageCount').value='20';modal=null;assert.equal(await vm.runInContext('saveForm(true)',context),false);assert.match(modal[1],/扩充/);
+ fields.get('pageCount').value='11';modal=null;assert.equal(await vm.runInContext('saveForm(true)',context),true);assert.equal(modal,null);assert.equal(context.step,2);
+ fields.get('pageCount').value='5';context.current.pageCountAcknowledged='source:15:5';modal=null;assert.equal(await vm.runInContext('saveForm(true)',context),true);assert.equal(modal,null);
+ console.log('PASS: >=5 page difference modal, shrink/expand disclosure, original/target persistence, scoped acknowledgement, stale decision rejected and server bypass blocked');
+})().catch(e=>{console.error(e);process.exitCode=1;}).finally(()=>fs.rmSync(root,{recursive:true,force:true}));

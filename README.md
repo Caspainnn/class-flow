@@ -267,6 +267,8 @@ node tools/check-lesson-service.cjs
 当前源码已集成上述模块，仍持续迭代。原型通过、自测通过、真实模型联调与教师正式验收是不同状态，以各模块最新记录为准。历史文档中的故障、路径及旧参数不是当前部署配置。
 
 - [PPT真实功能与联调记录](docs/ppt-preparation/真实功能验收.md)
+- [更新旧课件：原稿保留与模板翻新](docs/ppt-preparation/2026-11-02-更新课件正式集成.md)
+- [课件中断后继续制作](docs/ppt-preparation/2026-11-02-课件中断续做.md)
 - [教案使用与验证](docs/lesson-plan/使用与验证.md)
 - [问卷正式交付与验收](docs/questionnaire/正式交付与验收.md)
 - [数据看板口径与验收](docs/dashboard/正式交付与验收.md)

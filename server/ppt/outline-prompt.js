@@ -1,6 +1,6 @@
 'use strict';
 // Shared by platform handoff and the teacher's manual WorkBuddy prompt.
-const rules=require('./presentation-rules').coverRules+`\n请先写供教师快速审阅的轻量逐页大纲。
+const rules=require('./presentation-rules').coverRules+'\n'+require('./presentation-rules').endingRules+'\n'+require('./presentation-rules').studentSurfaceRules+`\n请先写供教师快速审阅的轻量逐页大纲。
 1. 教学目标最多3条，总计不超过80字，只写学生学完能做什么。
 2. 一页只讲一个核心观点。内容页标题不超过24字，封面标题沿用完整本课主题；内容为2至3个短要点，每点不超过28字，整页description不超过100字。封面、过渡页、总结页可只写1个要点。用换行分隔要点，不写长段落或多层列表。
 3. 大纲只确定每页“讲什么”。不写配色值、字体、坐标、详细版式、教师台词、完整演讲稿、完整例题答案、逐步推导或代码。需要例题时只点明例题主题，答案和讲解在制作阶段补齐、核对。
@@ -8,7 +8,7 @@ const rules=require('./presentation-rules').coverRules+`\n请先写供教师快�
 5. 必须遵守指定总页数，封面和结束页计入；未指定时按内容密度合理安排。若页数很少，优先保留核心知识，在讲稿中补充细节，不把所有资料压成文字墙。各页时长合计等于总课时。
 6. 参考资料只用于提炼与本课有关的信息，不照抄整段，不编造事实、来源或数据。视觉模板只辅助选择layoutId，不把模板的字体、配色和布局操作写进内容要点。
 7. 每页另列image配图意图，kind为none（不配图）或web（制作时网上找图）。整套PPT最多一张外部照片/插画，可以零张；只在真实物体、场景或案例图片显著帮助理解时选择教学价值最高的一页。抽象概念、公式、流程、对比和数据优先用原生形状或图表，不计入外部配图，不放装饰图。web时用短句写subject（图片内容）、purpose（教学用途），query用具体英文关键词供公开图库检索；不要只写“科技图片”。此时不找图、不提供猜测的图片网址，不等待图片预览。配图意图独立于description，不占用短要点篇幅。图片页布局由平台从已确认图片布局中匹配。
-8. pages第1项必须对应封面：title等于本课主题，description仅简述封面要展示的授课人和日期，不列学习目标或内容知识点；这些信息未填写时仅保留标题和可选副标题。
+8. pages第1项必须对应封面：title等于本课主题，description简述去重后的授课信息与日期，可另提炼2–4条简短课程亮点，每条不超过16字，不展开知识点或学习目标；不展示适用对象/授课对象。无合适亮点可省略，身份信息未填写时不编造。
 9. 交付前检查：一页一个中心、要点短且不重复、无教案式长段落，页数和课时正确。此阶段不生成课件或讲稿，等待教师整体确认。`;
 const handoff=rules+String.raw`
 仅使用Read/Write/Edit/Glob/Grep读取本轮输入并写outline.json，不加载PPTX skill，不执行Python或Shell。

@@ -3,6 +3,10 @@
 const http=require('node:http'),fs=require('node:fs'),path=require('node:path');
 const root=path.resolve(__dirname,'..');
 const files={
+  '/prototype/ppt-update.html':['prototype/ppt-update.html','text/html; charset=utf-8'],
+  '/prototype/ppt-update.css':['prototype/ppt-update.css','text/css; charset=utf-8'],
+  '/prototype/ppt-update.js':['prototype/ppt-update.js','text/javascript; charset=utf-8'],
+  '/prototype/ppt-update-prompt.js':['server/ppt/update-prompt.js','text/javascript; charset=utf-8'],
   '/prototype/ppt-management.css':['prototype/ppt-management.css','text/css; charset=utf-8'],
   '/prototype/assets/template-ai-original/001.png':['prototype/assets/template-ai-original/001.png','image/png'],
   '/prototype/assets/template-ai-original/002.png':['prototype/assets/template-ai-original/002.png','image/png'],

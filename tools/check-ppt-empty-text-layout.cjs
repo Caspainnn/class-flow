@@ -1,0 +1,6 @@
+'use strict';
+const assert=require('node:assert/strict'),{xml}=require('../server/ppt/package'),{describe,group}=require('../server/ppt/template-layouts'),{recommend}=require('../server/ppt/layout-similarity');
+const box=(x,y,w,h,text)=>`<p:sp><p:spPr><a:xfrm><a:off x="${x}" y="${y}"/><a:ext cx="${w}" cy="${h}"/></a:xfrm></p:spPr><p:txBody><a:bodyPr/><a:lstStyle/><a:p>${text?'<a:r><a:t>content</a:t></a:r>':''}</a:p></p:txBody></p:sp>`;
+const slide=content=>xml('<p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><p:cSld><p:spTree>'+box(0,0,1000,1000,false)+content+'</p:spTree></p:cSld></p:sld>');
+const first=describe(slide(box(50,100,400,700,true)+box(550,100,400,700,true)),null,null,{width:1000,height:1000});const second=describe(slide(box(50,100,900,300,true)+box(50,600,900,300,true)),null,null,{width:1000,height:1000});
+assert.equal(first[0].kind,'shape');assert.equal(first[1].kind,'text');const groups=group([{slide:1,shapes:first},{slide:2,shapes:second}]);assert.equal(recommend(groups).selectedIds.length,2,'full-slide empty text container must not erase real layout differences');console.log('PASS: empty text container stays decoration, real text is retained, full-canvas background cannot collapse different layouts');

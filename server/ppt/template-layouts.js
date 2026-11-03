@@ -12,7 +12,7 @@ function describe(slide,layout,master,canvas){
   const inherited=[layout,master].flatMap(n=>descendants(n,'sp')).filter(n=>{const p=descendants(n,'ph')[0]?.attrs;return p&&ph&&(ph.idx!==undefined?p.idx===ph.idx:(p.type||'body')===(ph.type||'body'));});
   const geom=descendants(shape,'xfrm')[0]||inherited.map(n=>descendants(n,'xfrm')[0]).find(Boolean),off=descendants(geom,'off')[0]?.attrs,ext=descendants(geom,'ext')[0]?.attrs;
   if(!off||!ext)continue;
-  const kind=shape.name==='pic'?'image':descendants(shape,'tbl').length?'table':descendants(shape,'chart').length?'chart':ph?.type==='title'||ph?.type==='ctrTitle'?'title':descendants(shape,'txBody').length?'text':shape.name==='cxnSp'?'line':'shape';
+  const kind=shape.name==='pic'?'image':descendants(shape,'tbl').length?'table':descendants(shape,'chart').length?'chart':ph?.type==='title'||ph?.type==='ctrTitle'?'title':descendants(shape,'t').length?'text':shape.name==='cxnSp'?'line':'shape';
   result.push({kind,x:t.tx+t.sx*Number(off.x),y:t.ty+t.sy*Number(off.y),w:t.sx*Number(ext.cx),h:t.sy*Number(ext.cy)});
  }};walk(tree);
  const w=canvas?.width||12192000,h=canvas?.height||6858000;

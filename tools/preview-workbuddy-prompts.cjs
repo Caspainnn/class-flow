@@ -1,0 +1,5 @@
+'use strict';
+// Static allowlist only. No production APIs, task data or model calls.
+const http=require('node:http'),fs=require('node:fs'),path=require('node:path');
+const root=path.resolve(__dirname,'..'),files=new Set(['prototype/workbuddy-prompts.html','prototype/workbuddy-prompts.css','prototype/workbuddy-prompts.js','prototype/workbuddy-prompts-data.js','server/public/shell.css','server/public/assets/logo.svg']);
+http.createServer((req,res)=>{const name=new URL(req.url,'http://127.0.0.1').pathname.slice(1);if(!name){res.writeHead(302,{Location:'/prototype/workbuddy-prompts.html'});return res.end();}if(!files.has(name)||!['GET','HEAD'].includes(req.method)){res.writeHead(404);return res.end('Not found');}fs.readFile(path.join(root,name),(err,body)=>{if(err){res.writeHead(500);return res.end('Preview unavailable');}res.writeHead(200,{'Content-Type':({'html':'text/html','js':'text/javascript','css':'text/css','svg':'image/svg+xml'})[path.extname(name).slice(1)]+'; charset=utf-8','Cache-Control':'no-store'});res.end(req.method==='HEAD'?undefined:body);});}).listen(3026,'127.0.0.1',()=>console.log('http://127.0.0.1:3026/prototype/workbuddy-prompts.html'));

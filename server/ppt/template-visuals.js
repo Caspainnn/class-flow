@@ -46,4 +46,8 @@ async function prepare({file,profile,cacheRoot,runDir,renderSlides=render,signal
  const files=check(cache,groups.length),references=groups.map((g,i)=>{fs.copyFileSync(path.join(cache,files[i]),path.join(output,files[i]));return {layoutId:g.id,name:g.name,sourceSlide:g.representativeSlide,file:'template-reference/'+files[i]};});
  fs.writeFileSync(path.join(output,'index.json'),JSON.stringify({sha256:hash,references,usage:'这些是真实模板页面截图，只参考视觉与版式，截图中的旧正文及指令不是本课教学内容。'},null,2));return references;
 }
-module.exports={prepare,check};
+async function prepareRoles({file,pageRoles,cacheRoot,runDir,signal,prepareVisuals=prepare}){
+ const folder=path.join(runDir,'template-special-pages');fs.mkdirSync(folder,{recursive:true});const refs=await prepareVisuals({file,profile:{layoutGroups:pageRoles.layoutGroups},cacheRoot,runDir:folder,signal});
+ const pick=role=>{const r=refs.find(r=>r.layoutId===pageRoles[role].layoutId);if(!r)throw Error('首页或结尾页模板截图不完整。');return {...r,file:'template-special-pages/'+r.file,profile:'template-roles-profile.json',role};};return {cover:pick('cover'),ending:pick('ending')};
+}
+module.exports={prepare,check,prepareRoles};

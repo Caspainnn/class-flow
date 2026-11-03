@@ -12,8 +12,9 @@ function permissionFailure(value){
 function diagnoseLog(raw){
  for(const line of String(raw).split(/\r?\n/)){let value;try{value=JSON.parse(line);}catch{continue;}
   for(const block of value.message?.content||[])if(block.type==='tool_result'&&block.is_error){const failure=permissionFailure(block.content);if(failure)return failure;}
-  if(value.type==='result'){const failure=permissionFailure(value.result);if(failure)return failure;if(value.is_error&&(value.errors_info?.some(e=>e.category==='empty_model_response')||/Empty stream.*upstream|finish_reason=error/is.test(JSON.stringify(value.errors||[]))))return {code:'model_empty_response',message:'制作工具连接的模型服务返回空响应，本轮未完成。教学要求、大纲和已有版本已保留，可稍后重试。'};}
+  if(value.type==='result'){if(/Max turns\s*\(?\d*\)?\s*exceeded/i.test(JSON.stringify(value.errors||value.result||'')))return {code:'tool_turn_limit',message:'制作工具已用尽本轮调用次数，尚未交付完整文件。原稿和教学要求已保留，请重新发起本轮。'};const failure=permissionFailure(value.result);if(failure)return failure;if(value.is_error&&(value.errors_info?.some(e=>e.category==='empty_model_response')||/Empty stream.*upstream|finish_reason=error/is.test(JSON.stringify(value.errors||[]))))return {code:'model_empty_response',message:'制作工具连接的模型服务返回空响应，本轮未完成。教学要求、大纲和已有版本已保留，可稍后重试。'};}
  }
  return permissionFailure(raw);
 }
-module.exports={pythonCommandRules,permissionFailure,diagnoseLog};
+function diagnoseFile(file){const fs=require('node:fs'),fd=fs.openSync(file,'r');try{const size=fs.fstatSync(fd).size,buffer=Buffer.alloc(Math.min(size,512*1024));fs.readSync(fd,buffer,0,buffer.length,size-buffer.length);return diagnoseLog(buffer.toString('utf8'));}finally{fs.closeSync(fd);}}
+module.exports={pythonCommandRules,permissionFailure,diagnoseLog,diagnoseFile};

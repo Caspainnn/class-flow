@@ -14,7 +14,7 @@ const root=fs.mkdtempSync(path.join(os.tmpdir(),'inclass-template-management-'))
 
  const service=createService({root,getSettings:()=>({}),getCourses:()=>[]});
  const item=await service.templates.add({name:'Synthetic.pptx',displayName:'合成测试模板',description:'隔离数据',base64:source.toString('base64')});
- assert.equal(item.analysis.slideCount,2);
+ assert.equal(item.analysis.slideCount,2);assert.equal(item.pageRoles.cover.sourceSlide,1);assert.equal(item.pageRoles.ending.sourceSlide,2);assert.equal(item.pageRoles.layoutGroups.length,2);assert.equal((await inspectPpt(fs.readFileSync(service.templates.roleFile(item.id)))).length,2);
  const updated=service.templates.update(item.id,{displayName:'修改后的模板',description:'新简介'});
  assert.equal(service.templates.get(item.id).displayName,'修改后的模板');
  assert.throws(()=>service.templates.update(item.id,{displayName:'',description:''}),/名称/);
@@ -24,11 +24,11 @@ const root=fs.mkdtempSync(path.join(os.tmpdir(),'inclass-template-management-'))
  await assert.rejects(()=>service.templates.confirm(item.id,{layouts:[{sourceSlide:0,name:'非法'}]}),/页码/);
  await assert.rejects(()=>service.templates.confirm(item.id,{layouts:[{sourceSlide:1,name:'A'},{sourceSlide:1,name:'B'}]}),/重复/);
  const task=service.create({title:'Synthetic',audience:'Test',minutes:20,content:'Test'});
- const selected=service.selectTemplate(task.id,item.id,confirmed.confirmedRevision),snapshot=fs.readFileSync(service.file(task.id,selected.template.file));
+ const selected=service.selectTemplate(task.id,item.id,confirmed.confirmedRevision);assert.equal(selected.template.pageRoles.ending.sourceSlide,2);const roleSnapshot=fs.readFileSync(service.file(task.id,selected.template.roleFile));const snapshot=fs.readFileSync(service.file(task.id,selected.template.file));
  const reloaded=require('../server/ppt/templates').createTemplates(path.join(root,'_templates'),inspectPpt,{prepareVisuals:async({runDir})=>{fs.mkdirSync(path.join(runDir,'template-reference'),{recursive:true});fs.writeFileSync(path.join(runDir,'template-reference','001.png'),'synthetic-image');fs.writeFileSync(path.join(runDir,'template-reference','002.png'),'synthetic-image-2');}});
  assert.equal(reloaded.get(item.id).displayName,'修改后的模板');await reloaded.preview(item.id);assert.equal(reloaded.get(item.id).previewReady,true);assert.match(reloaded.previewFile(item.id,2),/002.png$/);assert.throws(()=>reloaded.previewFile(item.id,3),/页码/);
  reloaded.remove(item.id);assert.equal(reloaded.list().length,0);assert.throws(()=>reloaded.get(item.id),/不存在/);assert.throws(()=>reloaded.previewFile(item.id,1),/不存在/);
- assert.ok(fs.readFileSync(service.file(task.id,selected.template.file)).equals(snapshot));
+ assert.ok(fs.readFileSync(service.file(task.id,selected.template.file)).equals(snapshot));assert.ok(fs.readFileSync(service.file(task.id,selected.template.roleFile)).equals(roleSnapshot));
  const again=await reloaded.add({name:'Synthetic.pptx',displayName:'重新上传',base64:source.toString('base64')});assert.notEqual(again.id,item.id);
  console.log('PASS: persisted metadata, manual original-page selection, exact reduced page count, invalid/duplicate denial, all-page preview, deletion and historical snapshot preservation');
 })().catch(e=>{console.error(e);process.exitCode=1;}).finally(()=>fs.rmSync(root,{recursive:true,force:true}));
