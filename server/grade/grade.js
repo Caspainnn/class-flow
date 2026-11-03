@@ -108,7 +108,9 @@ module.exports = async function (req, res, ctx) {
     const under = base => REL.map(seg => base && path.join(base, ...seg));
     const saved = getWb();
     if (extraPath) push(extraPath, '手动指定');
+    if (extraPath) return list;
     if (saved.path) push(saved.path, '上次连接');
+    push(path.join(ROOT, '.local-codebuddy-cli', 'node_modules', '@tencent-ai', 'codebuddy-code', 'bin', 'codebuddy'), '项目独立CLI');
     if (process.env.CODEBUDDY_CODE_PATH) push(process.env.CODEBUDDY_CODE_PATH, '环境变量');
     const bases = [process.env.LOCALAPPDATA, process.env.ProgramFiles, process.env['ProgramFiles(x86)']];
     for (const b of bases) {
@@ -137,44 +139,7 @@ module.exports = async function (req, res, ctx) {
     return list;
   }
 
-  function looksLikeScript(file) {
-    try {
-      const fd = fs.openSync(file, 'r');
-      const b = Buffer.alloc(2);
-      fs.readSync(fd, b, 0, 2, 0);
-      fs.closeSync(fd);
-      return b[0] === 0x23 && b[1] === 0x21;
-    } catch { return false; }
-  }
-
-  function probe(file, timeoutMs) {
-    return new Promise(resolve => {
-      const isScript = /\.(mjs|cjs|js)$/i.test(file) || looksLikeScript(file);
-      const cmd = isScript ? process.execPath : file;
-      const args = (isScript ? [file] : []).concat([
-        '-p', '只回复两个字母：OK',
-        '--output-format', 'text', '--tools', '',
-        '--permission-mode', 'dontAsk', '--no-session-persistence',
-      ]);
-      const t0 = Date.now();
-      let out = '', settled = false, child;
-      try {
-        child = spawn(cmd, args, { cwd: os.tmpdir(), windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });
-      } catch (e) { return resolve({ ok: false, why: '启动失败：' + e.message }); }
-      const timer = setTimeout(() => {
-        if (settled) return; settled = true;
-        try { child.kill(); } catch {}
-        resolve({ ok: false, why: `超时（${Math.round(timeoutMs / 1000)} 秒无响应）` });
-      }, timeoutMs);
-      child.stdout.on('data', b => { out += b.toString(); });
-      child.on('error', e => { if (!settled) { settled = true; clearTimeout(timer); resolve({ ok: false, why: '无法执行：' + e.message }); } });
-      child.on('close', code => {
-        if (settled) return; settled = true; clearTimeout(timer);
-        if (code === 0 && /\bOK\b/i.test(out)) resolve({ ok: true, ms: Date.now() - t0 });
-        else resolve({ ok: false, why: code === 0 ? '有响应但内容异常（可能未登录）' : `退出码 ${code}` });
-      });
-    });
-  }
+  const probe = (file, timeoutMs) => require('../lib/workbuddy-probe').probe(file, timeoutMs, {model:getWb().model});
 
   async function detectWorkbuddy(manualPath) {
     const list = candidates(manualPath);

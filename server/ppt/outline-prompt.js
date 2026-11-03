@@ -1,7 +1,7 @@
 'use strict';
 // Shared by platform handoff and the teacher's manual WorkBuddy prompt.
 const rules=require('./presentation-rules').coverRules+'\n'+require('./presentation-rules').endingRules+'\n'+require('./presentation-rules').studentSurfaceRules+`\n请先写供教师快速审阅的轻量逐页大纲。
-1. 教学目标最多3条，总计不超过80字，只写学生学完能做什么。
+1. teachingObjective只写学生学完能做什么，最多3条，总计不超过80字；没有明确教学目标时留空，不编造。不写制作指令、模板要求、内容保留策略或更新范围。
 2. 一页只讲一个核心观点。内容页标题不超过24字，封面标题沿用完整本课主题；内容为2至3个短要点，每点不超过28字，整页description不超过100字。封面、过渡页、总结页可只写1个要点。用换行分隔要点，不写长段落或多层列表。
 3. 大纲只确定每页“讲什么”。不写配色值、字体、坐标、详细版式、教师台词、完整演讲稿、完整例题答案、逐步推导或代码。需要例题时只点明例题主题，答案和讲解在制作阶段补齐、核对。
 4. 根据受众基础和给定课时组织“导入—核心概念—例子/应用—练习—总结”，按内容取舍，不为凑结构额外加页。同页要点应服务同一主题，避免把整个教学环节塞到一页。
@@ -12,7 +12,7 @@ const rules=require('./presentation-rules').coverRules+'\n'+require('./presentat
 9. 交付前检查：一页一个中心、要点短且不重复、无教案式长段落，页数和课时正确。此阶段不生成课件或讲稿，等待教师整体确认。`;
 const handoff=rules+String.raw`
 仅使用Read/Write/Edit/Glob/Grep读取本轮输入并写outline.json，不加载PPTX skill，不执行Python或Shell。
-JSON格式：{"objective":"• 目标一\n• 目标二","pages":[{"title":"本页标题","minutes":数字,"description":"• 短要点一\n• 短要点二","image":{"kind":"none"},"layoutId":"已确认模板中的id；无模板时省略"}]}。需要外部图的唯一一页写image:{"kind":"web","subject":"具体图片内容","purpose":"本图帮助理解什么","query":"specific English search keywords"}。每个pages项严格对应一页，不能将多个页面合在一项。有模板时layoutId只从template-profile.json的layoutGroups选取，也可省略交由制作阶段选择。
+JSON格式：{"teachingObjective":"• 目标一\n• 目标二（没有则为空字符串）","pages":[{"title":"本页标题","minutes":数字,"description":"• 短要点一\n• 短要点二","image":{"kind":"none"},"layoutId":"已确认模板中的id；无模板时省略"}]}。需要外部图的唯一一页写image:{"kind":"web","subject":"具体图片内容","purpose":"本图帮助理解什么","query":"specific English search keywords"}。每个pages项严格对应一页，不能将多个页面合在一项。有模板时layoutId只从template-profile.json的layoutGroups选取，也可省略交由制作阶段选择。
 风格示例（一页片段，非整份大纲）：{"title":"梯度下降如何更新参数","minutes":3,"description":"• 沿负梯度方向逐步减小损失\n• 学习率决定每次更新的步长\n• 用二次函数观察一次参数更新"}。
 确认后的大纲直接用于逐页制作，制作阶段依据原始要求和资料补全例题、图示与讲稿，不在大纲阶段提前展开。`;
 module.exports={rules,handoff};

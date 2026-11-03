@@ -19,7 +19,7 @@ function launchPages({launch,command,args,options,input,shouldContinue,onProgres
   allowed();const profile=input.template?JSON.parse(read('template-profile.json').toString('utf8')):null;
   let references=[];if(profile){onProgress({completed:0,total:input.outline.sections?.length||0,current:null,message:'正在准备模板页面视觉参考'});references=await prepareVisuals({file:path.join(runDir,'template.pptx'),profile,cacheRoot:visualCacheRoot,runDir,signal:imageAbort.signal});allowed();input.template.visualReferences=references;fs.writeFileSync(path.join(runDir,'input.json'),JSON.stringify(input,null,2));}
   let roleReferences=null;if(input.template?.pageRoles&&input.template.roleFile){roleReferences=await require('./template-visuals').prepareRoles({file:path.join(runDir,input.template.roleFile),pageRoles:input.template.pageRoles,cacheRoot:visualCacheRoot,runDir,signal:imageAbort.signal,prepareVisuals});allowed();input.template.roleReferences=roleReferences;fs.writeFileSync(path.join(runDir,'input.json'),JSON.stringify(input,null,2));}
-  const approved=require('./outline').validate(input.outline,{...input.requirements,template:profile?{profile}:null});
+  const approved=require('./outline').validate(input.outline,{...input.requirements,template:profile?{profile,pageRoles:input.template.pageRoles,roleFile:input.template.roleFile}:null});
   if(!approved.pageBased)throw new Error('请先确认逐页大纲。');
   const updating=input.requirements.creationMode==='update';
   const images=require('./images'),pages=approved.sections.map(s=>({title:s.title,content:s.description,minutes:s.minutes,sourcePages:s.sourcePages,...(s.layoutId?{layoutId:s.layoutId}:{}),image:s.image||{kind:'none'},imageRegion:s.imageRegion})),imagePlan=[];

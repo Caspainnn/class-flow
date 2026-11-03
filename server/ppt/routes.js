@@ -15,6 +15,8 @@ module.exports=async(req,res,ctx)=>{
   if(p==='/api/ppt/connection'&&m==='GET')return send(200,service.connection());
   if(p==='/api/ppt/templates'&&m==='GET'){const tasks=service.list();return send(200,{items:service.templates.list().map(t=>({...t,uses:tasks.filter(task=>task.template?.id===t.id).length}))});}
   if(p==='/api/ppt/templates'&&m==='POST')return send(201,await service.templates.add(await readBody(req,30*1024*1024)));
+  const templateGuide=p.match(/^\/api\/ppt\/templates\/([a-f0-9]{24})\/guide$/);
+  if(templateGuide&&m==='POST')return send(200,await service.templates.guide(templateGuide[1]));
   const templateItem=p.match(/^\/api\/ppt\/templates\/([a-f0-9]{24})$/);
   if(templateItem&&m==='GET')return send(200,service.templates.get(templateItem[1]));
   if(templateItem&&m==='PUT')return send(200,service.templates.update(templateItem[1],await readBody(req)));
@@ -46,6 +48,12 @@ module.exports=async(req,res,ctx)=>{
    const preview=url.searchParams.get('inline')==='1';
    const previews=t.versions.flatMap(v=>v.previews||[]);
    const published=[...(t.template?[t.template.file]:[]),...(t.htmlVersions||[]).flatMap(v=>[...v.slides.map(s=>s.file),...v.sources.map(s=>s.file),...(v.speechFile?[v.speechFile]:[])]),...t.files.map(f=>f.file),...t.versions.flatMap(v=>[v.file,...v.sources.map(f=>f.file)]),...previews];if(!published.includes(relative)||(preview&&!previews.includes(relative)))return send(404,{error:'文件不存在。'});
+   if(url.searchParams.get('format')==='docx'){
+    if(!(t.htmlVersions||[]).some(v=>v.speechFile===relative)||preview)return send(404,{error:'逐页讲稿不存在。'});
+    const buffer=await require('./speech-word')(fs.readFileSync(service.file(id,relative),'utf8'));
+    const name=require('./presentation-rules').filename(t.title).replace(/\.pptx$/, ' · 逐页讲稿.docx');
+    res.writeHead(200,{'Content-Type':'application/vnd.openxmlformats-officedocument.wordprocessingml.document','Content-Disposition':`attachment; filename="speech.docx"; filename*=UTF-8''${encodeURIComponent(name).replace(/'/g,'%27')}`,'Content-Length':buffer.length,'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'});res.end(buffer);return true;
+   }
    const file=service.file(id,relative),buffer=fs.readFileSync(file);if(preview&&relative.endsWith('.svg')&&(!buffer.toString().includes('<svg')||/<(?:script|foreignObject|!DOCTYPE)|\bon\w+\s*=|(?:href|src)\s*=\s*[\"'](?!data:|#)/i.test(buffer.toString())))return send(400,{error:'\u8be5SVG\u4e0d\u9002\u5408\u76f4\u63a5\u9884\u89c8\uff0c\u8bf7\u4e0b\u8f7dPPTX\u67e5\u770b\u3002'});res.writeHead(200,{'Content-Type':preview?(relative.endsWith('.svg')?'image/svg+xml':'image/png'):relative.endsWith('.pptx')?'application/vnd.openxmlformats-officedocument.presentationml.presentation':'application/octet-stream','Content-Disposition':`${preview?'inline':'attachment'}; filename="download"; filename*=UTF-8''${encodeURIComponent(t.versions.some(v=>v.file===relative)?require('./presentation-rules').filename(t.title):path.basename(file))}`,'Content-Length':buffer.length,'Cache-Control':'no-store','Content-Security-Policy':"sandbox; default-src 'none'; style-src 'unsafe-inline'; img-src data:",'X-Content-Type-Options':'nosniff'});res.end(buffer);return true;
   }
   if(action==='files'&&m==='POST')return send(200,service.attach(id,await readBody(req,30*1024*1024)));

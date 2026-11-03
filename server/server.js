@@ -391,6 +391,12 @@ const handler = async (req, res) => {
   }
   if (['/dashboard','/backup'].includes(p) && (!isLocal(req) || !/^(localhost|127\.0\.0\.1|\[::1\])(?::\d+)?$/i.test(req.headers.host||''))) return json(res,403,{error:'请在老师电脑的本机平台查看此页面。'});
   /* ---- 页面 ---- */
+  if (['/prototype/ppt-outline-layout.html', '/prototype/ppt-outline-layout.css', '/prototype/ppt-outline-layout.js'].includes(p)) {
+    if (!['GET', 'HEAD'].includes(m)) { res.writeHead(405, { Allow: 'GET, HEAD' }); return res.end('Read-only prototype'); }
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('Content-Security-Policy', "default-src 'self'; connect-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'");
+    return sendFile(res, '../..' + p);
+  }
   const workspacePages = ['/', '/session', '/compose', '/live', '/courses', '/preparation', '/homework', '/grading', '/workbuddy', '/xueqing', '/admin', '/questionnaires', '/dashboard', '/backup'];
   if (m === 'GET' && workspacePages.includes(p) && req.headers['sec-fetch-dest'] !== 'iframe') return sendFile(res, 'workspace.html');
   if (p === '/ppt-notifications.js') return sendFile(res, 'ppt-notifications.js');

@@ -12,7 +12,14 @@
  function viewed(value){let id;try{id=new URL(value,location.href).hash.match(/^#task\/([a-f0-9]{24})$/)?.[1];}catch{}if(id){state.unread=state.unread.filter(n=>n.id!==id);save();render();}}
  region.addEventListener('click',e=>{const close=e.target.closest('[data-dismiss]');if(close){state.unread=state.unread.filter(n=>n.key!==close.dataset.dismiss);save();render();}});
  let pending=false,revision=0;
- async function refresh(){if(pending)return;pending=true;const epoch=revision;try{const response=await fetch('/api/ppt/tasks');if(!response.ok)return;const data=await response.json();if(epoch!==revision)return;state=transition(state.known,data.items,state.unread);save();render();document.getElementById('workspaceFrame')?.contentWindow?.updatePptTasks?.(data.items);}catch{}finally{pending=false;}}
- window.PptNotifications={transition,refresh,viewed,removed(id){revision++;delete state.known[id];state.unread=state.unread.filter(n=>n.id!==id);save();render();},shown(t){revision++;state.known[t.id]=token(t);state.unread=state.unread.filter(n=>n.id!==t.id);save();render();},track(t){if(t.status==='running'&&state.known[t.id]!==token(t)){revision++;state.known[t.id]=token(t);save();}}};
+ const requestedDownloads=new Map();
+ function downloadWhenReady(t){if(t.run?.phase==='export'&&t.run.id)requestedDownloads.set(t.id,{runId:t.run.id,htmlVersion:t.run.htmlVersion});downloadReady(t);}
+ function downloadReady(t){const request=requestedDownloads.get(t.id);if(!request)return;if(t.run?.id!==request.runId||['failed','cancelled'].includes(t.status)){requestedDownloads.delete(t.id);return;}if(!['complete','ready'].includes(t.status))return;const version=t.versions?.at(-1);if(!version||version.htmlVersion!==request.htmlVersion||version.htmlHash!==t.run.htmlHash)return;
+  requestedDownloads.delete(t.id);const link=document.createElement('a');link.href=`/api/ppt/tasks/${t.id}/file?path=${encodeURIComponent(version.file)}`;link.download=(t.title||'课件')+'.pptx';document.body.append(link);link.click();link.remove();
+ }
+ async function refresh(){if(pending)return;pending=true;const epoch=revision;try{const response=await fetch('/api/ppt/tasks');if(!response.ok)return;const data=await response.json();if(epoch!==revision)return;state=transition(state.known,data.items,state.unread);save();render();document.getElementById('workspaceFrame')?.contentWindow?.updatePptTasks?.(data.items);
+  for(const [id,request] of requestedDownloads){const t=data.items.find(t=>t.id===id);if(!t||t.runId!==request.runId||['failed','cancelled'].includes(t.status)){requestedDownloads.delete(id);continue;}if(['complete','ready'].includes(t.status)){try{const result=await fetch('/api/ppt/tasks/'+id);if(result.ok)downloadReady(await result.json());}catch{}}}
+ }catch{}finally{pending=false;}}
+ window.PptNotifications={transition,refresh,viewed,downloadWhenReady,downloadReady,removed(id){requestedDownloads.delete(id);revision++;delete state.known[id];state.unread=state.unread.filter(n=>n.id!==id);save();render();},shown(t){downloadReady(t);revision++;state.known[t.id]=token(t);state.unread=state.unread.filter(n=>n.id!==t.id);save();render();},track(t){if(t.status==='running'&&state.known[t.id]!==token(t)){revision++;state.known[t.id]=token(t);save();}}};
  render();refresh();setInterval(refresh,5000);window.addEventListener('focus',refresh);
 })();

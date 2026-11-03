@@ -52,11 +52,11 @@ for index,page in enumerate(data['pages']):
   # PowerPoint's default shape style adds a theme shadow absent in the HTML.
   if kind in ['rect','line']:
    shape._element.spPr.append(OxmlElement('a:effectLst'))
- slide.notes_slide.notes_text_frame.text=page.get('speech','')+('\n\n'+page['notes'] if page.get('notes') else '')
+ # PowerPoint notes stay blank; the manuscript remains a separate platform file.
  counts.append(count)
  # Per-page checkpoint: each successful save contains every completed page.
  target=folder/'lesson.pptx';temporary=folder/'lesson.partial';deck.save(str(temporary));os.replace(temporary,target)
  (folder/'progress.json').write_text(json.dumps({'completed':index+1,'total':len(data['pages']),'stage':'ppt saved'}),encoding='utf-8')
- print(json.dumps({'type':'local_export_progress','stage':'exporting','completed':index+1,'total':len(data['pages']),'message':f'已导出 {index+1} / {len(data["pages"])} 页及对应讲稿'},ensure_ascii=False),flush=True)
-(folder/'report.json').write_text(json.dumps({'counts':counts,'warnings':[p['warnings'] for p in data['pages']]},ensure_ascii=False,indent=2),encoding='utf-8')
+ print(json.dumps({'type':'local_export_progress','stage':'exporting','completed':index+1,'total':len(data['pages']),'message':f'已导出 {index+1} / {len(data["pages"])} 页'},ensure_ascii=False),flush=True)
+(folder/'report.json').write_text(json.dumps({'counts':counts,'warnings':[p['warnings'] for p in data['pages']],'imageCredits':[{'page':i+1,**p['imageCredit']} for i,p in enumerate(data['pages']) if p.get('imageCredit')]},ensure_ascii=False,indent=2),encoding='utf-8')
 print(json.dumps({'pages':len(deck.slides),'nativeTextRuns':sum(c['text'] for c in counts),'svgRasterFragments':sum(c['svgFragments'] for c in counts)}))

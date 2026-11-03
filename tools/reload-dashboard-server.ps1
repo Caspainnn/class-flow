@@ -13,6 +13,13 @@ foreach ($dashboardFolder in @('ppt','lesson-plan','questionnaire-ai')) {
         }
     }
 }
+$dashboardTemplatesPath = Join-Path $dashboardRoot 'ppt/_templates'
+if (Test-Path -LiteralPath $dashboardTemplatesPath) {
+    foreach ($dashboardTemplateDirectory in (Get-ChildItem -LiteralPath $dashboardTemplatesPath -Directory | Where-Object { $_.Name -match '^[a-f0-9]{24}$' })) {
+        $dashboardTemplateFile = Join-Path $dashboardTemplateDirectory.FullName 'template.json'
+        if ((Test-Path -LiteralPath $dashboardTemplateFile) -and ((Get-Content -LiteralPath $dashboardTemplateFile -Raw -Encoding UTF8 | ConvertFrom-Json).layoutGuide.status -eq 'running')) { throw 'Template analysis is running; server was not restarted.' }
+    }
+}
 $dashboardBatchesFile = Join-Path $dashboardRoot 'gradebatches.json'
 if (Test-Path -LiteralPath $dashboardBatchesFile) {
     if (@((Get-Content -LiteralPath $dashboardBatchesFile -Raw -Encoding UTF8 | ConvertFrom-Json) | Where-Object { $_.status -eq 'running' -and -not $_.deletedAt }).Count) { throw 'Grading is running; server was not restarted.' }

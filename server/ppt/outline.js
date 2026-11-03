@@ -17,8 +17,13 @@ function validate(value,task){
  if(sections.some(s=>!s.title||!Number.isFinite(s.minutes)||s.minutes<=0)||Math.abs(sections.reduce((a,s)=>a+s.minutes,0)-task.minutes)>.01)bad('大纲各页或环节的时间之和应等于课时。');
  if(pageBased&&sections.some(s=>!s.description))bad('请填写每一页展示的内容。');
  if(pageBased&&task.pageCount&&sections.length!==task.pageCount)bad(task.creationMode==='update'?`本次目标为${task.pageCount}页，制作工具却返回${sections.length}页，尚未形成符合要求的拆合页方案。请重新生成；若要保留原稿页数，请在填写要求中清空PPT页数。`:`逐页大纲须恰好${task.pageCount}页，当前为${sections.length}页。`,'outline_page_count');
- if(pageBased&&sections.some(s=>s.layoutId&&!task.template?.profile?.layoutGroups?.some(g=>g.id===s.layoutId)))bad('大纲所选布局不属于当前已确认模板，请重新选择。');
+ const roles=task.template?.roleFile?task.template.pageRoles:null;
+ if(pageBased&&sections.some((s,i)=>{
+  if(!s.layoutId||task.template?.profile?.layoutGroups?.some(g=>g.id===s.layoutId))return false;
+  const role=i===0?roles?.cover:i===sections.length-1?roles?.ending:null;
+  return !role||role.layoutId!==s.layoutId||!roles.layoutGroups?.some(g=>g.id===s.layoutId);
+ }))bad('大纲所选布局不属于当前已确认模板，请重新选择。');
  for(const s of sections)if(s.image?.kind==='web')s.imageRegion=require('./images').layout(s,task.template?.profile?.layoutGroups);
- return {objective:String(value.objective??'').trim().slice(0,2000),sections,...(pageBased?{pageBased:true}:{})};
+ return {objective:String(value.objective??'').trim().slice(0,2000),...(value.teachingObjective!==undefined?{teachingObjective:String(value.teachingObjective??'').trim().slice(0,2000)}:{}),sections,...(pageBased?{pageBased:true}:{})};
 }
 module.exports={validate};

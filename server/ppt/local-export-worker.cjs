@@ -35,15 +35,15 @@ async function convert(){
    const snap=await call('Page.captureScreenshot',{format:'png',clip:{x,y,width:w,height:h,scale:1}},sessionId);o.x=x;o.y=y;o.w=w;o.h=h;o.file=`${i+1}-${k}.png`;fs.writeFileSync(path.join(output,o.file),Buffer.from(snap.data,'base64'));
   }
   const shot=await call('Page.captureScreenshot',{format:'png'},sessionId);fs.writeFileSync(path.join(output,`${i+1}-html.png`),Buffer.from(shot.data,'base64'));
-  scene.speech=slides[i].speech||'';scene.notes=slides[i].notes||'';pages.push(scene);fs.writeFileSync(path.join(output,`page-${i+1}.json`),JSON.stringify(scene));progress('reading',i+1,`已读取 ${i+1} / ${slides.length} 页排版`);
+  scene.speech=slides[i].speech||'';scene.notes=slides[i].notes||'';scene.imageCredit=slides[i].image?.status==='ready'?slides[i].image:null;pages.push(scene);fs.writeFileSync(path.join(output,`page-${i+1}.json`),JSON.stringify(scene));progress('reading',i+1,`已读取 ${i+1} / ${slides.length} 页排版`);
  }
  fs.writeFileSync(path.join(output,'scene.json'),JSON.stringify({title:input.requirements.title,pages}));
- progress('exporting',0,'正在写入可编辑文字、图形和逐页讲稿');await convert();
+ progress('exporting',0,'正在写入可编辑文字和图形');await convert();
  const report=JSON.parse(fs.readFileSync(path.join(output,'report.json'),'utf8')),fragments=report.counts.reduce((n,c)=>n+c.svgFragments,0);
- const summary=`已在本机完成 ${pages.length} 页转换；普通文字和常规形状可编辑，逐页讲稿已写入对应备注。${fragments?`${fragments}处复杂图示按图片保留，图示内部暂不可编辑。`:''}请下载检查实际排版。`;
+ const summary=`已在本机完成 ${pages.length} 页转换；备注留空，逐页讲稿单独保留。${fragments?`${fragments}处复杂图示按图片保留，图示内部暂不可编辑。`:''}请下载检查实际排版。`;
  fs.writeFileSync(path.join(output,'timing.json'),JSON.stringify({pages:pages.length,elapsedMs:Date.now()-started}));
  fs.writeFileSync(path.join(run,'delivery.json'),JSON.stringify({pptx:'native-export/lesson.pptx',sources:['native-export/report.json'],previews:pages.map((_,i)=>`native-export/${i+1}-html.png`),summary}));
- progress('delivery',pages.length,'所有页面已导出，正在校验文件和讲稿');
+ progress('delivery',pages.length,'所有页面已导出，正在校验文件');
 }finally{
  if(ws?.readyState===1){try{await call('Browser.close');}catch{}ws.close();}else child.kill();
  if(child.exitCode===null)await Promise.race([new Promise(resolve=>child.once('close',resolve)),sleep(2000)]);

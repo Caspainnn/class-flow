@@ -18,6 +18,6 @@ const root=fs.mkdtempSync(path.join(os.tmpdir(),'inclass-template-visuals-'));
  const version={number:1,slides:[{title:'One',notes:'Private note',speech:'Teacher speech'}],sources:[],hash:'hash',summary:'Old creation details',speechFile:'speech.md',template:{name:'Old template'}};
  const html=ctx.window.PptHtmlView.render({task:{id:'test',htmlVersions:[version],versions:[],status:'html-ready'},version,page:0,draft:'',connected:true});
  for(const removed of ['教师备注','教师使用','下载完整逐页演讲稿','参考模板：','一一对应','可以在这里逐页检查和修改课件','制作反馈','Private note','Old creation details'])assert.ok(!html.includes(removed),removed);
- assert.match(html,/<details class="slide-notes speech-panel"><summary>本页演讲稿<\/summary>/);assert.match(html,/Teacher speech/);assert.match(html,/下载逐页讲稿（1页）/,'sidebar download remains available');
- console.log('PASS: screenshot mapping/cache/missing-render rejection; compact HTML preview with native speech disclosure and sidebar download');
+ assert.match(html,/<details class="slide-notes speech-panel"><summary>本页演讲稿<\/summary>/);assert.match(html,/Teacher speech/);assert.match(html,/逐页讲稿\.docx/);assert.match(html,/format=docx">下载<\/a>/,'Word manuscript download remains available');
+ console.log('PASS: screenshot mapping/cache/missing-render rejection; compact HTML preview with native speech disclosure and Word download');
 }finally{fs.rmSync(root,{recursive:true,force:true});}})().catch(e=>{console.error(e);process.exitCode=1;});

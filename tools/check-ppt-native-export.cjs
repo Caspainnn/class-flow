@@ -3,7 +3,7 @@
 const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict'),crypto=require('node:crypto');
 const {createService}=require('../server/ppt/service'),{validateHtml,outlineHash}=require('../server/ppt/html-deck');
 const root=fs.mkdtempSync(path.resolve('.tmp-native-service-')),geometry=process.argv.includes('--geometry'),sample=geometry?null:process.argv[2],count=geometry?1:Number(process.argv[3]||50);
-const settings={ppt:{pythonPath:path.resolve('.local-ppt-python/Scripts/python.exe')}};
+const settings={ppt:{pythonPath:process.env.PPT_PYTHON||path.resolve('.local-ppt-python/Scripts/python.exe'),...(process.env.PPT_BROWSER?{browserPath:process.env.PPT_BROWSER}:{})}};
 const service=createService({root,getSettings:()=>settings,getCourses:()=>[],launch(){throw Error('No model calls allowed');}});
 (async()=>{
  let task;
@@ -21,7 +21,7 @@ const service=createService({root,getSettings:()=>settings,getCourses:()=>[],lau
  for(let i=0;i<600;i++){latest=service.get(task.id);if(latest.status!=='running')break;await new Promise(r=>setTimeout(r,500));}
  if(latest.status==='running'){service.cancel(task.id);throw Error('Converter exceeded five-minute test budget');}
  assert.equal(latest.status,'complete',latest.error);assert.equal(latest.versions.length,1);assert.equal(latest.provider,'local');assert.equal(latest.versions[0].slides.length,task.htmlVersions[0].slides.length);
- const normalize=s=>String(s).normalize('NFKC').replace(/\s+/g,'');for(let i=0;i<latest.versions[0].slides.length;i++){assert.ok(latest.versions[0].slides[i].text.trim());assert.ok(normalize(latest.versions[0].slides[i].notes).includes(normalize(task.htmlVersions[0].slides[i].speech)));}
- if(geometry){const scene=JSON.parse(fs.readFileSync(path.join(root,task.id,'runs',latest.run.id,'native-export/scene.json'))),objects=scene.pages[0].objects,img=objects.find(o=>o.kind==='image');assert.equal(img.w,100);assert.equal(img.h,100);assert.equal(img.x,250);assert.ok(objects.findIndex(o=>o.text?.includes('Foreground'))>objects.findIndex(o=>o.kind==='rect'&&o.color==='rgb(0, 0, 255)'));assert.ok(objects.findIndex(o=>o.text?.includes('Auto foreground'))>objects.findIndex(o=>o.kind==='rect'&&o.color==='rgb(250, 250, 250)'));assert.match(latest.versions[0].slides[0].notes,/https:\/\/example.test\/credit/);}
+ const normalize=s=>String(s).normalize('NFKC').replace(/\s+/g,'');for(let i=0;i<latest.versions[0].slides.length;i++){assert.ok(latest.versions[0].slides[i].text.trim());assert.equal(latest.versions[0].slides[i].notes.trim(),'');}
+ if(geometry){const scene=JSON.parse(fs.readFileSync(path.join(root,task.id,'runs',latest.run.id,'native-export/scene.json'))),objects=scene.pages[0].objects,img=objects.find(o=>o.kind==='image');assert.equal(img.w,100);assert.equal(img.h,100);assert.equal(img.x,250);assert.ok(objects.findIndex(o=>o.text?.includes('Foreground'))>objects.findIndex(o=>o.kind==='rect'&&o.color==='rgb(0, 0, 255)'));assert.ok(objects.findIndex(o=>o.text?.includes('Auto foreground'))>objects.findIndex(o=>o.kind==='rect'&&o.color==='rgb(250, 250, 250)'));assert.equal(latest.versions[0].slides[0].notes.trim(),'');}
  const result={pages:latest.versions[0].slides.length,elapsedMs:Date.now()-started,root,pptx:service.file(task.id,latest.versions[0].file),taskId:task.id};fs.writeFileSync(path.join(root,'result.json'),JSON.stringify(result,null,2));console.log(JSON.stringify(result));
 })().catch(e=>{console.error(e);process.exitCode=1;});

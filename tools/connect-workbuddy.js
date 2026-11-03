@@ -14,16 +14,14 @@
 'use strict';
 
 const fs = require('fs');
-const os = require('os');
 const path = require('path');
-const { spawn } = require('child_process');
+const { probe } = require('../server/lib/workbuddy-probe');
 
 const ROOT = path.join(__dirname, '..');
-const DATA_DIR = path.join(ROOT, 'data');
+const DATA_DIR = path.resolve(process.env.DATA_DIR || path.join(ROOT, 'data'));
 const SETTINGS_FILE = path.join(DATA_DIR, 'settings.json');
 
 /* 试跑用的提示词：越短越好，只用来验证「能不能跑通」 */
-const PROBE_PROMPT = '只回复两个字母：OK';
 const DEFAULT_TIMEOUT = 20000;
 
 const argv = process.argv.slice(2);
@@ -44,17 +42,21 @@ const C = {
 
 function readSettings() {
   try {
-    return JSON.parse(fs.readFileSync(SETTINGS_FILE, 'utf8'));
-  } catch {
-    return {};
+    const value = JSON.parse(fs.readFileSync(SETTINGS_FILE, 'utf8'));
+    if (!value || typeof value !== 'object' || Array.isArray(value)) throw Error();
+    return value;
+  } catch (error) {
+    if (error.code === 'ENOENT') return {};
+    throw Error('配置文件无法读取或不是有效JSON，未覆盖原配置。');
   }
 }
 
 function writeSettings(patch) {
   const cur = readSettings();
-  const next = { ...cur, ...patch };
+  const next = { ...cur, ...patch, ...(patch.workbuddy ? { workbuddy: { ...cur.workbuddy, ...patch.workbuddy } } : {}) };
   fs.mkdirSync(DATA_DIR, { recursive: true });
-  fs.writeFileSync(SETTINGS_FILE, JSON.stringify(next, null, 2), 'utf8');
+  fs.writeFileSync(SETTINGS_FILE + '.tmp', JSON.stringify(next, null, 2), 'utf8');
+  fs.renameSync(SETTINGS_FILE + '.tmp', SETTINGS_FILE);
 }
 
 /* WorkBuddy 安装目录下，codebuddy 的几种可能位置（同级的后备名字也要试） */
@@ -112,6 +114,9 @@ function candidates() {
   const saved = readSettings().workbuddy;
   if (saved && saved.path) push(saved.path, '上次连接');
 
+  /* 项目内独立安装入口，避免依赖全局 PATH 或修改 WorkBuddy。 */
+  push(path.join(ROOT, '.local-codebuddy-cli', 'node_modules', '@tencent-ai', 'codebuddy-code', 'bin', 'codebuddy'), '项目独立CLI');
+
   /* 2. 环境变量 */
   if (process.env.CODEBUDDY_CODE_PATH) push(process.env.CODEBUDDY_CODE_PATH, '环境变量');
 
@@ -139,89 +144,6 @@ function candidates() {
   return list;
 }
 
-/* ---------------- 试跑 ---------------- */
-
-/** 无扩展名的文件：看前两字节是不是 #! ，是就说明得用 node 跑 */
-function looksLikeScript(file) {
-  try {
-    const fd = fs.openSync(file, 'r');
-    const buf = Buffer.alloc(2);
-    fs.readSync(fd, buf, 0, 2, 0);
-    fs.closeSync(fd);
-    return buf[0] === 0x23 && buf[1] === 0x21;
-  } catch {
-    return false;
-  }
-}
-
-function probe(file, timeoutMs) {
-  return new Promise((resolve) => {
-    /* Windows 上 bin/codebuddy 是带 shebang 的文本脚本（不是 exe），
-       不能直接 spawn，必须交给 node 跑。.mjs/.js 同理。 */
-    const isScript = /\.(mjs|cjs|js)$/i.test(file) || looksLikeScript(file);
-    const cmd = isScript ? process.execPath : file;
-    const args = isScript ? [file] : [];
-    args.push(
-      '-p', PROBE_PROMPT,
-      '--output-format', 'text',
-      '--tools', '',
-      '--permission-mode', 'dontAsk',
-      '--no-session-persistence'
-    );
-
-    const t0 = Date.now();
-    let out = '';
-    let err = '';
-    let settled = false;
-
-    let child;
-    try {
-      child = spawn(cmd, args, {
-        cwd: os.tmpdir(),
-        windowsHide: true,
-        env: { ...process.env },
-        stdio: ['ignore', 'pipe', 'pipe'],
-      });
-    } catch (e) {
-      return resolve({ ok: false, ms: 0, why: '启动失败：' + e.message });
-    }
-
-    const timer = setTimeout(() => {
-      if (settled) return;
-      settled = true;
-      try { child.kill(); } catch {}
-      resolve({ ok: false, ms: Date.now() - t0, why: `超时（${Math.round(timeoutMs / 1000)} 秒无结果）` });
-    }, timeoutMs);
-
-    child.stdout.on('data', (b) => { out += b.toString('utf8'); });
-    child.stderr.on('data', (b) => { err += b.toString('utf8'); });
-
-    child.on('error', (e) => {
-      if (settled) return;
-      settled = true;
-      clearTimeout(timer);
-      resolve({ ok: false, ms: Date.now() - t0, why: '无法执行：' + e.message });
-    });
-
-    child.on('close', (code) => {
-      if (settled) return;
-      settled = true;
-      clearTimeout(timer);
-      const ms = Date.now() - t0;
-      const text = (out + '\n' + err).trim();
-      /* 判据：正常退出 + 输出里有 OK。有些版本会把提示回显，所以看包含关系 */
-      if (code === 0 && /\bOK\b/i.test(out)) {
-        resolve({ ok: true, ms, why: null });
-      } else if (code === 0) {
-        resolve({ ok: false, ms, why: '命令退出正常但没有响应内容（可能没登录）' });
-      } else {
-        const first = text.split('\n').filter((l) => l && !/^\s+at\s/.test(l))[0] || `退出码 ${code}`;
-        resolve({ ok: false, ms, why: first.slice(0, 160) });
-      }
-    });
-  });
-}
-
 /* ---------------- 主流程 ---------------- */
 
 async function main() {
@@ -239,7 +161,7 @@ async function main() {
     return 0;
   }
 
-  const timeoutMs = Number(arg('--timeout')) || DEFAULT_TIMEOUT;
+  const timeoutMs = Math.min(120000, Math.max(1000, Number(arg('--timeout')) || DEFAULT_TIMEOUT));
 
   /* --path 指定 */
   let list;
@@ -290,16 +212,18 @@ async function main() {
       continue;
     }
     process.stdout.write(`  … ${item.path}\n`);
-    const r = await probe(item.path, timeoutMs);
+    const r = await probe(item.path, timeoutMs, { model: readSettings().workbuddy?.model });
     if (r.ok) {
       const version = detectVersion(item.path);
+      const previous = readSettings().workbuddy || {};
       writeSettings({
         workbuddy: {
+          ...previous,
           enabled: true,
           path: item.path,
           version: version || null,
-          model: 'default',
-          timeoutMs: 60000,
+          model: previous.model || 'default',
+          timeoutMs: previous.timeoutMs || 60000,
           verifiedAt: new Date().toISOString(),
           lastError: null,
         },
@@ -310,8 +234,9 @@ async function main() {
       console.log(`  路径：${item.path}`);
       if (version) console.log(`  版本：${version}`);
       console.log('');
-      console.log('下一步：重启服务（关掉 node 窗口再 node server.js），');
-      console.log('打开 http://127.0.0.1:3000/ ，左侧栏底部应显示绿点「本地 WorkBuddy 已连接」。');
+      console.log('配置已保存到：' + SETTINGS_FILE);
+      console.log('无需为连接配置重启服务；刷新平台的 WorkBuddy 设置页即可。');
+      console.log(`打开 http://127.0.0.1:${process.env.PORT || 3000}/workbuddy 查看连接结果。`);
       return 0;
     }
     console.log(C.warn(`  ✗ 不可用：${r.why}`));
@@ -322,8 +247,8 @@ async function main() {
   });
   console.log('');
   console.log(C.warn('没有可用的 WorkBuddy 命令。'));
-  console.log('  1. 确认 WorkBuddy 桌面版正开着并且已登录；');
-  console.log('  2. 如果报的是代理相关错误，关掉系统代理再试；');
+  console.log('  1. 确认配置的独立 CLI 已由本人完成账号登录；桌面版登录不代表 CLI 已登录。');
+  console.log('  2. 在本机终端检查 CLI 登录、账号额度和网络，不自动修改系统代理。');
   console.log('  3. 仍然不行就改用手动批 —— 作业批改功能完整可用，只是要你自己在 WorkBuddy 里批一次。');
   return 1;
 }

@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>大纲布局选择 · 一堂课独立原型</title>
+  <link rel="icon" href="../assets/logo.svg">
+  <link rel="stylesheet" href="../shell.css">
+  <link rel="stylesheet" href="../ppt.css">
+  <link rel="stylesheet" href="../ppt-management.css">
+  <link rel="stylesheet" href="ppt-outline-layout.css">
+  <script src="ppt-outline-layout.js" defer></script>
+</head>
+<body class="shelled outline-prototype">
+  <div class="app">
+    <aside class="sh-side" aria-label="平台导航">
+      <a class="sh-brand" href="#outline" data-demo-nav><img class="sh-logo" src="../assets/logo.svg" alt="一堂课 Logo"><span class="t">一堂课</span><span class="v">v3</span></a>
+      <nav class="sh-nav">
+        <div class="sh-grp"><b>概览</b><span class="ln"></span></div>
+        <a href="#" data-demo-nav><span class="ico">▤</span>工作台</a>
+        <a href="#" data-demo-nav><span class="ico">▦</span>数据看板</a>
+        <div class="sh-grp"><b>课前</b><span class="ln"></span></div>
+        <a href="#" data-demo-nav><span class="ico">☰</span>课程管理</a>
+        <a href="#outline" class="on" aria-current="page" data-demo-nav><span class="ico">▧</span>PPT管理</a>
+        <a href="#" data-demo-nav><span class="ico">✎</span>教案制作</a>
+        <div class="sh-grp"><b>课中</b><span class="ln"></span></div>
+        <a href="#" data-demo-nav><span class="ico">◉</span>签到管理</a>
+        <div class="sh-grp"><b>课后</b><span class="ln"></span></div>
+        <a href="#" data-demo-nav><span class="ico">▦</span>学情分析</a>
+        <a href="#" class="sub" data-demo-nav>预警名单</a>
+        <a href="#" class="sub" data-demo-nav>个体画像</a>
+        <a href="#" class="sub" data-demo-nav>问卷管理</a>
+        <a href="#" class="sub" data-demo-nav>练习分析</a>
+        <a href="#" data-demo-nav><span class="ico">✓</span>作业管理</a>
+        <a href="#" class="sub" data-demo-nav>作业列表</a>
+        <a href="#" class="sub" data-demo-nav>自动批改</a>
+        <div class="sh-grp"><b>设置</b><span class="ln"></span></div>
+        <a href="#" data-demo-nav><span class="ico">◉</span>WorkBuddy</a>
+        <a href="#" data-demo-nav><span class="ico">⚙</span>系统设置</a>
+      </nav>
+      <div class="sh-ft"><span>独立原型 · 示例数据</span></div>
+    </aside>
+    <main class="sh-main ppt" id="prototypeRoot">
+      <section class="ppt-module-wrap">
+        <header class="ppt-module-header"><h1>PPT管理</h1><p>集中管理教学课件与可复用模板。</p></header>
+        <nav class="ppt-module-tabs" aria-label="PPT管理栏目"><a class="active" aria-current="page" href="#outline" data-demo-nav>课件管理</a><a href="#" data-demo-nav>模板管理</a></nav>
+      </section>
+      <div class="content-width">
+        <div class="prototype-bar"><span>独立交互原型</span><p>仅演示大纲编辑与布局选择，示例修改保存在当前浏览器，不上传、不调用 WorkBuddy。</p></div>
+        <nav class="breadcrumb" aria-label="面包屑"><button type="button" data-action="demo-nav">PPT管理</button><span>/</span><span>AI安全第一课</span></nav>
+        <header class="page-head"><div><h1>AI安全第一课</h1><p class="subline">先检查每页内容与布局，确认后再制作完整课件。</p></div><div class="head-actions"><span class="tag amber">待确认大纲</span><button type="button" data-action="demo-nav">返回列表</button></div></header>
+        <div class="flow-navigation"><nav class="flow-steps" aria-label="制作流程"><div class="flow-step complete"><i class="flow-number">1</i>填写要求</div><div class="flow-step complete"><i class="flow-number">2</i>选择方式</div><div class="flow-step active" aria-current="step"><i class="flow-number">3</i>生成大纲</div><div class="flow-step"><i class="flow-number">4</i>生成PPT</div></nav></div>
+        <section class="panel prototype-outline-panel" aria-labelledby="outlineHeading">
+          <div class="panel-heading"><div><h2 id="outlineHeading">逐页教学大纲</h2><p class="helper">每页右侧展示所选模板的排版结构，可编辑本页内容并更换布局。</p></div><span class="tag blue">示例模板 · 简约蓝</span></div>
+          <p class="objective"><strong>教学目标</strong> 识别常见 AI 使用风险，掌握检查输入、核实输出和人工复核的方法。</p>
+          <div id="outlinePages"></div>
+          <div class="prototype-outline-footer"><p id="outlineTotal" class="helper" aria-live="polite"></p><button type="button" class="primary" data-action="confirm">确认全部页面，生成PPT</button></div>
+        </section>
+        <div class="flow-footer"><button type="button" class="flow-back" data-action="back">← 上一步</button></div>
+      </div>
+    </main>
+  </div>
+  <dialog id="layoutPicker" class="ppt-modal prototype-layout-picker" aria-labelledby="layoutPickerTitle" aria-describedby="layoutPickerContext">
+    <header class="prototype-dialog-head"><div><h2 id="layoutPickerTitle">选择本页布局</h2><p id="layoutPickerContext"></p></div><button type="button" data-action="close-picker" aria-label="关闭布局选择器">关闭</button></header>
+    <div class="prototype-picker-body"><div><p class="prototype-picker-label">当前模板已确认的布局</p><div id="layoutOptions" class="prototype-layout-options" aria-label="可选布局"></div></div><aside id="layoutDetail" class="prototype-layout-detail" aria-label="所选布局说明"></aside></div>
+    <footer class="prototype-dialog-footer"><div><button type="button" data-action="close-picker">返回大纲</button><button type="button" class="primary" data-action="apply-layout">应用布局</button></div></footer>
+  </dialog>
+  <dialog id="discardDialog" class="ppt-modal" aria-labelledby="discardTitle"><h2 id="discardTitle">放弃本页未保存的修改？</h2><p>本页标题、时长、内容及布局将恢复到编辑前，其他页面不受影响。</p><div class="modal-actions"><button type="button" data-action="keep-editing" autofocus>继续编辑</button><button type="button" class="danger" data-action="discard">放弃本页修改</button></div></dialog>
+  <div id="toast" class="ppt-toast" role="status" aria-live="polite" hidden></div>
+</body>
+</html>

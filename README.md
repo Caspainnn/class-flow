@@ -11,7 +11,7 @@
 | 工作台 | 课程概览、待办、最近课堂与常用功能 | `/` |
 | 数据看板 | 课程/学期/日期筛选，课堂、作业、问卷和备课统计，跳转待办 | `/dashboard` |
 | 课程管理 | 创建与维护课程，粘贴或上传名单，课程概要与删除保护 | `/courses` |
-| PPT管理 | 课件卡片、逐页大纲、HTML课件预览和修改、逐页讲稿、历史版本、可编辑PPTX导出；模板库与代表布局确认 | `/preparation?type=ppt` |
+| PPT管理 | 课件卡片、大纲布局查看与更换、HTML课件预览和修改、逐页讲稿Word下载、检查标记、历史版本、本机可编辑PPTX导出；模板库及可选WorkBuddy布局说明书 | `/preparation?type=ppt` |
 | 教案制作 | 基本要求、内置/上传DOCX模板、参考资料、AI生成、逐节编辑、课时校验与Word版本导出 | `/preparation?type=plan` |
 | 签到管理 | 动态二维码/课堂码、答题即签到、迟到补签、实时名单、签到记录与出勤导出 | `/session` |
 | 学情分析 | 规则预警、个体画像、课堂练习与作业分析 | `/xueqing?tab=warn` |
@@ -27,34 +27,41 @@
 
 ### 交给Agent自动安装与配置
 
-将下面整段复制给能在本机读写文件、执行命令的Agent（如WorkBuddy或编码助手）。无需先填写路径；Agent会优先使用当前项目，自动完成可执行步骤，账号登录、Office安装等需要本人参与的事项会单独提示。
+将下面整段复制给老师电脑上能读写文件、执行命令的Agent（如WorkBuddy或编码助手）。这是“一次粘贴，Agent实际部署”的入口；老师只需完成本人账号登录、安装器授权及手机同网测试。电脑需联网且允许下载依赖。Agent必须以实际检查结果交付，不能把安装完成或保存路径当作AI已连通。适用环境为Windows 10/11；Mac/Linux可运行基础平台，但本文的PowerPoint COM模板截图和Windows导出环境不适用。
 
 ```text
 请帮我在这台电脑上安装、配置并启动 ClassFlow · 一堂课，实际执行操作，
 不要只给安装教程。项目仓库：https://github.com/Caspainnn/class-flow.git
 
-目标：先让基础平台可用，再尽可能配置本机AI工具链。完成可独立执行的工作后，
-一次性告诉我仍需本人处理的事项；不要因缺少AI账号或Office就停止基础平台安装。
+目标：基础平台启动、独立CLI实际回复OK、PPT本机转换通过隔离单页验证。
+遇到本人登录、安装授权等必须由我处理的步骤时，给出明确入口并等我操作；
+其余可独立执行的工作继续完成。缺少账号或Office不能阻止基础平台安装，
+但未完成的AI连接/模板截图必须如实标为待办，不能笼统报告“全部部署成功”。
 
 1. 定位项目，保留已有工作
    - 检查当前目录和已有项目；若已是ClassFlow，直接复用，先阅读AGENTS.md和README。
+     获取origin/main并记录实际提交号；工作区干净且能快进时才更新，
+     有本地改动或分叉时保留并说明差异，不覆盖老师已有版本。
    - 若尚未下载，在非C盘、当前用户可写的位置克隆仓库，例如D:\ClassFlow；
      使用这台电脑实际可用的盘符。没有合适位置时再让我选择，不擅自放到C盘。
    - 已有目录非空时不得覆盖。已有data、备份、配置和未提交代码必须保留；
      不运行reset --hard、clean或强制拉取，不用演示数据覆盖真实数据。
 
 2. 检查和安装基础环境
-   - 检查Node.js、npm和Git；Node至少20。缺少时从官方渠道安装兼容版本，
+   - 检查Node.js、npm和Git；Node至少20，新部署优先选择官方仍支持的LTS。
+     缺少时从官方渠道安装兼容版本，
      在安装前核对来源；需要管理员授权或安装器交互时清楚提示我。
    - 在项目server目录运行npm ci，使用锁文件，不随意升级依赖或更改全局npm镜像。
    - 不要求我手工安装数据库，也不要求重新构建已附带的前端资源。
 
 3. 启动并验证基础平台
    - 先检查3000端口及其所属进程。如果已经是这个项目的服务，验证并复用；
-     不结束不明进程，不在正在签到、回收问卷或生成课件时重启服务。
+     不结束不明进程，不在正在签到、回收问卷、批改或生成课件/说明书时重启服务。
    - 端口可用时启动server/server.js。确需其他端口时，统一调整启动方式、
      学生链接与快捷入口，不能仍用固定3000的旧启动脚本。
-   - Windows后台启动使用隐藏窗口，并把日志留在本机被忽略的目录。
+   - Windows后台启动使用隐藏窗口，并把日志留在本机logs目录。
+     启动前仅在子进程环境移除CODEBUDDY_*和NODE_OPTIONS，防止继承Agent运行环境；
+     不改系统环境变量、代理、注册表或WorkBuddy程序文件。
    - 验证/api/ping和工作台、课程、签到、PPT、教案、作业、批改、问卷、
      数据看板、备份页面的HTTP响应；打开教师本机地址供我使用。
    - 新安装有默认演示名单，明确告诉我在哪里替换，不把它当作我的真实学生。
@@ -67,32 +74,50 @@
      没有实际手机访问证据时，不宣称局域网验收通过。
 
 5. 配置CodeBuddy / WorkBuddy
-   - 优先查找现有CLI及登录状态，可用tools/connect-workbuddy.js --list列出候选。
-   - 没有可用CLI时，核对官方来源并安装README中有联调记录的独立CodeBuddy CLI；
-     不修改WorkBuddy应用文件，不读取或复制其他账号的令牌，不伪造登录。
-   - 账号登录由我本人完成。连接配置保留其他已有设置，使用本机实际路径，
-     自定义DATA_DIR时不能把配置写错到默认data目录。
+   - 先运行node tools/connect-workbuddy.js --list（不调用模型），检查候选是否存在。
+     优先复用已有已验证的独立CLI；桌面WorkBuddy已登录不代表独立CLI已登录。
+   - 没有可用入口时，按README“独立CLI安装与登录”在项目.local-codebuddy-cli
+     安装官方包@tencent-ai/codebuddy-code@2.173.0；不安装来源不明的同名包。
+     该版本是项目已联调版本，不声称它是最新版；若官方源不可用，报告实际错误，
+     不擅自换包、换镜像或改WorkBuddy内置程序。
+   - 运行该CLI的交互入口，由我本人选择对应站点并在浏览器授权。
+     不读取或复制其他账号令牌，不把开发者电脑的登录目录拷过来，不伪造登录。
+     登录完成后继续执行下一项，而不是停在“请自行配置”。
+   - 与服务使用同一个绝对DATA_DIR，在项目根目录执行：
+     node tools/connect-workbuddy.js --path "本机实际CLI入口" --timeout 45000
+     显式指定一个入口，只检测一次；脚本保留其他设置并使用--port 0避开端口冲突。
    - 允许一次只要求回复“OK”的最小模型连通验证，可能消耗少量账号额度；
      未经我进一步要求，不批量调用模型、不自动生成真实课件、不购买套餐。
+     必须同时确认退出码0、脚本报告连通、GET /api/gb/settings中enabled=true、
+     verifiedAt已更新、lastError为空，并刷新/workbuddy核对实际入口。
+     不再额外点击一次“重新检测”消耗第二次额度；失败时先查原因，等我同意后再重试。
    - 无法连接时保留已启动的平台，说明原因及待完成配置，不伪装连接成功。
 
 6. 配置PPT附加工具
    - 按README列出的固定提交安装PPT Master，保留许可证。
      若下载完整仓库，正确定位skills/ppt-master，确保配置指向含SKILL.md的目录。
-   - 在项目非C盘目录建立独立Python环境，依照该提交的实际依赖说明安装；
+   - 在项目.local-ppt-python建立独立Python虚拟环境，依照该提交的实际依赖说明安装；
      不修改系统Python环境，不复制开发者电脑上的虚拟环境或绝对路径。
+     本机固定导出必须安装python-pptx和Pillow；不能只创建空虚拟环境就算完成。
+   - 检查本机Chrome或Edge，若不是默认安装位置则显式写入ppt.browserPath。
    - 写入或合并本机PPT配置，使用实际skillPath、pythonPath及固定revision，
      timeoutMs=7200000、allowShell=false；不得为绕过错误打开全权限模式。
    - 检查Microsoft PowerPoint是否可用。未安装时列为待办，不安装破解软件，
      不把布局示意当作原PPT截图；有授权安装或人工操作需求时再提示我。
-   - 本步骤只核对环境与配置，不以长时间真实出片作为安装成功的前提。
+   - 用配置中的Python实际执行import pptx和import PIL，检查浏览器文件与SKILL.md存在，
+     GET /api/ppt/connection核对ready和exportReady，然后运行README的隔离单页转换。
+     必须得到真实PPTX并验证原生文字，不能只凭exportReady=true宣称可导出。
+     不调用真实模型生成长课件，不读取真实教学任务作为测试样例。
 
 7. 交付结果
    - 完成必要静态检查与隔离验证；只使用临时虚构数据，不向真实教学库灌测试记录。
    - 在Windows上准备可重复启动的入口或快捷方式，确保项目路径、端口正确，
-     不依赖Agent会话存活；不要声称旧版发行包已包含当前完整平台。
+     不依赖Agent会话存活；原有bat不能只凭“端口被node占用”判断服务身份或安全停止。
+     停止入口只能处理已核实属于本项目的PID，并提示先结束进行中的教学任务。
+     不要声称旧版发行包已包含当前完整平台。
    - 最后告诉我：项目位置、启动/停止方法、教师地址、学生地址、日志位置、
-     基础平台验证结果、AI/PPT工具配置结果，以及仍需本人登录或安装的事项。
+     当前main提交号、基础页面HTTP结果、CLI最小请求结果、单页PPTX转换结果、
+     模板截图能力、仍需本人登录或安装的事项。分别列通过/失败/未验证及原因。
    - 不上传教学数据、备份、登录凭据或截图，不把本机路径与密钥写入公开Git仓库。
 ```
 
@@ -144,33 +169,59 @@ node server/server.js
 
 ### 连接本机工具
 
-1. 安装可用的CodeBuddy CLI，由本人完成账号登录。现有联调曾使用独立CLI `2.173.0`，不要假定每台机器的WorkBuddy内置CLI都可用。
+1. 安装可用的CodeBuddy CLI，由本人完成账号登录。现有联调使用独立CLI `2.173.0`，不要假定每台机器的WorkBuddy内置CLI都可用。
 2. 在“WorkBuddy”设置页配置实际入口路径、模型和超时，检测连接。检测与真实任务可能消耗额度；桌面WorkBuddy和独立CLI是否共享额度，需向服务方确认。
 3. 在具体模块发起任务并审阅结果。问卷初版不会自动发布给学生。
 
-辅助探测脚本：
+#### 独立CLI安装与登录（Agent可执行）
+
+从[CodeBuddy官方安装文档](https://www.codebuddy.cn/docs/cli/installation)核对包来源，按[官方快速开始](https://www.codebuddy.cn/docs/cli/quickstart)由本人授权。以下在项目根目录的PowerShell中执行，安装到Git忽略的本机目录，不改全局安装或WorkBuddy应用：
+
+```powershell
+npm.cmd install --prefix .local-codebuddy-cli --no-audit --no-fund --ignore-scripts @tencent-ai/codebuddy-code@2.173.0
+node .local-codebuddy-cli/node_modules/@tencent-ai/codebuddy-code/bin/codebuddy --version
+node .local-codebuddy-cli/node_modules/@tencent-ai/codebuddy-code/bin/codebuddy --port 0
+```
+
+第三条是交互登录入口，需老师本人完成对应站点的浏览器授权，随后退出交互CLI回到终端。版本号仅为本项目联调依据；安装或登录失败时保留基础平台，不自动升级或循环请求。若Agent正在WorkBuddy中运行，CLI进程需要干净的子进程环境：移除其继承的`CODEBUDDY_*`和`NODE_OPTIONS`，不要改系统持久设置。连接脚本和平台检测已自动清理这些子进程变量，并使用随机端口`--port 0`。
+
+登录后做一次最小连接验证：
 
 ```bash
 node tools/connect-workbuddy.js --list
-node tools/connect-workbuddy.js --path "实际CLI入口路径"
+node tools/connect-workbuddy.js --path ".local-codebuddy-cli/node_modules/@tencent-ai/codebuddy-code/bin/codebuddy" --timeout 45000
 ```
 
-`--list`只列候选，连接检测会发送模型请求。该辅助脚本使用项目默认`data/settings.json`，使用自定义`DATA_DIR`时请在平台设置页配置。
+`--list`只列候选，不调用模型、不改配置。显式`--path`只检测该入口；不指定时可能逐个检测多个候选。检测会发送一次只需回复`OK`的模型请求并消耗额度；成功要求CLI正常退出且实际输出为`OK`，不以路径存在或提示词回显判定。成功后合并保存`workbuddy`配置，保留模型、超时、PPT及其他设置；失败时不报告连通。无需为连接配置重启服务。
+
+脚本与服务都读取`DATA_DIR`，默认是项目`data/`。自定义时必须在两者的启动环境中设为同一个绝对路径。配置保存在这个目录的`settings.json`；不要同时运行多个配置写入操作。可用`GET /api/gb/settings`核对`enabled`、`path`、`verifiedAt`和`lastError`，无需重复发送模型请求。`/workbuddy`中的绿色连接状态是最近一次探测结果，账号过期、额度或网络变化仍可能使后续任务失败。
 
 ### PPT附加依赖与流程
 
-- **PPT Master skill**：已验证来源为[hugohe3/ppt-master](https://github.com/hugohe3/ppt-master/tree/5832c3a8ca77e22284198407f0a7e4485ada9688/skills/ppt-master)，固定提交`5832c3a8ca77e22284198407f0a7e4485ada9688`。需另行安装技能目录、保留许可，并按该版本说明准备Python依赖；本仓库不包含skill副本、Python环境或账号凭据。
-- 配置读取`data/settings.json`中的`ppt`，未设置时兼容读取项目下`.local-ppt-skills/config.json`。路径应使用本机绝对路径。
+- **PPT Master skill**：已验证来源为[hugohe3/ppt-master](https://github.com/hugohe3/ppt-master/tree/5832c3a8ca77e22284198407f0a7e4485ada9688/skills/ppt-master)，固定提交`5832c3a8ca77e22284198407f0a7e4485ada9688`。需另行安装技能目录、保留许可，并按该版本说明准备Python依赖；本仓库不包含skill副本、Python环境或账号凭据。首次安装可将完整仓库克隆到`.local-ppt-skills/ppt-master-repo`并检出该提交，此时真正的`skillPath`是该目录下的`skills/ppt-master`，不是仓库根目录。已有目录不得覆盖或重置。
+- 配置读取实际`DATA_DIR/settings.json`中的`ppt`，未设置时兼容读取项目下`.local-ppt-skills/config.json`。路径应使用本机绝对路径；不要覆盖文件中其他设置。
 - 原生模板页面截图依赖**Windows、Microsoft PowerPoint与PowerShell COM**。缺少组件时不能获得该路径的真实模板视觉参考，结构示意不能替代原页截图。
 - 平台“导出可编辑PPT”使用本机固定程序，读取已确认HTML，不调用模型。需要本机 Chrome 或 Edge、Python 的 `python-pptx` 与 `Pillow`；读取 `ppt.pythonPath`，浏览器自动查找，亦可配置 `ppt.browserPath`。普通文字和常规图形可编辑，复杂SVG图示暂作为图片保留。手动交接流程仍可在外部制作和导回文件。
 - PPT任务默认最长两小时，可配置缩短，不能超过两小时。默认不启用更宽的Shell权限，任务目录不是操作系统沙箱。
 
-PPT专用配置示例（替换路径，不包含账号信息）：
+首次配置的命令示例（项目根目录PowerShell；Git目标目录必须尚不存在；`py -3.12`需替换为本机已安装、可安装这些依赖的真实Python入口，本机已验证Python 3.12）：
+
+```powershell
+git clone --no-checkout https://github.com/hugohe3/ppt-master.git .local-ppt-skills/ppt-master-repo
+git -C .local-ppt-skills/ppt-master-repo checkout --detach 5832c3a8ca77e22284198407f0a7e4485ada9688
+py -3.12 -m venv .local-ppt-python
+& .local-ppt-python/Scripts/python.exe -m pip install -r .local-ppt-skills/ppt-master-repo/skills/ppt-master/requirements.txt
+& .local-ppt-python/Scripts/python.exe -m pip install python-pptx Pillow
+```
+
+Python未安装时由Agent核对官方来源并安装，安装器授权交给老师；不得使用指向Microsoft Store的空命令当作已安装解释器。技能配置完成后检查`SKILL.md`与`LICENSE`确实存在，按该版本技能要求检查环境，不能为通过校验修改其归属或完整性文件。
+
+PPT专用配置示例（合并到`settings.json`的`ppt`字段，或作为兼容文件`.local-ppt-skills/config.json`的完整内容；替换为本机实际路径，不包含账号信息）：
 
 ```json
 {
   "name": "PPT Master",
-  "skillPath": "D:/ClassFlow/.local-ppt-skills/ppt-master",
+  "skillPath": "D:/ClassFlow/.local-ppt-skills/ppt-master-repo/skills/ppt-master",
   "pythonPath": "D:/ClassFlow/.local-ppt-python/Scripts/python.exe",
   "revision": "5832c3a8ca77e22284198407f0a7e4485ada9688",
   "timeoutMs": 7200000,
@@ -178,9 +229,26 @@ PPT专用配置示例（替换路径，不包含账号信息）：
 }
 ```
 
-PPT按“填写要求 → 选择方式 → 生成大纲 → 生成PPT”操作。大纲按页组织，教师确认后逐页制作HTML课件；检查和修改后通过按钮导出可编辑PPTX。封面使用填写的授课人、时间，逐页讲稿供教师查看。HTML与PPTX是不同产物，导出后需核对字体、布局与可编辑性。
+PPT按“填写要求 → 选择方式 → 生成大纲 → 生成PPT”操作。大纲按页组织，右侧展示当前模板的布局缩略图，支持查看、更换布局和定位编辑；编辑中的布局选择随大纲一起保存，教师确认后逐页制作HTML课件。检查和修改后通过按钮导出可编辑PPTX。封面使用填写的授课人、时间，逐页讲稿供教师查看。HTML与PPTX是不同产物，导出后需核对字体、布局与可编辑性。PPT备注默认留空，逐页讲稿独立下载，入口位于PPT下载行下方。
 
-上传模板先拆解、推荐代表布局，由教师确认保留，也可从原PPT补选。在线配图按大纲意图检索Commons素材，整套最多一张外部照片或插画，需联网并核对素材及来源。取消、失败或服务重启会保留要求与已有版本，但不保证模型任务可从中断处自动续跑。
+上传模板先拆解、推荐代表布局，由教师确认保留，也可从原PPT补选。“模板文件与信息”默认勾选使用WorkBuddy编写布局说明书，结合原页预览分析用途、估计容量和限制，供新课件大纲参考，会调用模型；取消勾选则仅程序识别。分析失败保留模板，并可在详情中重试。模板真实截图仍需PowerPoint。
+
+在线配图按大纲意图检索Commons素材，整套最多一张外部照片或插画，需联网并核对素材及来源。取消、失败或服务重启会保留要求与已有版本，但不保证模型任务可从中断处自动续跑。
+
+#### 部署完成的最小验证
+
+浏览器应为本机实际的Chrome或Edge。在项目根目录设置真实工具路径，先检查同一个Python环境能导入所需模块，再运行不调用模型的单页检查：
+
+```powershell
+$env:PPT_PYTHON = (Resolve-Path '.local-ppt-python/Scripts/python.exe').Path
+& $env:PPT_PYTHON -c "import pptx; import PIL; print('PPT dependencies OK')"
+# 非默认浏览器位置才需设置：$env:PPT_BROWSER = '本机实际chrome.exe或msedge.exe路径'
+node tools/check-ppt-native-export.cjs --geometry
+```
+
+成功时输出包含`pages: 1`和实际`pptx`路径的JSON；脚本已校验真实PPTX页数、原生文字、图片比例与图层。产物留在项目`.tmp-native-service-*`隔离目录，不写正式教学库。基础服务另需验证`/api/ping`、`/api/dashboard`、`/api/gb/settings`、`/api/ppt/connection`及正式页面。`ready`只检查CLI/skill配置，`exportReady`只检查浏览器/Python路径；它们不能代替模型回复、Python导入和实际转换。
+
+部署结果应分别记录“基础平台HTTP通过、CLI实际回复通过、PPT本机转换通过、模板截图通过/待验证”。未启动真实PowerPoint渲染时，模板截图只能记为待验证；手机同网和真实教学内容生成仍由老师验收。详细检查与本次发布范围见[部署与发布记录](docs/部署与发布-2026-11-03.md)。
 
 ### 教案与问卷
 
@@ -270,6 +338,11 @@ node tools/check-lesson-service.cjs
 - [PPT真实功能与联调记录](docs/ppt-preparation/真实功能验收.md)
 - [更新旧课件：原稿保留与模板翻新](docs/ppt-preparation/2026-11-02-更新课件正式集成.md)
 - [课件中断后继续制作](docs/ppt-preparation/2026-11-02-课件中断续做.md)
+- [首尾页布局校验与已有大纲恢复](docs/ppt-preparation/2026-11-03-首尾页布局校验修复.md)
+- [大纲布局选择正式集成（真实模板布局、草稿保存与首尾页约束）](docs/ppt-preparation/2026-11-03-大纲布局正式集成.md)
+- [模板布局说明书上传选项（默认勾选、程序识别回退与大纲参考）](docs/ppt-preparation/2026-11-03-模板布局说明书选项.md)
+- [已验收的大纲布局独立网页原型（保留3000端口下独立路由）](docs/ppt-preparation/2026-11-03-大纲布局独立原型.md)
+- [大纲教学目标与内部制作说明分离](docs/ppt-preparation/2026-11-03-大纲教学目标展示修正.md)
 - [本机固定程序导出接入](docs/ppt-preparation/2026-11-03-本机导出接入.md)
 - [教案使用与验证](docs/lesson-plan/使用与验证.md)
 - [问卷正式交付与验收](docs/questionnaire/正式交付与验收.md)
