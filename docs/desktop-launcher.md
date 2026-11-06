@@ -20,3 +20,10 @@
 使用：双击桌面“一堂课”；托盘右键选择打开平台、日志或退出。依赖不完整、端口被其他目录占用时会说明问题，不会停止占用者。服务失联后托盘会提示，可再次打开；恢复事务未完成时不会抢先重启。日志位于logs，课程数据位于data（或DATA_DIR）。
 
 构建：`powershell -NoProfile -ExecutionPolicy Bypass -File tools/build-launcher.ps1`；发行包：`python tools/build-release.py --skip-exe`。使用Windows自带.NET Framework编译器，不再依赖PyInstaller或开发者绝对路径。发行包携带基础Node及server、xueqing模块，不包含真实教学数据、密钥、账号和本机Python/Office环境。
+
+
+## 双击无响应修复
+
+现象：Node服务已就绪，但日志缺少ready/browser opened，重复启动只发送信号，没有打开网页。原因：分离启动的Node继承了启动脚本的管道句柄，启动器等待ReadToEndAsync的EOF会一直阻塞，导致ready标志未置位。改为有超时地读取唯一的PID行，等待启动脚本退出后检查服务健康，不再依赖管道EOF。
+
+验证：保留正式Node进程，仅替换托盘；首次与重复双击均记录browser opened。独立3047端口从完全未运行状态冷启动，依次记录server started、ready、browser opened，验证通过；测试完成后已清理隔离服务。发行包同步更新。
