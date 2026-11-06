@@ -369,11 +369,15 @@ const PUBLIC_ROUTES = [
   /^\/qr\.svg$/, /^\/favicon\.ico$/, /^\/assets\/logo\.svg$/, /^\/api\/ping$/
 ];
 
+const desktop=require('./desktop').createDesktop({projectRoot:path.resolve(__dirname,'..'),dataRoot:store.DATA_DIR,runtime:backupRuntime,backupActive:()=>require('./backup/routes').hasActive()});
+
 /* ---------------- 路由 ---------------- */
 const handler = async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
   const p = url.pathname;
   const m = req.method;
+  if (desktop.handle(req,res,{url,json})) return;
+  if (desktop.closing&&p.startsWith('/api/')) return json(res,503,{error:'一堂课正在退出，请稍后重新启动。'});
   if (backupRuntime.gate(req,res,url,json)) return;
 
   if (!isLocal(req) && !PUBLIC_ROUTES.some(r => r.test(p))) {

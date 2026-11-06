@@ -26,3 +26,5 @@ module.exports=async(req,res,ctx)=>{
   return send(404,{error:'备份入口不存在。'});
  }catch(e){if(res.headersSent)return true;return send(e.status||400,{error:e.message||'备份操作失败，请重试。'});}
 };
+
+module.exports.hasActive=()=>Boolean(service?.hasActive());
