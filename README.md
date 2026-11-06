@@ -117,6 +117,8 @@
      上面的D:\ClassFlow只是示例，必须替换为实际项目位置，不可照抄开发者电脑路径。
      脚本自动使用Windows自带.NET Framework编译器构建“一堂课.exe”、
      创建当前用户桌面“一堂课”快捷方式，持久保留该快捷入口的PORT、DATA_DIR、HOST；
+     快捷方式应直接指向项目的一堂课.exe，通过参数传入配置，不再以PowerShell作为目标。
+     如360隔离桌面入口，按docs/desktop-antivirus.md记录和复测，不能直接认定误报或关闭防护。
      自定义局域网地址时追加-HostAddress和-PublicOrigin，与服务及学生地址保持一致。
      不要求老师安装Python/PyInstaller来启动基础平台，不依赖Agent会话继续存活。
    - 旧启动器正在运行且需要编译更新时，先核对所有后台任务均已结束，
@@ -151,7 +153,8 @@
      核对origin地址、当前分支/提交、git status，记录更新前提交号。
    - 查明当前PORT、HOST、绝对DATA_DIR、PUBLIC_ORIGIN、桌面快捷方式目标及参数、
      托盘程序和服务PID、日志位置。使用实际运行配置，不假设一定是3000或项目data目录。
-     程序不自动加载.env；快捷方式可能通过tools/open-desktop.ps1持久传入环境。
+     程序不自动加载.env；新版快捷方式直接打开一堂课.exe，并通过启动参数保留配置；
+     旧版快捷方式可能通过tools/open-desktop.ps1传入环境，更新前仍须读取原参数。
    - 仅记录必要配置及文件位置，不展示、上传或写入Git账号令牌、密钥、学生数据。
      保留现有data、备份、settings.json、CLI登录、模型/PPT路径和老师已修改的文件。
 

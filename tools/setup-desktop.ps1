@@ -20,13 +20,14 @@ $wrapper=Join-Path $PSScriptRoot 'open-desktop.ps1'
 $powershell=Join-Path $PSHOME 'powershell.exe'
 if(Test-Path -LiteralPath $shortcut){$old=$shell.CreateShortcut($shortcut);if($old.TargetPath -ne $exe -and !($old.TargetPath -eq $powershell -and $old.Arguments.Contains($wrapper))){throw '桌面已有其他项目的一堂课快捷方式，未覆盖。请用-ShortcutDirectory指定其他位置。'}}
 $link=$shell.CreateShortcut($shortcut)
-$link.TargetPath=$powershell
-$link.Arguments='-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File "'+$wrapper+'" -Port '+$Port+' -DataDirectory "'+$DataDirectory+'" -HostAddress "'+$HostAddress+'"'
-if($PublicOrigin){$link.Arguments+=' -PublicOrigin "'+$PublicOrigin+'"'}
+$link.TargetPath=$exe
+# Quote native Windows arguments, including paths ending with a backslash.
+function ConvertTo-LauncherArgument([string]$Value){'"'+($Value -replace '(\\*)"','$1$1\"' -replace '(\\+)$','$1$1')+'"'}
+$link.Arguments='--port '+$Port+' --data-dir '+(ConvertTo-LauncherArgument $DataDirectory)+' --host '+(ConvertTo-LauncherArgument $HostAddress)+' --public-origin '+(ConvertTo-LauncherArgument $PublicOrigin)
 $link.WorkingDirectory=$projectRoot
 $link.IconLocation=Join-Path $projectRoot 'icon.ico'
 $link.Description='一堂课教学工作台'
 $link.WindowStyle=7
 $link.Save()
 Write-Output ('已配置桌面入口：'+$shortcut)
-if($Open){& $wrapper -Port $Port -DataDirectory $DataDirectory -HostAddress $HostAddress -PublicOrigin $PublicOrigin}
+if($Open){Start-Process -FilePath $exe -ArgumentList $link.Arguments -WorkingDirectory $projectRoot -WindowStyle Hidden | Out-Null}

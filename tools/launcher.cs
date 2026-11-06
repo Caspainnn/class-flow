@@ -12,7 +12,35 @@ using System.Threading.Tasks;
 using System.Web.Script.Serialization;
 using System.Windows.Forms;
 
+static class Program {
+ [STAThread] static int Main(string[] args){
+  Application.EnableVisualStyles();Application.SetCompatibleTextRenderingDefault(false);
+  try{
+   for(int i=0;i<args.Length;i++){
+    string name;
+    switch(args[i]){
+     case "--port":name="PORT";break;
+     case "--data-dir":name="DATA_DIR";break;
+     case "--host":name="HOST";break;
+     case "--public-origin":name="PUBLIC_ORIGIN";break;
+     case "--check":case "--stop":continue;
+     default:throw new ArgumentException("无法识别启动参数："+args[i]+"。请重新运行桌面入口配置脚本。");
+    }
+    if(++i>=args.Length)throw new ArgumentException("启动参数缺少值。请重新运行桌面入口配置脚本。");
+    string value=args[i];int port;Uri origin;
+    if(name=="PORT"&&(!int.TryParse(value,out port)||port<1||port>65535))throw new ArgumentException("启动端口须为1至65535。请重新配置桌面入口。");
+    if(name=="DATA_DIR"){if(string.IsNullOrWhiteSpace(value))throw new ArgumentException("数据目录不能为空。请重新配置桌面入口。");value=Path.GetFullPath(value);}
+    if(name=="PUBLIC_ORIGIN"&&value.Length>0&&(!Uri.TryCreate(value,UriKind.Absolute,out origin)||(origin.Scheme!="http"&&origin.Scheme!="https")))throw new ArgumentException("学生访问地址须为有效HTTP地址。请重新配置桌面入口。");
+    Environment.SetEnvironmentVariable(name,value);
+   }
+   return Launcher.Run(args);
+  }catch(Exception e){if(Array.IndexOf(args,"--check")<0)MessageBox.Show(e.Message,"一堂课",MessageBoxButtons.OK,MessageBoxIcon.Warning);return 1;}
+ }
+}
+
 static class Launcher {
+ // Apply command-line settings before initializing identity, port and data paths.
+ static Launcher(){}
  internal static readonly string Root=AppDomain.CurrentDomain.BaseDirectory.TrimEnd('\\');
  internal static readonly string Data=Path.GetFullPath(Environment.GetEnvironmentVariable("DATA_DIR")??Path.Combine(Root,"data"));
  internal static readonly int Port=ReadPort();
@@ -32,8 +60,7 @@ static class Launcher {
  internal static void Trace(string text){try{Directory.CreateDirectory(Path.Combine(Root,"logs"));File.AppendAllText(Path.Combine(Root,"logs","launcher.log"),DateTime.Now.ToString("s")+" "+text+Environment.NewLine);}catch{}}
  internal static void Error(string text){MessageBox.Show(text,"一堂课",MessageBoxButtons.OK,MessageBoxIcon.Warning);}
  internal static string FindNode(){var paths=new List<string>{Path.Combine(Root,"runtime","node.exe"),Path.Combine(Root,"node","node.exe")};foreach(string d in (Environment.GetEnvironmentVariable("PATH")??"").Split(Path.PathSeparator))if(d.Trim('"').Length>0)paths.Add(Path.Combine(d.Trim('"'),"node.exe"));paths.Add(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),"nodejs","node.exe"));paths.Add(@"D:\Node\node.exe");return paths.Find(File.Exists);}
- [STAThread] static int Main(string[] args){
-  Application.EnableVisualStyles();Application.SetCompatibleTextRenderingDefault(false);
+ internal static int Run(string[] args){
   if(Array.IndexOf(args,"--check")>=0){try{File.WriteAllText(Path.Combine(Root,"launcher-check.json"),new JavaScriptSerializer().Serialize(Status()),Encoding.UTF8);return 0;}catch{return 1;}}
   bool created;using(var mutex=new Mutex(true,"Local\\Inclass-"+Identity+"-"+Port,out created)){
    string suffix=Identity+"-"+Port;bool stopping=Array.IndexOf(args,"--stop")>=0;
