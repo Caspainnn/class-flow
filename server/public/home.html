@@ -119,10 +119,6 @@ body[data-active=home] .last-metrics{display:grid;grid-template-columns:repeat(4
         <h1>工作台</h1>
         <div class="sub" id="sub">—</div>
       </div>
-      <div class="r">
-        <a class="btn" href="/courses">导入名单</a>
-        <a class="btn pri" href="/session">签到管理</a>
-      </div>
     </div>
 
     <div class="stats" id="stats"></div>
@@ -179,21 +175,20 @@ async function api(u) { try { const r = await fetch(u, { cache: 'no-store' }); r
 
 (async function boot() {
   const all = await api('/api/all');
-  if (!all) { $('#sub').textContent = '连不上本地服务，双击「课中签到.bat」重新启动'; return; }
+  if (!all) { $('#sub').textContent = '连不上本地服务，双击桌面「一堂课」重新打开'; return; }
   const ses = ((await api('/api/sessions')) || {}).sessions || [];
   const courses = all.courses || [], students = all.students || [];
-  const activeCourseId = (all.settings && all.settings.activeCourseId) || (courses[0] || {}).id || '';
-
-  let xq = null;
-  if (activeCourseId) xq = await api('/api/xq/data?courseId=' + encodeURIComponent(activeCourseId));
+  const courseData = await Promise.all(courses.map(c => api('/api/xq/data?courseId=' + encodeURIComponent(c.id))));
+  const complete = courseData.every(d => d && d.overall && Array.isArray(d.students));
+  const xq = { students:courseData.flatMap(d => d?.students || []), homework:courseData.flatMap(d => d?.homework || []) };
+  const courseIds = new Set(courses.map(c => c.id));
 
   const cnt = id => students.filter(s => s.courseId === id).length;
   const lastOf = id => ses.filter(s => s.courseId === id).sort((a, b) => b.startedAt - a.startedAt)[0] || null;
-  const weekSes = ses.filter(s => Date.now() - s.startedAt < 7 * 86400000).length;
-  const warns = xq ? xq.overall.warns : 0;
+  const weekSes = ses.filter(s => courseIds.has(s.courseId) && !s.deletedAt && s.startedAt<=Date.now() && Date.now() - s.startedAt < 7 * 86400000).length;
+  const warns = complete ? courseData.reduce((n,d) => n + Number(d.overall.warns || 0),0) : null;
   const hwTodo = xq ? (xq.homework || []).filter(h => h.sub < h.total) : [];
   const activeSes = all.active ? ses.find(s => s.id === all.active) : null;
-  const curCourse = courses.find(c => c.id === activeCourseId);
 
   $('#sub').textContent = `${today()} · ${courses.length} 门课 · ${students.length} 名学生` +
     (activeSes ? ' · 有一场签到正在进行' : '');
@@ -201,9 +196,9 @@ async function api(u) { try { const r = await fetch(u, { cache: 'no-store' }); r
   const icon = path => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${path}</svg>`;
   const statItems=[
     {value:courses.length,label:'课程总览',note:'管理课程与教学名单',path:'<path d="M3 6h7l2 2h9v12H3zM3 6V4h7l2 2"/>'},
-    {value:students.length,label:'学生总数',note:'来自已录入的课程名单',path:'<circle cx="9" cy="8" r="3"/><path d="M3 20v-2a6 6 0 0 1 12 0v2M16 5a3 3 0 0 1 0 6M21 20v-2a5 5 0 0 0-4-5"/>'},
+    {value:students.length,label:'学生总数',note:'全部课程名单合计',path:'<circle cx="9" cy="8" r="3"/><path d="M3 20v-2a6 6 0 0 1 12 0v2M16 5a3 3 0 0 1 0 6M21 20v-2a5 5 0 0 0-4-5"/>'},
     {value:weekSes,label:'近7天课次',note:'回顾近期课堂活动',path:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 3v4M17 3v4M3 10h18M8 14h3M8 17h7"/>'},
-    {value:warns,label:'待关注学生',note:curCourse?'当前课程 · '+curCourse.name:'当前课程预警汇总',path:'<path d="M12 3 2 21h20zM12 9v5M12 17h.01"/>',href:'/xueqing?tab=warn',warning:warns>0}
+    {value:warns??'—',label:'待关注学生',note:complete?'全部课程预警汇总（按课程名单计）':'部分课程学情暂不可用',path:'<path d="M12 3 2 21h20zM12 9v5M12 17h.01"/>',href:'/dashboard',warning:warns>0}
   ];
   $('#stats').innerHTML=statItems.map(s=>`<${s.href?'a':'div'} class="stat" ${s.href?'href="'+s.href+'"':''}><i class="stat-icon">${icon(s.path)}</i><span class="stat-label">${s.label}</span><b ${s.warning?'style="color:var(--red)"':''}>${s.value}</b><span class="stat-note">${esc(s.note)}</span></${s.href?'a':'div'}>`).join('');
   $('#fnWarn').textContent = warns ? warns + ' 人待关注' : '按规则自动列出';
@@ -218,7 +213,7 @@ async function api(u) { try { const r = await fetch(u, { cache: 'no-store' }); r
   });
   if (warns) {
     const names = (xq.students || []).filter(s => s.warns.length).slice(0, 2).map(s => s.name).join('、');
-    todos.push({ c: 'blue', txt: `${warns} 名学生命中预警（${names}${warns > 2 ? ' 等' : ''}）`, go: '/xueqing?tab=warn', label: '看名单 →' });
+    todos.push({ c: 'blue', txt: `${warns} 名学生命中预警（${names}${warns > 2 ? ' 等' : ''}）`, go: '/dashboard', label: '看课程 →' });
   }
   $('#todos').innerHTML = todos.length ? todos.map(t =>
     `<div class="todo"><span class="d" style="background:var(--${t.c})"></span><span>${esc(t.txt)}</span>` +
@@ -245,7 +240,6 @@ async function api(u) { try { const r = await fetch(u, { cache: 'no-store' }); r
       `最近一次点名 <span>${fmt(latest.startedAt)} · ${esc(c ? c.name : '')}</span>` +
       `<a class="more" href="/api/export.xlsx?sessionId=${latest.id}">导出这次 →</a>`;
     $('#last').innerHTML=`<div class="last-metrics"><div class="last-metric">到课人数<b>${latest.present}<small style="font-size:12px;color:#93a2af;font-weight:400"> / ${latest.total}</small></b></div><div class="last-metric">迟到人数<b style="color:var(--amber)">${latest.late}</b></div><div class="last-metric">缺勤人数<b style="color:${latest.absent?'var(--red)':'#2f4d67'}">${latest.absent}</b></div><div class="last-metric">答对率<b style="color:var(--ok)">${latest.correctRate==null?'—':latest.correctRate+'%'}</b></div></div>${latest.question?`<div class="last-question">课堂题目 · ${esc(latest.question)}</div>`:''}`;
-    if (curCourse) $('#sub').textContent += ` · 学情取「${curCourse.name}」`;
   }
 })();
 </script>

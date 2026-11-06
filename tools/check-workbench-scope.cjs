@@ -1,0 +1,10 @@
+'use strict';
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
+const html=fs.readFileSync('server/public/home.html','utf8'),source=html.match(/<script>([\s\S]*?)<\/script>/)[1],nodes=new Map(),calls=[];
+assert.ok(!html.slice(html.indexOf('<div class="head">'),html.indexOf('<div class="stats"')).includes('导入名单'));
+assert.ok(!html.slice(html.indexOf('<div class="head">'),html.indexOf('<div class="stats"')).includes('签到管理'));
+const node=s=>{if(!nodes.has(s))nodes.set(s,{innerHTML:'',textContent:'',querySelector:child=>node(s+' '+child)});return nodes.get(s);};
+const all={courses:[{id:'a',name:'A'},{id:'b',name:'B'}],students:[{id:'a1',courseId:'a'},{id:'b1',courseId:'b'},{id:'b2',courseId:'b'}],settings:{activeCourseId:'a'}};
+const context={document:{querySelector:node},Date,Set,fetch:async url=>{calls.push(url);return {json:async()=>url==='/api/all'?all:url==='/api/sessions'?{sessions:[]}:{overall:{warns:url.endsWith('a')?1:2},students:[{name:url.endsWith('a')?'Alice':'Bob',warns:['warning']}],homework:[]}};}};
+vm.createContext(context);vm.runInContext(source,context);
+setImmediate(()=>{try{assert.ok(calls.includes('/api/xq/data?courseId=a'));assert.ok(calls.includes('/api/xq/data?courseId=b'));assert.match(node('#stats').innerHTML,/>3<\/b>/);assert.ok(node('#stats').innerHTML.includes('全部课程预警汇总'));assert.ok(!node('#stats').innerHTML.includes('当前课程'));assert.ok(node('#todos').innerHTML.includes('3 名学生命中预警'));console.log('PASS: workbench queries all courses and aggregates warnings independent of active course; header buttons removed.');}catch(e){console.error(e);process.exitCode=1;}});
