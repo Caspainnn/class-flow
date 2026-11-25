@@ -216,7 +216,12 @@ async function api(u, body, method, onError = toast) {
   let r, d;
   try { r = await fetch(u, opt); d = await r.json().catch(() => ({})); }
   catch (e) { onError('服务没有响应，请重试。'); return null; }
-  if (!r.ok) { onError(d.error || ('操作失败 ' + r.status)); return null; }
+  if (!r.ok) {
+    onError(d.error === 'not found'
+      ? '服务还是旧进程，先关掉再重新启动「课中签到」'
+      : (d.error || ('操作失败 ' + r.status)));
+    return null;
+  }
   return d;
 }
 const countOf = id => DATA.students.filter(s => s.courseId === id).length;
