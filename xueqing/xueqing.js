@@ -138,7 +138,6 @@ module.exports = async function xueqing(req, res, ctx) {
         q: { text: s.question.text, options: s.question.options, correct: s.question.correct },
         total: roster.length,
         present: recs.length,
-        late: recs.filter(r => r.status === 'late').length,
         answered: answered.length,
         rate: roster.length ? round1(recs.length / roster.length * 100) : 0,
         ansRate: roster.length ? round1(answered.length / roster.length * 100) : 0,
@@ -283,13 +282,13 @@ module.exports = async function xueqing(req, res, ctx) {
 
     /* ② 学生汇总 */
     ws = wb.addWorksheet('学生汇总', { views: [{ state: 'frozen', ySplit: 3 }] });
-    ws.columns = [{ width: 15 }, { width: 11 }, { width: 12 }, { width: 10 }, { width: 8 }, { width: 10 }, { width: 10 }, { width: 12 }, { width: 10 }];
-    titleStyle(ws, `${CN}　学生汇总（共 ${d.overall.count} 次课 · ${d.overall.hwCount} 次作业）`, 9);
-    headStyle(ws, 2, ['学号', '姓名', '出勤(次)', '出勤率', '迟到', '答题次数', '答对率', '作业提交', '作业均分']);
+    ws.columns = [{ width: 15 }, { width: 11 }, { width: 12 }, { width: 10 }, { width: 10 }, { width: 12 }, { width: 10 }];
+    titleStyle(ws, `${CN}　学生汇总（共 ${d.overall.count} 次课 · ${d.overall.hwCount} 次作业）`, 8);
+    headStyle(ws, 2, ['学号', '姓名', '出勤(次)', '出勤率', '答题次数', '答对率', '作业提交', '作业均分']);
     d.students.forEach(s => {
       const r = ws.addRow([s.id, s.name, s.attended + '/' + s.total,
         s.total ? Math.round(s.attended / s.total * 100) + '%' : '',
-        '', s.answered,
+        s.answered,
         s.correctRate == null ? '' : s.correctRate + '%',
         `${s.hwDone}/${s.hw.length}`,
         s.hwAvg == null ? '' : s.hwAvg]);
@@ -307,12 +306,11 @@ module.exports = async function xueqing(req, res, ctx) {
       d.students.forEach(stu => {
         const rec = byId.get(stu.id);
         const r = ws.addRow([`第${x.sn}次 · ${x.label}`, stu.id, stu.name,
-          rec ? (rec.status === 'late' ? '迟到' : '到课') : '缺勤',
+          rec ? '到课' : '缺勤',
           rec ? localDate(rec.submittedAt || rec.claimedAt) : '']);
         r.getCell(2).numFmt = '@';
         if (rec) r.getCell(5).numFmt = 'yyyy-mm-dd hh:mm:ss';
         if (!rec) r.getCell(4).font = { size: 10.5, color: { argb: 'FFA03030' } };
-        else if (rec.status === 'late') r.getCell(4).font = { size: 10.5, color: { argb: 'FFBA7517' } };
       });
     });
 

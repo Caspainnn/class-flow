@@ -106,6 +106,17 @@ function migrate() {
     }
   });
   if (st) write('sessions', sessions);
+
+  /* 迟到状态移除（2026-11-25）：历史「late」记录先整份备份再归并为「present」 */
+  let lt = false;
+  sessions.forEach(s => (s.records || []).forEach(r => { if (r.status === 'late') { r.status = 'present'; lt = true; } }));
+  if (lt) {
+    try {
+      fs.writeFileSync(fileOf('sessions.backup-before-late-removal'),
+        JSON.stringify(read('sessions', []), null, 2), { flag: 'wx' });
+    } catch {}
+    write('sessions', sessions);
+  }
 }
 
 module.exports = { DATA_DIR, uid, read, write, seed, fileOf };

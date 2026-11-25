@@ -83,6 +83,19 @@ input:focus,select:focus{border-color:var(--blue);background:#fff}
     <!-- 第一步：出题 -->
     <div id="stage1" style="display:none">
       <div class="card">
+        <h2>一键录入 <span>把题目整段粘贴进来，自动识别题干、选项和答案</span></h2>
+        <div class="row">
+          <div class="col" style="flex:3 1 420px"><label for="pasteBox">粘贴完整题目（支持「答案：C / 正确答案：AC / 【多选题】」，选项 A–F 各占一行）</label>
+            <textarea id="pasteBox" rows="7" placeholder="例如：&#10;你的问题是……？&#10;A. 选项一&#10;B. 选项二&#10;C. 选项三&#10;D. 选项四&#10;答案：C"></textarea></div>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+          <button type="button" class="btn pri" id="parseBtn">识别并填充</button>
+          <span class="hint" id="parseHint" style="flex:1;min-width:200px">识别后自动填到下方表单，可再手动修改；没有答案行会提示。</span>
+        </div>
+        <div id="parseResult" class="empty" style="display:none;margin-top:10px"></div>
+      </div>
+
+      <div class="card">
         <h2>本次签到 <span>选一门课，出一道题（也可以只签到——但至少要填题干和两个选项）</span></h2>
         <div class="row">
           <div class="col" style="max-width:300px"><label for="course">课程</label><select id="course"></select></div>
@@ -99,6 +112,10 @@ input:focus,select:focus{border-color:var(--blue);background:#fff}
         <div class="row" style="margin-bottom:0">
           <div class="col"><label for="o2">C</label><input id="o2"></div>
           <div class="col"><label for="o3">D</label><input id="o3"></div>
+        </div>
+        <div class="row" style="margin-bottom:0">
+          <div class="col"><label for="o4">E</label><input id="o4" placeholder="选填"></div>
+          <div class="col"><label for="o5">F</label><input id="o5" placeholder="选填"></div>
         </div>
         <div style="border-top:1px solid var(--line2);margin-top:16px;padding-top:14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
           <span class="hint" style="margin:0;flex:1;min-width:200px" id="startHint"></span>
@@ -129,7 +146,6 @@ input:focus,select:focus{border-color:var(--blue);background:#fff}
             <div style="font-size:11.5px;color:var(--ink3);margin-top:4px" id="liveOpts"></div>
             <div style="display:flex;gap:26px;margin-top:16px;flex-wrap:wrap">
               <div><div style="font-size:24px;font-weight:500" id="nPresent">0</div><div style="font-size:11px;color:var(--ink3)">已到</div></div>
-              <div><div style="font-size:24px;font-weight:500;color:var(--amber)" id="nLate">0</div><div style="font-size:11px;color:var(--ink3)">迟到</div></div>
               <div><div style="font-size:24px;font-weight:500;color:var(--ink3)" id="nAbsent">0</div><div style="font-size:11px;color:var(--ink3)">未到</div></div>
               <div><div style="font-size:24px;font-weight:500;color:var(--ok)" id="nAnswered">0</div><div style="font-size:11px;color:var(--ink3)">已答题</div></div>
             </div>
@@ -159,7 +175,8 @@ input:focus,select:focus{border-color:var(--blue);background:#fff}
         <p class="hint" id="archiveStats"></p>
         <div style="border-top:1px solid var(--line2);margin-top:18px;padding-top:14px;display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap">
           <a class="btn" href="/session?tab=records" onclick="event.preventDefault();attendanceTab('records')">查看签到记录</a>
-          <button class="btn pri" id="againBtn">再出一道题</button>
+          <button class="btn" id="againBtn">再出一道题</button>
+          <button class="btn pri" id="reSignBtn">重新签到</button>
         </div>
       </div>
     </div>
@@ -242,25 +259,77 @@ window.useRecent = function (i) {
   const q = (window._recent || [])[i];
   if (!q) return;
   $('#qText').value = q.text;
-  for (let k = 0; k < 4; k++) $('#o' + k).value = (q.options || [])[k] || '';
+  for (let k = 0; k < 6; k++) $('#o' + k).value = (q.options || [])[k] || '';
   $('#questionType').value = Array.isArray(q.correct) ? 'multiple' : 'single';
   renderAnswerChoices([].concat(q.correct == null ? 0 : q.correct));
 };
 
 function renderAnswerChoices(selected = [0]) {
   const multiple = $('#questionType').value === 'multiple';
-  $('#correctChoices').innerHTML = 'ABCD'.split('').map((letter,i) => `<label><input type="${multiple?'checkbox':'radio'}" name="correctAnswer" value="${i}" ${selected.includes(i)?'checked':''}>${letter}</label>`).join('');
+  const count = [0,1,2,3,4,5].filter(i => $('#o' + i).value.trim()).length;
+  $('#correctChoices').innerHTML = 'ABCDEF'.split('').map((letter,i) => {
+    const has = i < count;
+    return `<label style="${has?'':'opacity:.35;pointer-events:none'}"><input type="${multiple?'checkbox':'radio'}" name="correctAnswer" value="${i}" ${selected.includes(i)?'checked':''}>${letter}</label>`;
+  }).join('');
 }
-$('#questionType').onchange = () => renderAnswerChoices();
+$('#questionType').onchange = () => renderAnswerChoices(currentSelection());
+const currentSelection = () => Array.from(document.querySelectorAll('[name="correctAnswer"]:checked'), el => Number(el.value));
+['o0','o1','o2','o3','o4','o5'].forEach(id => $('#'+id).oninput = () => renderAnswerChoices(currentSelection()));
 renderAnswerChoices();
 $('#course').onchange = renderRecent;
+
+/* ---------- 一键录入：解析粘贴的整段题目 ---------- */
+function parseQuestionBlock(raw) {
+  const lines = raw.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+  let type = null, answer = null, ansIdx = -1;
+  lines.forEach((l, i) => {
+    const t = l.match(/^【(单选|多选)题?】\s*(.*)$/);
+    if (t) { type = t[1] === '多选' ? 'multiple' : 'single'; lines[i] = t[2]; }
+    const a = lines[i].match(/^(?:正确答案|参考答案|答案)\s*[:：]?\s*([A-Fa-f]{1,6})\s*$/);
+    if (a && answer === null) { answer = a[1].toUpperCase(); ansIdx = i; }
+  });
+  if (answer === null) return { error: '没找到「答案：X」这一行，无法自动识别正确答案' };
+  const body = lines.slice(0, ansIdx).concat(lines.slice(ansIdx + 1)).filter(l => l.trim());
+  const optRe = /^([A-Fa-f])\s*[.、．:：)）]\s*(.+)$/;
+  const opts = []; const qLines = []; let seenOpt = false, stray = null;
+  body.forEach(l => {
+    const m = l.match(optRe);
+    if (m) { seenOpt = true; opts.push({ letter: m[1].toUpperCase(), text: m[2].trim() }); }
+    else if (!seenOpt) qLines.push(l);
+    else stray = l;
+  });
+  if (stray) return { error: '选项中间混入了非选项行：「' + stray + '」，请检查格式' };
+  if (!qLines.length) return { error: '没识别到题干' };
+  if (opts.length < 2) return { error: '只识别到 ' + opts.length + ' 个选项，至少需要两个' };
+  if (opts.length > 6) return { error: '识别到 ' + opts.length + ' 个选项，最多支持 6 个（A–F）' };
+  opts.sort((a, b) => a.letter.localeCompare(b.letter));
+  const letters = opts.map(o => o.letter);
+  const correct = [...answer].map(ch => letters.indexOf(ch)).filter(i => i >= 0);
+  if (!correct.length) return { error: '答案 ' + answer + ' 不在选项 ' + letters.join('') + ' 里' };
+  return { text: qLines.join(' '), options: opts.map(o => o.text), correct,
+    type: type || (correct.length > 1 ? 'multiple' : 'single') };
+}
+
+$('#parseBtn').onclick = () => {
+  const box = $('#parseResult'), hint = $('#parseHint');
+  const r = parseQuestionBlock($('#pasteBox').value);
+  box.style.display = 'block';
+  if (r.error) { box.textContent = '✕ ' + r.error; return; }
+  $('#qText').value = r.text;
+  r.options.forEach((t, i) => $('#o' + i).value = t);
+  for (let i = r.options.length; i < 6; i++) $('#o' + i).value = '';
+  $('#questionType').value = r.type;
+  renderAnswerChoices(r.correct);
+  box.textContent = '✓ 已填充：' + (r.type === 'multiple' ? '多选题' : '单选题') + ' · ' + r.options.length + ' 个选项 · 正确答案 ' + r.correct.map(i => 'ABCDEF'[i]).join('');
+  hint.textContent = '识别结果在上方，下方表单可继续手动修改。';
+};
 
 $('#startBtn').onclick = async () => {
   if(starting)return;
   const courseId = $('#course').value;
   if (!courseId) return toast('先选一门课程');
   const text = $('#qText').value.trim();
-  const rawOptions = [0, 1, 2, 3].map(i => $('#o' + i).value.trim());
+  const rawOptions = [0, 1, 2, 3, 4, 5].map(i => $('#o' + i).value.trim());
   const options = rawOptions.filter(Boolean);
   const selected = Array.from(document.querySelectorAll('[name="correctAnswer"]:checked'), el => Number(el.value));
   if (!selected.length || selected.some(i => !rawOptions[i])) return toast('请为已填写的选项设置正确答案');
@@ -298,7 +367,7 @@ function tickClock() {
   const m = Math.floor(REMAIN / 60000), s = Math.floor(REMAIN % 60000 / 1000);
   $('#clock').textContent = REMAIN > 0
     ? `剩余 ${m > 0 ? m + ' 分 ' : ''}${s} 秒 · 二维码每 3 秒刷新`
-    : '签到窗口已结束 · 仍在补签宽限内';
+    : '签到窗口已结束';
 }
 
 async function refreshState() {
@@ -333,7 +402,6 @@ function paintLive(st,archived) {
     return `${'ABCDEF'[i]}. ${esc(o)}`;
   }).join('　　');
   $('#nPresent').textContent = st.present;
-  $('#nLate').textContent = st.late;
   $('#nAbsent').textContent = st.absent.length;
   $('#nAnswered').textContent = st.answered;
   $('#absent').innerHTML = st.absent.length
@@ -408,6 +476,24 @@ $('#againBtn').onclick = async () => {
   if (fresh) DATA = fresh;
   STATE = null;
   renderStage1();
+};
+
+/* 归档后用同一道题重新发起签到（二维码自动刷新，签到数据归新一轮） */
+$('#reSignBtn').onclick = async () => {
+  if (starting || !ARCHIVED) return;
+  starting = true; $('#reSignBtn').disabled = true;
+  const st = ARCHIVED;
+  const d = await api('/api/session/start', {
+    courseId: st.courseId,
+    question: {
+      text: st.question.text,
+      options: st.question.options,
+      type: st.question.type || (Array.isArray(st.question.correct) ? 'multiple' : 'single'),
+      correct: st.question.correct
+    }
+  });
+  starting = false; $('#reSignBtn').disabled = false;
+  if (d) { toast('已用同一道题重新发起签到'); enterLive(); }
 };
 
 
@@ -486,14 +572,13 @@ function renderAttendanceTrend(list) {
 function renderAttendanceSessions(list) {
   if (!list.length) { $('#historyList').innerHTML = '<div class="empty">还没有点名记录</div>'; return; }
   $('#historyList').innerHTML = `<table>
-    <thead><tr><th>时间</th><th>题目</th><th class="num">到课</th><th class="num">迟到</th><th class="num">出勤率</th><th class="num">答对率</th><th></th></tr></thead>
+    <thead><tr><th>时间</th><th>题目</th><th class="num">到课</th><th class="num">出勤率</th><th class="num">答对率</th><th></th></tr></thead>
     <tbody>${list.map(s => {
       const cls = s.rate >= 90 ? 'ok' : s.rate >= 70 ? '' : 'warn';
       return `<tr>
         <td class="mono">${fmtTime(s.startedAt)}</td>
         <td title="${esc(s.question)}">${esc(s.question.slice(0, 26))}${s.question.length > 26 ? '…' : ''}</td>
         <td class="num">${s.present}/${s.total}</td>
-        <td class="num">${s.late}</td>
         <td class="num"><span class="tag ${cls}">${s.rate}%</span></td>
         <td class="num">${s.correctRate == null ? '—' : s.correctRate + '%'}</td>
         <td style="text-align:right"><a class="btn mini" href="/api/export.xlsx?sessionId=${s.id}">导出</a></td>
@@ -504,7 +589,7 @@ function renderAttendanceSessions(list) {
 function renderAttendanceStudents(list) {
   if (!list.length) { $('#historyPerStudent').innerHTML = '<div class="empty">这门课还没有名单</div>'; return; }
   $('#historyPerStudent').innerHTML = `<table>
-    <thead><tr><th>学号</th><th>姓名</th><th class="num">出勤</th><th class="num">缺勤</th><th class="num">迟到</th><th class="num">出勤率</th><th class="num">答对率</th></tr></thead>
+    <thead><tr><th>学号</th><th>姓名</th><th class="num">出勤</th><th class="num">缺勤</th><th class="num">出勤率</th><th class="num">答对率</th></tr></thead>
     <tbody>${list.map(s => {
       const bad = s.total > 0 && s.rate < 60;
       return `<tr>
@@ -512,7 +597,6 @@ function renderAttendanceStudents(list) {
         <td style="${bad ? 'color:#A32D2D' : ''}">${esc(s.name)}</td>
         <td class="num">${s.attended}/${s.total}</td>
         <td class="num" style="${s.absent ? 'color:#A32D2D' : ''}">${s.absent}</td>
-        <td class="num">${s.late}</td>
         <td class="num"><span class="tag ${bad ? 'bad' : s.rate >= 90 ? 'ok' : ''}">${s.total ? s.rate + '%' : '—'}</span></td>
         <td class="num">${s.correctRate == null ? '—' : s.correctRate + '%'}</td>
       </tr>`;

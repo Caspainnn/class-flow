@@ -43,7 +43,7 @@ const graceSlices = () => SETTINGS.tokenGrace == null
   ? 3   // 全新部署没有 settings.json 时也保证码有效 4 片（12s），不至于扫慢一点就过期
   : Math.max(0, Math.floor(Number(SETTINGS.tokenGrace) || 0));
 const windowMs = () => num(SETTINGS.windowMs, 90000);
-const lateGraceMs = () => num(SETTINGS.lateGraceMs, 600000);
+// 迟到状态已移除：窗口关闭即不能签，lateGraceMs 仅保留在 settings 里做兼容，不再参与判定
 const ticketTtlMs = () => num(SETTINGS.ticketTtlMs, 120000);
 const CODE_SLOT_MS = 30000;
 
@@ -212,7 +212,6 @@ function sessionState(s) {
     windowMs: windowMs(),
     total: roster.length,
     present: s.records.length,
-    late: s.records.filter(r => r.status === 'late').length,
     absent,
     dist,
     correct: answered.filter(r => r.correct).length,
@@ -243,7 +242,6 @@ function statOfSession(s) {
     question: s.question.text,
     total,
     present,
-    late: recs.filter(r => r.status === 'late').length,
     absent: Math.max(0, total - present),
     rate: total ? round1(present / total * 100) : 0,
     correctRate: answered.length ? round1(answered.filter(r => r.correct).length / answered.length * 100) : null,
@@ -258,12 +256,11 @@ function courseStats(courseId) {
   const sessions = getSessions().filter(s => s.courseId === courseId).sort((a, b) => a.startedAt - b.startedAt);
 
   const perStudent = roster.map(stu => {
-    let attended = 0, late = 0, answered = 0, correct = 0;
+    let attended = 0, answered = 0, correct = 0;
     sessions.forEach(s => {
       const r = s.records.find(x => x.studentId === stu.id);
       if (!r) return;
       attended++;
-      if (r.status === 'late') late++;
       if (answers.answered(r.answer)) { answered++; if (r.correct) correct++; }
     });
     return {
@@ -271,7 +268,6 @@ function courseStats(courseId) {
       name: stu.name,
       total: sessions.length,
       attended,
-      late,
       absent: sessions.length - attended,
       rate: sessions.length ? round1(attended / sessions.length * 100) : 0,
       correctRate: answered ? round1(correct / answered * 100) : null
@@ -484,7 +480,7 @@ const handler = async (req, res) => {
       });
     }
     const now = Date.now();
-    if (now > s.endsAt + lateGraceMs()) return json(res, 400, { error: '本次签到已关闭' });
+    if (now > s.endsAt) return json(res, 400, { error: '本次签到已关闭，请看投影上最新的二维码' });
 
     // 一台设备一个会话只能领一张票：挡「同一部手机反复扫码帮别人签」
     let dev = deviceOf(req);
@@ -498,10 +494,10 @@ const handler = async (req, res) => {
     }
 
     const ticket = crypto.randomBytes(16).toString('hex');
-    tickets.set(ticket, { claimedAt: now, exp: now + ticketTtlMs(), used: false, late: now > s.endsAt, device: dev });
+    tickets.set(ticket, { claimedAt: now, exp: now + ticketTtlMs(), used: false, device: dev });
     const course = findCourse(s.courseId);
     return json(res, 200, {
-      ok: true, ticket, late: now > s.endsAt,
+      ok: true, ticket,
       expiresIn: ticketTtlMs(),
       title: course ? course.name : '',
       question: { text: s.question.text, options: s.question.options, type: s.question.type || (Array.isArray(s.question.correct) ? 'multiple' : 'single') }
@@ -535,7 +531,7 @@ const handler = async (req, res) => {
     s.records.push({
       studentId: stu.id,
       name: stu.name,
-      status: t.late ? 'late' : 'present',
+      status: 'present',
       claimedAt: t.claimedAt,
       submittedAt: Date.now(),
       answer,
@@ -544,7 +540,7 @@ const handler = async (req, res) => {
     saveSession(s);
     // 不告诉学生答对没答对：课上不揭晓，避免互相看分数、也避免打击
     return json(res, 200, {
-      ok: true, name: stu.name, status: t.late ? 'late' : 'present',
+      ok: true, name: stu.name, status: 'present',
       present: s.records.length, total: roster.length
     });
   }
@@ -846,7 +842,7 @@ const handler = async (req, res) => {
 
     const sub = multi
       ? `共 ${list.length} 次点名　名单 ${roster.length} 人　导出 ${stamp(Date.now())}`
-      : `到课 ${list[0].records.length}/${roster.length}　迟到 ${list[0].records.filter(r => r.status === 'late').length}　`
+      : `到课 ${list[0].records.length}/${roster.length}　`
         + `缺勤 ${Math.max(0, roster.length - list[0].records.length)}　本题：${list[0].question.text}`;
     ws.mergeCells(2, 1, 2, N);
     ws.getRow(2).getCell(1).value = sub;
@@ -879,7 +875,7 @@ const handler = async (req, res) => {
           r && answers.answered(r.answer) ? answers.format(r.answer, s.question.options) : '',
           correctText,
           r ? (r.correct ? '对' : '错') : '',
-          r ? (r.status === 'late' ? '迟到' : '到课') : '缺勤',
+          r ? '到课' : '缺勤',
           r ? localDate(r.submittedAt || r.claimedAt) : ''
         ];
         row.values = multi ? [batch, ...base] : base;
@@ -898,7 +894,6 @@ const handler = async (req, res) => {
           cStatus.font = { size: 10.5, color: { argb: 'FFA03030' } };
           row.getCell(cSid + 1).font = { size: 10.5, color: { argb: 'FF9AA0A8' } };
         }
-        if (r && r.status === 'late') cStatus.font = { size: 10.5, color: { argb: 'FFBA7517' } };
         if (r && r.correct) cOk.font = { size: 10.5, color: { argb: 'FF1D9E75' } };
         row.height = 19;
       });
@@ -960,11 +955,11 @@ const handler = async (req, res) => {
 };
 
 /* ---------------- 启动 ---------------- */
-/* 重启后接着上次没结束的那场（老师电脑崩了不用重开一场） */
+/* 重启后接着上次没结束的那场（老师电脑崩了不用重开一场；窗口已过则不再续） */
 (function resumeActive() {
   const now = Date.now();
   const last = getSessions()
-    .filter(s => !s.closed && now < s.endsAt + lateGraceMs())
+    .filter(s => !s.closed && now < s.endsAt)
     .sort((a, b) => b.startedAt - a.startedAt)[0];
   if (last) activeSessionId = last.id;
 })();

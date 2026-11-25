@@ -66,7 +66,7 @@ function createService({root,now=Date.now}){
    if(open){active.push({title:allCourses.find(c=>c.id===s.courseId)?.name||'当前课堂',sub:'签到进行中',kind:'classroom',href});continue;}
    if(!r.includes(s.startedAt))continue;
    if(!records.length){emptySessions.push(s.id);continue;}
-   const valid=records.filter(v=>answers.answered(v.answer));sessions.push({id:s.id,courseId:s.courseId,date:day(s.startedAt),at:s.startedAt,total:studentIds.size,present:records.length,answered:valid.length,correct:valid.filter(v=>v.correct).length,late:records.filter(v=>v.status==='late').length,href});
+   const valid=records.filter(v=>answers.answered(v.answer));sessions.push({id:s.id,courseId:s.courseId,date:day(s.startedAt),at:s.startedAt,total:studentIds.size,present:records.length,answered:valid.length,correct:valid.filter(v=>v.correct).length,href});
   }
   sessions.sort((a,b)=>a.at-b.at);
   function homeworkRow(h,b){const students=roster((h||b).courseId),studentIds=new Set(students.map(s=>s.id)),scores=h?.scores||{},results=b?.results||{},matched=new Set((b?.files||[]).filter(f=>f.status==='matched'&&studentIds.has(f.sid)).map(f=>f.sid)),valid=Object.entries(scores).filter(([id,e])=>studentIds.has(id)&&e&&e.st!=='no'&&Number.isFinite(e.score));
@@ -96,7 +96,7 @@ function createService({root,now=Date.now}){
   const pptTemplates=folders(path.join(root,'ppt','_templates'),'template.json').filter(t=>!t.deletedAt);
   let planTemplates=[];const templateDir=path.join(root,'lesson-plan','templates');if(fs.existsSync(templateDir))planTemplates=fs.readdirSync(templateDir).filter(n=>/^[a-f0-9]{24}\.json$/.test(n)).map(n=>read(path.join(templateDir,n),{}));
   const templateCounts={ppt:pptTemplates.length,layouts:pptTemplates.reduce((n,t)=>n+(t.profile?.confirmed?(t.profile.layoutGroups||[]).length:0),0),plan:planTemplates.length+1};
-  const byDate=new Map();sessions.forEach(s=>{let v=byDate.get(s.date);if(!v){v={date:s.date,total:0,present:0,answered:0,correct:0,late:0};byDate.set(s.date,v);}for(const k of ['total','present','answered','correct','late'])v[k]+=s[k];});
+  const byDate=new Map();sessions.forEach(s=>{let v=byDate.get(s.date);if(!v){v={date:s.date,total:0,present:0,answered:0,correct:0};byDate.set(s.date,v);}for(const k of ['total','present','answered','correct'])v[k]+=s[k];});
   return {generatedAt:time,range:{from:r.from,to:r.to},options:{courses:allCourses.map(c=>({id:c.id,name:c.name})),terms:[...new Set(allCourses.map(c=>c.term||'未设置'))]},courses,sessions,trend:[...byDate.values()],homework,surveys,resources:resources.sort((a,b)=>b.at-a.at),tasks,templateCounts,emptySessions:emptySessions.length,activeSessions:active.length,notice:'历史课堂按当前名单统计；关注人次按当前课程全量规则计算，缺成绩不等于已核实未交。',filters:{courseId,term}};
  }
  return {snapshot};

@@ -240,7 +240,7 @@ async function api(u) { try { const r = await fetch(u, { cache: 'no-store' }); r
     $('#lastCard').querySelector('h2').innerHTML =
       `最近一次点名 <span>${fmt(latest.startedAt)} · ${esc(c ? c.name : '')}</span>` +
       `<a class="more" href="/api/export.xlsx?sessionId=${latest.id}">导出这次 →</a>`;
-    $('#last').innerHTML=`<div class="last-metrics"><div class="last-metric">到课人数<b>${latest.present}<small style="font-size:12px;color:#93a2af;font-weight:400"> / ${latest.total}</small></b></div><div class="last-metric">迟到人数<b style="color:var(--amber)">${latest.late}</b></div><div class="last-metric">缺勤人数<b style="color:${latest.absent?'var(--red)':'#2f4d67'}">${latest.absent}</b></div><div class="last-metric">答对率<b style="color:var(--ok)">${latest.correctRate==null?'—':latest.correctRate+'%'}</b></div></div>${latest.question?`<div class="last-question">课堂题目 · ${esc(latest.question)}</div>`:''}`;
+    $('#last').innerHTML=`<div class="last-metrics"><div class="last-metric">到课人数<b>${latest.present}<small style="font-size:12px;color:#93a2af;font-weight:400"> / ${latest.total}</small></b></div><div class="last-metric">缺勤人数<b style="color:${latest.absent?'var(--red)':'#2f4d67'}">${latest.absent}</b></div><div class="last-metric">答对率<b style="color:var(--ok)">${latest.correctRate==null?'—':latest.correctRate+'%'}</b></div></div>${latest.question?`<div class="last-question">课堂题目 · ${esc(latest.question)}</div>`:''}`;
   }
 })();
 </script>

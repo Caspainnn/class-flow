@@ -212,10 +212,9 @@ if (location.hash === '#ima') location.replace('/courses');
       </div>
       <div class="row">
         <div class="col"><label for="setWindow">签到窗口（秒）</label><input id="setWindow" type="number" step="10" min="10"></div>
-        <div class="col"><label for="setLate">迟到补签宽限（分钟）</label><input id="setLate" type="number" step="1" min="0"></div>
+        <div class="col"><label for="setTicket">答题凭证有效期（秒）</label><input id="setTicket" type="number" step="10" min="20"></div>
       </div>
       <div class="row">
-        <div class="col"><label for="setTicket">答题凭证有效期（秒）</label><input id="setTicket" type="number" step="10" min="20"></div>
         <div class="col"><label for="setPort">端口（改 bat 里的 PORT，重启生效）</label><input id="setPort" readonly></div>
       </div>
       <div class="hint" id="setHint"></div>
@@ -403,14 +402,13 @@ function renderTrend(list) {
 function renderSessionTable(list) {
   if (!list.length) { $('dashList').innerHTML = '<div class="empty">还没有点名记录</div>'; return; }
   $('dashList').innerHTML = `<table>
-    <thead><tr><th>时间</th><th>题目</th><th class="num">到课</th><th class="num">迟到</th><th class="num">出勤率</th><th class="num">答对率</th><th></th></tr></thead>
+    <thead><tr><th>时间</th><th>题目</th><th class="num">到课</th><th class="num">出勤率</th><th class="num">答对率</th><th></th></tr></thead>
     <tbody>${list.map(s => {
       const cls = s.rate >= 90 ? 'ok' : s.rate >= 70 ? '' : 'warn';
       return `<tr>
         <td class="mono">${fmtTime(s.startedAt)}</td>
         <td title="${esc(s.question)}">${esc(s.question.slice(0, 26))}${s.question.length > 26 ? '…' : ''}</td>
         <td class="num">${s.present}/${s.total}</td>
-        <td class="num">${s.late}</td>
         <td class="num"><span class="tag ${cls}">${s.rate}%</span></td>
         <td class="num">${s.correctRate == null ? '—' : s.correctRate + '%'}</td>
         <td style="text-align:right"><a class="btn mini" href="/api/export.xlsx?sessionId=${s.id}">导出</a></td>
@@ -421,7 +419,7 @@ function renderSessionTable(list) {
 function renderPerStudent(list) {
   if (!list.length) { $('perStu').innerHTML = '<div class="empty">这门课还没有名单</div>'; return; }
   $('perStu').innerHTML = `<table>
-    <thead><tr><th>学号</th><th>姓名</th><th class="num">出勤</th><th class="num">缺勤</th><th class="num">迟到</th><th class="num">出勤率</th><th class="num">答对率</th></tr></thead>
+    <thead><tr><th>学号</th><th>姓名</th><th class="num">出勤</th><th class="num">缺勤</th><th class="num">出勤率</th><th class="num">答对率</th></tr></thead>
     <tbody>${list.map(s => {
       const bad = s.total > 0 && s.rate < 60;
       return `<tr>
@@ -429,7 +427,6 @@ function renderPerStudent(list) {
         <td style="${bad ? 'color:#A32D2D' : ''}">${esc(s.name)}</td>
         <td class="num">${s.attended}/${s.total}</td>
         <td class="num" style="${s.absent ? 'color:#A32D2D' : ''}">${s.absent}</td>
-        <td class="num">${s.late}</td>
         <td class="num"><span class="tag ${bad ? 'bad' : s.rate >= 90 ? 'ok' : ''}">${s.total ? s.rate + '%' : '—'}</span></td>
         <td class="num">${s.correctRate == null ? '—' : s.correctRate + '%'}</td>
       </tr>`;
@@ -641,7 +638,6 @@ function renderSettings() {
   $('setRefresh').value = s.codeRefreshMs || 3000;
   $('setGrace').value = s.tokenGrace == null ? 3 : s.tokenGrace;
   $('setWindow').value = Math.round((s.windowMs || 90000) / 1000);
-  $('setLate').value = Math.round((s.lateGraceMs || 600000) / 60000);
   $('setTicket').value = Math.round((s.ticketTtlMs || 120000) / 1000);
   const R = Object.assign({ absenceRun: 2, corLastN: 5, corMinAns: 3, corRate: 20, hwMiss: 2, hwLow: 2, hwLowScore: 60 }, s.xqRules || {});
   $('setAbsRun').value = R.absenceRun;
@@ -659,16 +655,15 @@ function hint() {
   const g = Number($('setGrace').value) || 0;
   $('setHint').textContent =
     `当前设置下：二维码每 ${r / 1000} 秒换一次，实际有效 ${(r * (g + 1)) / 1000} 秒（最后 ${g} 片仍可用）。`
-    + ` 签到窗口 ${$('setWindow').value} 秒，超时后 ${$('setLate').value} 分钟内算迟到。`;
+    + ` 签到窗口 ${$('setWindow').value} 秒，窗口关闭后即不能签到。`;
 }
-['setRefresh', 'setGrace', 'setWindow', 'setLate', 'setTicket'].forEach(id => { $(id).oninput = hint; });
+['setRefresh', 'setGrace', 'setWindow', 'setTicket'].forEach(id => { $(id).oninput = hint; });
 
 $('saveSet').onclick = async () => {
   const d = await api('/api/settings', {
     codeRefreshMs: Number($('setRefresh').value),
     tokenGrace: Number($('setGrace').value),
     windowMs: Number($('setWindow').value) * 1000,
-    lateGraceMs: Number($('setLate').value) * 60000,
     ticketTtlMs: Number($('setTicket').value) * 1000
   }, 'PUT');
   if (d) { toast('已保存，下一场点名生效'); D.settings = d; hint(); }

@@ -185,7 +185,7 @@ async function claim(payload) {
     TICKET = d.ticket;
     LEFT = Math.floor(d.expiresIn / 1000);
     if (d.title) $('course').textContent = d.title;
-    buildForm(d.question, d.late);
+    buildForm(d.question);
   } catch (e) {
     netFail(e);
   }
@@ -222,7 +222,7 @@ function useKnown(on) {
   sync();
 }
 
-function buildForm(q, late) {
+function buildForm(q) {
   $('formErr').classList.remove('on');
   $('formErr').textContent = '';
   $('submit').textContent = '提交并签到';
@@ -254,11 +254,6 @@ function buildForm(q, late) {
   $('sid').oninput = () => { $('sid').value = $('sid').value.replace(/\D/g, ''); sync(); };
   $('sname').oninput = () => sync();
   $('whoEdit').onclick = () => useKnown(false);
-
-  if (late) {
-    $('state').classList.add('warn');
-    $('stateText').textContent = '迟到签到';
-  }
 
   view('vForm');
   sync();
@@ -320,7 +315,6 @@ $('submit').onclick = async () => {
     clearInterval(timerId);
     $('doneTitle').textContent = '签到成功';
     $('doneSub').innerHTML = `${esc(d.name)} · 第 ${d.present} 位到课`
-      + (d.status === 'late' ? '（迟到）' : '')
       + '<br>答案已提交，这节课的题老师会讲。';
     view('vDone');
   } catch (e) {

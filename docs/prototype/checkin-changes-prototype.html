@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>签到调整原型 · 2026-11-25</title>
+<style>
+:root{--ink:#1F1D1A;--ink2:#5F5E5A;--ink3:#8A867E;--line:#E2DED6;--line2:#ECE8E0;--fill:#F5F3EE;
+  --blue:#185FA5;--ok:#1D9E75;--accent:#B5502E;--amber:#BA7517}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#F7F6F3;color:var(--ink);font-family:-apple-system,"Segoe UI","Microsoft YaHei","PingFang SC",sans-serif;
+  padding:20px;max-width:860px;margin:0 auto}
+.note{background:#E6F1FB;border:1px solid #B5D4F4;border-radius:10px;padding:12px 16px;font-size:13px;line-height:1.7;margin-bottom:16px}
+.note b{font-weight:600}
+.card{background:#fff;border:1px solid var(--line2);border-radius:14px;padding:20px 22px;margin-bottom:14px}
+h2{font-size:16px;font-weight:500;margin-bottom:4px}
+h2 span{font-size:12px;color:var(--ink3);font-weight:400;margin-left:8px}
+label{display:block;font-size:12px;color:var(--ink3);margin:0 0 6px}
+input,select,textarea{font-family:inherit;font-size:14px;padding:9px 11px;border:1px solid var(--line);
+  border-radius:9px;background:#FCFBF9;color:var(--ink);outline:none;width:100%}
+input:focus,textarea:focus{border-color:var(--blue);background:#fff}
+.row{display:flex;gap:12px;margin-bottom:12px;flex-wrap:wrap}
+.col{flex:1;min-width:120px}
+.btn{font-family:inherit;font-size:13.5px;padding:9px 16px;border-radius:9px;border:1px solid var(--line);
+  background:#fff;color:var(--ink);cursor:pointer}
+.btn:hover{border-color:var(--ink3)}
+.btn.pri{background:var(--ink);color:#fff;border-color:var(--ink)}
+.btn.pri:hover{background:#332F2A}
+.btn.new{background:#185FA5;color:#fff;border-color:#185FA5}
+.btn.big{font-size:14.5px;padding:11px 22px}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.badge{display:inline-block;font-size:10.5px;padding:2px 7px;border-radius:99px;margin-left:8px;vertical-align:2px}
+.badge.add{background:#E1F5EE;color:#0F6E56}
+.badge.mod{background:#FAEEDA;color:#854F0B}
+.hint{font-size:12px;color:var(--ink3);line-height:1.7}
+.steps{display:flex;gap:8px;margin:4px 0 16px}
+.step{flex:1;text-align:center;font-size:12px;color:var(--ink3);padding:8px 0;border-radius:9px;background:#fff;border:1px solid var(--line2)}
+.step.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.stats{display:flex;gap:34px;margin-top:14px}
+.stat b{font-size:24px;font-weight:500;display:block}
+.stat span{font-size:11px;color:var(--ink3)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:11px;padding:3px 9px;border-radius:99px;background:var(--fill);color:var(--ink2)}
+.optrow{display:flex;gap:12px;margin-bottom:10px}
+.optrow .k{flex:0 0 22px;display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--ink3);font-weight:500}
+.answers{display:flex;gap:14px;align-items:center}
+.answers label{display:flex;align-items:center;gap:5px;font-size:13.5px;color:var(--ink);margin:0;cursor:pointer}
+.foot{display:flex;justify-content:flex-end;gap:10px;border-top:1px solid var(--line2);padding-top:14px;margin-top:16px;flex-wrap:wrap;align-items:center}
+.toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);background:#17191C;color:#fff;font-size:13px;
+  padding:10px 18px;border-radius:9px;opacity:0;transition:.2s;pointer-events:none;max-width:80vw}
+.toast.on{opacity:1}
+.hidden{display:none!important}
+.parsed{background:#EDF6F1;border:1px solid #C8E5D6;border-radius:9px;padding:10px 14px;font-size:12.5px;color:#0F6E56;
+  margin:10px 0;line-height:1.8;display:none}
+.qrbox{width:190px;flex:0 0 190px}
+.answer-ok{color:#0F6E56;font-weight:500}
+</style>
+</head>
+<body>
+
+<div class="note">
+  <b>签到调整原型（可交互）</b> · 对应三条需求：① 移除迟到状态，历史迟到记录一律归为正常签到；
+  ② 出题支持一键录入——粘贴整段题目自动填选项和答案（下方解析器真实可用，可直接粘贴试）；
+  ③ 结束归档页右下角新增「重新签到」，同一道题一键再发起。灰色「新增/调整」标签标出每处变化。
+</div>
+
+<div class="steps">
+  <div class="step on" id="s1">1 选题 · 出题</div>
+  <div class="step" id="s2">2 扫码签到</div>
+  <div class="step" id="s3">3 结束归档</div>
+</div>
+
+<!-- ============ 第一步：出题 ============ -->
+<div id="stage1">
+  <div class="card">
+    <h2>一键录入<span>粘贴题干 + 选项 + 答案，自动识别填充</span><span class="badge add">新增</span></h2>
+    <div class="row">
+      <div class="col" style="flex:3 1 400px">
+        <textarea id="pasteBox" rows="7" placeholder="把题目整段粘贴到这里，点「识别并填充」">
+你的 PPT 质检服务依赖 Windows 的 PowerPoint COM 接口，但远程云服务器是 Linux。若要求质检结果与真实 PowerPoint 渲染尽量一致，最稳妥的部署方案是？
+A. 直接在 Linux 上用 python-pptx 完全替代 COM
+B. 在 Linux 上用 LibreOffice headless 渲染，并默认结果与 PowerPoint 完全一致
+C. 改用 Windows 云服务器，或把 COM 质检部分拆到 Windows Worker 上执行
+D. 把 PPT 后缀改成 .zip 后直接检查 XML，不需要考虑渲染
+E. 在 Linux 上安装 Microsoft PowerPoint 的 Linux 原生版
+F. 关闭安全组 22 端口以提高兼容性
+答案：C</textarea>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;align-items:center">
+      <button class="btn new" id="parseBtn">识别并填充 →</button>
+      <span class="hint" style="flex:1">支持「答案：C / 正确答案：AC / 【多选题】」等写法；选项 A–F 各一行</span>
+    </div>
+    <div class="parsed" id="parseResult"></div>
+  </div>
+
+  <div class="card">
+    <h2>本次签到<span>识别后字段自动带出，也可手动改</span><span class="badge mod">调整 · 选项扩到 A–F</span></h2>
+    <div class="row">
+      <div class="col" style="max-width:260px"><label>课程</label>
+        <select id="course"><option>高等数学（上）（48 人）</option></select></div>
+      <div class="col" style="max-width:130px"><label>题型</label>
+        <select id="questionType"><option value="single">单选题</option><option value="multiple">多选题</option></select></div>
+      <div class="col" style="min-width:220px"><label>正确答案</label>
+        <div class="answers" id="correctChoices"></div></div>
+    </div>
+    <div class="row"><div class="col"><label>题目</label><input id="qText" placeholder="例如：矩阵 A 可逆的充要条件是？"></div></div>
+    <div class="optrow"><span class="k">A</span><div class="col"><input id="o0"></div><span class="k">B</span><div class="col"><input id="o1"></div></div>
+    <div class="optrow"><span class="k">C</span><div class="col"><input id="o2"></div><span class="k">D</span><div class="col"><input id="o3"></div></div>
+    <div class="optrow"><span class="k">E</span><div class="col"><input id="o4" placeholder="选填"></div><span class="k">F</span><div class="col"><input id="o5" placeholder="选填"></div></div>
+    <div class="foot">
+      <span class="hint" style="margin-right:auto">开始后二维码投到大屏，学生扫码或输课堂码。</span>
+      <button class="btn pri big" id="startBtn">开始签到</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 第二步：扫码签到 ============ -->
+<div id="stage2" class="hidden">
+  <div class="card">
+    <h2>签到进行中<span id="courseName">高等数学（上） · 48 人</span></h2>
+    <p class="hint" id="clock" style="margin-bottom:14px"></p>
+    <div style="display:flex;gap:26px;flex-wrap:wrap;align-items:flex-start">
+      <div class="qrbox">
+        <svg id="qrSvg" viewBox="0 0 100 100" style="width:100%;border:1px solid var(--line2);border-radius:8px;background:#fff"></svg>
+        <div class="hint" style="text-align:center;margin-top:6px">学生访问 http://10.122.230.52:3000/join<span class="badge mod">调整 · 新增</span></div>
+      </div>
+      <div style="flex:1;min-width:240px">
+        <div style="font-size:12px;color:var(--ink3)">课堂码</div>
+        <div style="font-size:32px;font-weight:500;letter-spacing:4px" id="code">----<span class="badge mod">调整 · 码 3 秒轮换 · 有效 12 秒</span></div>
+        <div style="font-size:13.5px;margin-top:10px" id="liveQ">—</div>
+        <div class="stats">
+          <div class="stat"><b id="nPresent">0</b><span>已到</span></div>
+          <div class="stat"><b id="nAbsent" style="color:var(--ink3)">48</b><span>未到</span></div>
+          <div class="stat"><b id="nAnswered" style="color:var(--ok)">0</b><span>已答题</span></div>
+        </div>
+        <div class="hint" style="margin-top:6px">迟到状态已移除，补签宽限内的提交一律记为正常到课<span class="badge mod">调整 · 移除迟到</span></div>
+      </div>
+      <div style="flex:0 0 200px">
+        <div style="font-size:11.5px;color:var(--ink3);margin-bottom:8px">未到名单</div>
+        <div class="chips" id="absent"></div>
+      </div>
+    </div>
+    <div class="foot">
+      <span class="hint" style="margin-right:auto">原型演示：点右侧按钮模拟学生提交</span>
+      <button class="btn" id="mockBtn">模拟一名学生提交</button>
+      <button class="btn pri" id="endBtn">结束本次并归档</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 第三步：结束归档 ============ -->
+<div id="stage3" class="hidden">
+  <div class="card">
+    <h2>结束归档<span id="archiveMeta">高等数学（上） · 已归档</span></h2>
+    <div id="archiveQuestion" style="font-size:16px;line-height:1.7;margin:10px 0 14px">—</div>
+    <div id="archiveAnswer" style="padding:12px 15px;background:#EAF7F1;color:#0F6E56;border-radius:9px;font-size:14px;margin-bottom:14px">—</div>
+    <div id="archiveOptions"></div>
+    <p class="hint" id="archiveStats" style="margin-top:12px"></p>
+    <div class="foot">
+      <span class="badge add" style="margin-right:auto">新增 · 右下角「重新签到」</span>
+      <a class="btn" href="javascript:void(0)" onclick="toast('原型：跳转签到记录页')">查看签到记录</a>
+      <button class="btn" id="newQBtn">再出一道题</button>
+      <button class="btn pri" id="reSignBtn">重新签到</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+const $ = s => document.querySelector(s);
+const toast = t => { const e = $('#toast'); e.textContent = t; e.classList.add('on');
+  clearTimeout(toast._t); toast._t = setTimeout(() => e.classList.remove('on'), 2600); };
+
+/* ---------- 一键录入解析器（真实实现预览） ---------- */
+function parseQuestionBlock(raw) {
+  const lines = raw.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+  let type = null, answer = null, ansIdx = -1;
+  lines.forEach((l, i) => {
+    const t = l.match(/^【(单选|多选)题?】\s*(.*)$/);          // 【单选题】/【多选题】前缀
+    if (t) { type = t[1] === '多选' ? 'multiple' : 'single'; lines[i] = t[2]; }
+    const a = lines[i].match(/^(?:正确答案|参考答案|答案)\s*[:：]?\s*([A-Fa-f]{1,6})\s*$/);
+    if (a && answer === null) { answer = a[1].toUpperCase(); ansIdx = i; }
+  });
+  if (answer === null) return { error: '没找到「答案：X」这一行，无法自动识别正确答案' };
+  const body = lines.slice(0, ansIdx).concat(lines.slice(ansIdx + 1)).filter(l => l.trim());
+  const optRe = /^([A-Fa-f])\s*[.、．:：)）]\s*(.+)$/;
+  const opts = []; const qLines = []; let seenOpt = false, stray = null;
+  body.forEach(l => {
+    const m = l.match(optRe);
+    if (m) { seenOpt = true; opts.push({ letter: m[1].toUpperCase(), text: m[2].trim() }); }
+    else if (!seenOpt) qLines.push(l);          // 选项前的行 = 题干
+    else stray = l;                             // 选项后才出现的杂行才算异常
+  });
+  if (stray) return { error: '选项中间混入了非选项行："' + stray + '"' };
+  if (!qLines.length) return { error: '没识别到题干' };
+  if (opts.length < 2) return { error: '只识别到 ' + opts.length + ' 个选项，至少需要两个' };
+  if (opts.length > 6) return { error: '识别到 ' + opts.length + ' 个选项，最多支持 6 个（A–F）' };
+  opts.sort((a, b) => a.letter.localeCompare(b.letter));
+  const letters = opts.map(o => o.letter);
+  const correct = [...(answer || '')].map(ch => letters.indexOf(ch)).filter(i => i >= 0);
+  if (!correct.length) return { error: '答案 ' + answer + ' 不在选项 ' + letters.join('') + ' 里' };
+  return {
+    text: qLines.join(' '),
+    options: opts.map(o => o.text),
+    correct,
+    type: type || (correct.length > 1 ? 'multiple' : 'single')
+  };
+}
+
+const NAMES = ['张三','李雨桐','刘博涵','苏亦辰','沈嘉树','宋雨薇','周予安','陈知夏','林晚晴','赵一鸣'];
+let PRESENT = 0, ANSWERED = 0, LIVEQ = null, ARCHIVEDQ = null, TIMER = null, REMAIN = 90;
+
+function renderChoices(selected = [0]) {
+  const multiple = $('#questionType').value === 'multiple';
+  $('#correctChoices').innerHTML = 'ABCDEF'.split('').map((L, i) => {
+    const has = i < rawOptionCount();
+    return `<label style="${has ? '' : 'opacity:.35;pointer-events:none'}">
+      <input type="${multiple ? 'checkbox' : 'radio'}" name="correctAnswer" value="${i}" ${selected.includes(i) ? 'checked' : ''}>${L}</label>`;
+  }).join('');
+}
+function rawOptionCount() { return [0,1,2,3,4,5].filter(i => $('#o' + i).value.trim()).length; }
+$('#questionType').onchange = () => renderChoices();
+['o0','o1','o2','o3','o4','o5'].forEach(id => $('#'+id).oninput = () => renderChoices(currentSelection()));
+function currentSelection() { return Array.from(document.querySelectorAll('[name="correctAnswer"]:checked'), el => Number(el.value)); }
+
+$('#parseBtn').onclick = () => {
+  const r = parseQuestionBlock($('#pasteBox').value);
+  const box = $('#parseResult');
+  if (r.error) { box.style.display = 'block'; box.style.background = '#FBEDE9'; box.style.borderColor = '#F0C4B3';
+    box.style.color = '#93401F'; box.textContent = '✕ ' + r.error; return; }
+  box.style.display = 'block'; box.style.background = '#EDF6F1'; box.style.borderColor = '#C8E5D6'; box.style.color = '#0F6E56';
+  box.textContent = `✓ 识别成功：${r.type === 'multiple' ? '多选题' : '单选题'} · ${r.options.length} 个选项 · 正确答案 ${r.correct.map(i => 'ABCDEF'[i]).join('')}`;
+  fillForm(r);
+};
+
+function fillForm(r) {
+  $('#qText').value = r.text;
+  r.options.forEach((t, i) => $('#o' + i).value = t);
+  for (let i = r.options.length; i < 6; i++) $('#o' + i).value = '';
+  $('#questionType').value = r.type;
+  renderChoices(r.correct);
+}
+
+/* ---------- 流程切换 ---------- */
+function showStage(n) {
+  [1, 2, 3].forEach(i => {
+    $('#stage' + i).classList.toggle('hidden', i !== n);
+    $('#s' + i).classList.toggle('on', i === n);
+  });
+}
+
+/* 伪二维码：确定性伪随机图案 */
+function drawQR() {
+  let seed = 42;
+  const rnd = () => (seed = seed * 1103515245 + 12345 % 2147483648) % 97;
+  let cells = '';
+  for (let y = 0; y < 21; y++) for (let x = 0; x < 21; x++) {
+    const corner = (x < 7 && y < 7) || (x > 13 && y < 7) || (x < 7 && y > 13);
+    const dark = corner ? ((x % 6 === 0 || y % 6 === 0 || (x > 1 && x < 5 && y > 1 && y < 5))
+      || (x > 13 && (x % 6 === 1 || y % 6 === 0 || (x > 15 && x < 19 && y > 1 && y < 5)))
+      || (y > 13 && (y % 6 === 1 || x % 6 === 0 || (y > 15 && y < 19 && x > 1 && x < 5)))) : rnd() > 48;
+    if (dark) cells += `<rect x="${x * 100 / 21}" y="${y * 100 / 21}" width="${100 / 21}" height="${100 / 21}" fill="#1a1a1a"/>`;
+  }
+  $('#qrSvg').innerHTML = cells;
+}
+
+function enterLive(fresh) {
+  showStage(2);
+  drawQR();
+  PRESENT = fresh ? 0 : PRESENT; ANSWERED = fresh ? 0 : ANSWERED;
+  LIVEQ = $('#qText').value || LIVEQ;
+  $('#liveQ').textContent = LIVEQ;
+  REMAIN = 90;
+  paint();
+  clearInterval(TIMER);
+  TIMER = setInterval(() => {
+    REMAIN = Math.max(0, REMAIN - 1);
+    $('#clock').textContent = REMAIN > 0
+      ? `剩余 ${Math.floor(REMAIN / 60)} 分 ${REMAIN % 60} 秒 · 二维码每 3 秒刷新`
+      : '签到窗口已结束 · 仍在补签宽限内（提交记为正常到课）';
+  }, 1000);
+}
+
+function paint() {
+  $('#nPresent').textContent = PRESENT;
+  $('#nAbsent').textContent = 48 - PRESENT;
+  $('#nAnswered').textContent = ANSWERED;
+  $('#absent').innerHTML = NAMES.slice(PRESENT).map(n => `<span class="chip">${n}</span>`).join('') || '<span class="chip">全员已到</span>';
+}
+
+$('#startBtn').onclick = () => {
+  const opts = rawOptionCount(), sel = currentSelection(), text = $('#qText').value.trim();
+  if (!text) return toast('题目还没填');
+  if (opts < 2) return toast('至少填两个选项');
+  if (!sel.length || sel.some(i => i >= opts)) return toast('请为已填写的选项设置正确答案');
+  if ($('#questionType').value === 'multiple' && sel.length < 2) return toast('多选题至少两个正确答案');
+  LIVEQ = text;
+  PRESENT = 0; ANSWERED = 0;
+  enterLive(true);
+  toast('已开始，让学生扫码（原型）');
+};
+
+$('#mockBtn').onclick = () => { PRESENT = Math.min(48, PRESENT + 1); ANSWERED++; paint(); };
+
+$('#endBtn').onclick = () => {
+  clearInterval(TIMER);
+  ARCHIVEDQ = { text: LIVEQ, opts: [0,1,2,3,4,5].map(i => $('#o' + i).value.trim()).filter(Boolean),
+    correct: currentSelection(), type: $('#questionType').value };
+  renderArchive();
+  showStage(3);
+  toast('已归档（原型）');
+};
+
+function renderArchive() {
+  $('#archiveQuestion').textContent = ARCHIVEDQ.text;
+  $('#archiveAnswer').textContent = '正确答案：' + ARCHIVEDQ.correct.map(i => 'ABCDEF'[i]).join('、');
+  $('#archiveOptions').innerHTML = ARCHIVEDQ.opts.map((o, i) => {
+    const good = ARCHIVEDQ.correct.includes(i);
+    return `<div style="display:flex;justify-content:space-between;padding:11px 0;border-bottom:1px solid var(--line2);font-size:13.5px;${good ? 'color:#0F6E56;font-weight:500' : ''}">
+      <span>${'ABCDEF'[i]}. ${o}${good ? '（正确）' : ''}</span>
+      <span style="font-size:12px;color:var(--ink3)">${Math.floor(Math.random() * 12) + (good ? 8 : 0)} 人选择</span></div>`;
+  }).join('');
+  $('#archiveStats').textContent = `已签到 ${PRESENT} / 48 人 · 已答题 ${ANSWERED} 人 · 正确率 ${ANSWERED ? Math.round(ANSWERED * 0.7) + '%' : '—'}（原型数据）`;
+}
+
+$('#reSignBtn').onclick = () => {   /* 新增：复用同一道题重新发起 */
+  PRESENT = 0; ANSWERED = 0;
+  enterLive(true);
+  toast('已用同一道题重新发起签到，二维码已刷新');
+};
+$('#newQBtn').onclick = () => { showStage(1); toast('返回出题页，题目和选项保留，可修改后重新发起'); };
+
+renderChoices();
+drawQR();
+setInterval(() => { const c = Math.floor(Date.now() / 30000) % 10000;
+  $('#code').firstChild.textContent = String(c).padStart(4, '0'); }, 1000);
+$('#code').firstChild.textContent = '5183';
+$('#clock').textContent = '剩余 1 分 30 秒 · 二维码每 3 秒刷新';
+</script>
+</body>
+</html>
