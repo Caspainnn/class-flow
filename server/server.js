@@ -59,6 +59,12 @@ function deviceOf(req) {
   return m ? m[1] : null;
 }
 
+/* 学生手机发起请求时的来源地址（局域网直连，取 socket 地址最可靠） */
+function clientIp(req) {
+  const raw = (req.socket && (req.socket.remoteAddress || '')) || req.ip || '';
+  return String(raw).replace(/^::ffff:/i, '').replace(/^::1$/, '127.0.0.1');
+}
+
 /* ---------------- 工具 ---------------- */
 const readBody = (req, maxLen = 1e6) => new Promise(resolve => {
   let raw = '';
@@ -536,6 +542,7 @@ const handler = async (req, res) => {
       claimedAt: t.claimedAt,
       submittedAt: Date.now(),
       device: t.device || '',      // 重开签到后靠它挡住同一部手机重复签
+      ip: clientIp(req),           // 提交时的来源地址，导出表里用来查代签
       answer,
       correct: answers.matches(answer, s.question.correct)
     });
@@ -845,10 +852,10 @@ const handler = async (req, res) => {
 
     const roster = getStudents(list[0].courseId);
     const cols = multi
-      ? ['点名批次', '学号', '姓名', '题目', '提交答案', '正确答案', '是否正确', '状态', '签到时间']
-      : ['学号', '姓名', '题目', '提交答案', '正确答案', '是否正确', '状态', '签到时间'];
+      ? ['点名批次', '学号', '姓名', '题目', '提交答案', '正确答案', '是否正确', '状态', '签到时间', '提交 IP']
+      : ['学号', '姓名', '题目', '提交答案', '正确答案', '是否正确', '状态', '签到时间', '提交 IP'];
     const N = cols.length;
-    const cSid = multi ? 2 : 1, cTime = N;
+    const cSid = multi ? 2 : 1, cIp = N, cTime = N - 1;
 
     const wb = new ExcelJS.Workbook();
     wb.creator = '课中签到';
@@ -856,7 +863,7 @@ const handler = async (req, res) => {
     const sheetName = multi ? String((course && course.name) || '签到明细').slice(0, 24) : '签到明细';
     const ws = wb.addWorksheet(sheetName, { views: [{ state: 'frozen', ySplit: 3 }] });
 
-    const WIDTH = { '点名批次': 24, '学号': 15, '姓名': 11, '题目': 46, '提交答案': 24, '正确答案': 24, '是否正确': 9, '状态': 8, '签到时间': 19 };
+    const WIDTH = { '点名批次': 24, '学号': 15, '姓名': 11, '题目': 46, '提交答案': 24, '正确答案': 24, '是否正确': 9, '状态': 8, '签到时间': 19, '提交 IP': 16 };
     ws.columns = cols.map(c => ({ width: WIDTH[c] || 14 }));
 
     const head0 = multi
@@ -891,6 +898,9 @@ const handler = async (req, res) => {
       const byId = new Map(s.records.map(r => [r.studentId, r]));
       const correctText = answers.format(s.question.correct, s.question.options);
       const batch = `第 ${si + 1} 次 · ${stamp(s.startedAt)}`;
+      // 同一 IP 出现多人：可能是一条 NAT 出口（热点），也可能是代签，标出来人工看
+      const ipCount = new Map();
+      s.records.forEach(r => { if (r.ip) ipCount.set(r.ip, (ipCount.get(r.ip) || 0) + 1); });
 
       roster.forEach(stu => {
         const r = byId.get(stu.id);
@@ -903,7 +913,8 @@ const handler = async (req, res) => {
           correctText,
           r ? (r.correct ? '对' : '错') : '',
           r ? '到课' : '缺勤',
-          r ? localDate(r.submittedAt || r.claimedAt) : ''
+          r ? localDate(r.submittedAt || r.claimedAt) : '',
+          r ? (r.ip || '') : ''
         ];
         row.values = multi ? [batch, ...base] : base;
         row.getCell(cSid).numFmt = '@';            // 学号保持文本，不会被 Excel 转成数字
@@ -913,10 +924,17 @@ const handler = async (req, res) => {
           c.border = { bottom: { style: 'hair', color: { argb: 'FFEDEFF2' } } };
           c.alignment = Object.assign({ vertical: 'middle' }, c.alignment || {});
         });
-        const cStatus = row.getCell(N - 1);
-        const cOk = row.getCell(N - 2);
+        const cStatus = row.getCell(cIp - 1);
+        const cOk = row.getCell(cIp - 2);
         cStatus.alignment = { horizontal: 'center', vertical: 'middle' };
         cOk.alignment = { horizontal: 'center', vertical: 'middle' };
+        const cIpCell = row.getCell(cIp);
+        cIpCell.alignment = { horizontal: 'left', vertical: 'middle' };
+        cIpCell.font = { size: 10, color: { argb: 'FF6B7280' } };
+        if (r && r.ip && ipCount.get(r.ip) > 1) {
+          cIpCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFDF3E0' } };
+          cIpCell.font = { size: 10, color: { argb: 'FF9A5B00' } };
+        }
         if (!r) {
           cStatus.font = { size: 10.5, color: { argb: 'FFA03030' } };
           row.getCell(cSid + 1).font = { size: 10.5, color: { argb: 'FF9AA0A8' } };
