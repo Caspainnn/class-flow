@@ -489,7 +489,8 @@ const handler = async (req, res) => {
       res.setHeader('Set-Cookie',
         `${DEVICE_COOKIE}=${dev}; Path=/; Max-Age=31536000; SameSite=Lax`);
     }
-    if ([...tickets.values()].some(t => t.device === dev)) {
+    if ([...tickets.values()].some(t => t.device === dev)
+      || s.records.some(r => r.device && r.device === dev)) {
       return json(res, 400, { error: '这台手机本次已经签过了，一个人只能签一个学号' });
     }
 
@@ -534,6 +535,7 @@ const handler = async (req, res) => {
       status: 'present',
       claimedAt: t.claimedAt,
       submittedAt: Date.now(),
+      device: t.device || '',      // 重开签到后靠它挡住同一部手机重复签
       answer,
       correct: answers.matches(answer, s.question.correct)
     });
@@ -635,6 +637,31 @@ const handler = async (req, res) => {
     const s = startSession(b.courseId, b.question);
     if (s.error) return json(res, 400, s);
     return json(res, 200, { ok: true, sessionId: s.id });
+  }
+
+  /* 重新签到：把已归档的同一场签到重新开放，已签到的记录原样保留，二维码继续可用 */
+  if (p === '/api/session/reopen' && m === 'POST') {
+    const b = await readBody(req);
+    const id = String(b.sessionId || '').trim();
+    if (!id) return json(res, 400, { error: '请指定要重新签到的场次' });
+    const current = currentSession();
+    const s = getSessions().find(x => x.id === id);
+    if (!s) return json(res, 404, { error: '这场签到不存在，可能已被删除' });
+    if (current && !current.closed && current.id !== id) {
+      return json(res, 409, { error: '已有进行中的签到，请先结束或取消当前签到' });
+    }
+    if (!getStudents(s.courseId).length) {
+      return json(res, 400, { error: '这门课还没有名单，先去后台导入名单' });
+    }
+    const now = Date.now();
+    s.closed = false;
+    s.endsAt = now + windowMs();
+    s.reopenedAt = now;                       // 只作追溯用，不参与统计
+    s.reopenCount = (s.reopenCount || 0) + 1;
+    saveSession(s);
+    activeSessionId = s.id;
+    tickets = new Map();                      // 新一批票据，已签到的学号仍会被 submit 挡住
+    return json(res, 200, { ok: true, sessionId: s.id, session: sessionState(s) });
   }
 
   if (p === '/api/session/state') {

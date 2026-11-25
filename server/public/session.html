@@ -176,8 +176,9 @@ input:focus,select:focus{border-color:var(--blue);background:#fff}
         <div style="border-top:1px solid var(--line2);margin-top:18px;padding-top:14px;display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap">
           <a class="btn" href="/session?tab=records" onclick="event.preventDefault();attendanceTab('records')">查看签到记录</a>
           <button class="btn" id="againBtn">再出一道题</button>
-          <button class="btn pri" id="reSignBtn">重新签到</button>
+          <button class="btn pri" id="reSignBtn" title="重新开放这一场：已签到记录保留，二维码继续可用">重新签到</button>
         </div>
+        <p class="hint" style="margin:10px 0 0;text-align:right">「重新签到」= 重新开放这一场：已到的同学记录保留，同一个二维码继续可用，未到的同学还能扫。</p>
       </div>
     </div>
     <div class="flow-footer"><button class="flow-back" id="attendancePrev" disabled>← 上一步</button></div>
@@ -478,22 +479,14 @@ $('#againBtn').onclick = async () => {
   renderStage1();
 };
 
-/* 归档后用同一道题重新发起签到（二维码自动刷新，签到数据归新一轮） */
+/* 归档后重新开放同一场签到：二维码继续用，已签到的记录保留，没签的同学还能扫 */
 $('#reSignBtn').onclick = async () => {
   if (starting || !ARCHIVED) return;
   starting = true; $('#reSignBtn').disabled = true;
-  const st = ARCHIVED;
-  const d = await api('/api/session/start', {
-    courseId: st.courseId,
-    question: {
-      text: st.question.text,
-      options: st.question.options,
-      type: st.question.type || (Array.isArray(st.question.correct) ? 'multiple' : 'single'),
-      correct: st.question.correct
-    }
-  });
+  const kept = ARCHIVED.present;
+  const d = await api('/api/session/reopen', { sessionId: ARCHIVED.id });
   starting = false; $('#reSignBtn').disabled = false;
-  if (d) { toast('已用同一道题重新发起签到'); enterLive(); }
+  if (d) { toast(`已重新开放签到，保留已到 ${kept} 人`); enterLive(); }
 };
 
 
@@ -581,10 +574,19 @@ function renderAttendanceSessions(list) {
         <td class="num">${s.present}/${s.total}</td>
         <td class="num"><span class="tag ${cls}">${s.rate}%</span></td>
         <td class="num">${s.correctRate == null ? '—' : s.correctRate + '%'}</td>
-        <td style="text-align:right"><a class="btn mini" href="/api/export.xlsx?sessionId=${s.id}">导出</a></td>
+        <td style="text-align:right;white-space:nowrap"><a class="btn mini" href="#" onclick="reopenFromHistory('${s.id}');return false">重新签到</a> <a class="btn mini" href="/api/export.xlsx?sessionId=${s.id}">导出</a></td>
       </tr>`;
     }).join('')}</tbody></table>`;
 }
+
+/* 从签到记录里重新开放某一场：复用原场次的二维码与已签到数据 */
+window.reopenFromHistory = async function (id) {
+  const d = await api('/api/session/reopen', { sessionId: id });
+  if (!d) return;
+  DATA = (await api('/api/all')) || DATA;
+  toast('已重新开放该场签到，已签到记录保留');
+  enterLive();
+};
 
 function renderAttendanceStudents(list) {
   if (!list.length) { $('#historyPerStudent').innerHTML = '<div class="empty">这门课还没有名单</div>'; return; }
