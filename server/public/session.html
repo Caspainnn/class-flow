@@ -18,6 +18,9 @@
 .btn.pri:hover{background:#2c2f33}
 .btn.mini{padding:5px 10px;font-size:11.5px}
 .btn.big{padding:11px 22px;font-size:13px}
+.btn:disabled,.btn[disabled]{opacity:.45;cursor:not-allowed}
+.btn:disabled:hover,.btn[disabled]:hover{border-color:var(--line)}
+.feedback-dialog .btn[hidden]{display:none}
 .card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:18px 20px;margin-bottom:12px}
 .card h2{font-size:13px;font-weight:500;margin:0 0 14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .card h2 span{font-weight:400;color:var(--ink3);font-size:11.5px}
@@ -200,7 +203,7 @@ input:focus,select:focus{border-color:var(--blue);background:#fff}
   <h2 id="cancelSessionTitle">取消本次签到？</h2>
   <p id="cancelSessionMessage"></p>
   <p id="cancelSessionError" role="alert" hidden></p>
-  <div class="feedback-actions"><button class="btn" id="keepSessionBtn" autofocus>继续签到</button><button class="btn danger" id="confirmCancelSessionBtn">确认取消并返回选题</button></div>
+  <div class="feedback-actions"><button class="btn" id="keepSessionBtn" autofocus>继续签到</button><button class="btn pri" id="endFromCancelBtn" hidden>结束本次并归档</button><button class="btn danger" id="confirmCancelSessionBtn">确认取消并返回选题</button></div>
 </dialog>
 <script src="/shell.js"></script>
 <script>
@@ -432,9 +435,17 @@ function paintLive(st,archived) {
 }
 
 function renderCancelMessage(){
-  const blocked=!STATE||STATE.id!==cancelTargetId||STATE.present>0;
-  $('#confirmCancelSessionBtn').disabled=blocked||ending;
-  $('#cancelSessionMessage').textContent=STATE&&STATE.present>0?'已有学生提交签到，不能取消或返回选题。请保留本次数据，使用“结束本次并归档”。':'确认取消本次签到？当前尚无学生提交，取消后二维码和课堂码失效，本次空记录将移除，不计入签到次数与学情分析。';
+  const stale = !STATE || STATE.id !== cancelTargetId;
+  const hasRecords = !!(STATE && STATE.present > 0);
+  const blocked = stale || hasRecords;
+  $('#confirmCancelSessionBtn').disabled = blocked || ending;
+  // 已有学生提交时，取消本来就不允许：把死按钮换成能用的「结束并归档」，别让人点了没反应
+  $('#confirmCancelSessionBtn').hidden = hasRecords;
+  $('#endFromCancelBtn').hidden = !hasRecords;
+  $('#cancelSessionTitle').textContent = hasRecords ? '已有学生签到，不能取消' : '取消本次签到？';
+  $('#cancelSessionMessage').textContent = hasRecords
+    ? '已有学生提交签到，不能取消或返回选题。请保留本次数据，使用“结束本次并归档”。'
+    : '确认取消本次签到？当前尚无学生提交，取消后二维码和课堂码失效，本次空记录将移除，不计入签到次数与学情分析。';
 }
 function closeCancelSession(){if($('#cancelSessionPanel').open)$('#cancelSessionPanel').close();cancelTargetId=null;}
 function requestCancelSession(){
@@ -456,6 +467,7 @@ $('#confirmCancelSessionBtn').onclick=async()=>{
   STATE=null;closeCancelSession();showStage(1);$('#startBtn').focus();
   toast('已取消本次签到，空记录已移除；题目保留，可修改后重新发起');
 };
+$('#endFromCancelBtn').onclick=()=>{if(ending)return;closeCancelSession();$('#endBtn').click();};
 $('#attendancePrev').onclick=()=>{
   if(stage===3&&ARCHIVED){archiveReview=true;showStage(2);paintLive(ARCHIVED,true);}
   else if(stage===2&&archiveReview){archiveReview=false;showStage(1);}
