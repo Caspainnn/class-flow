@@ -77,14 +77,15 @@ input:focus,textarea:focus{border-color:var(--blue);background:#fff}
     <div class="row">
       <div class="col" style="flex:3 1 400px">
         <textarea id="pasteBox" rows="7" placeholder="把题目整段粘贴到这里，点「识别并填充」">
+**选择题：**
 你的 PPT 质检服务依赖 Windows 的 PowerPoint COM 接口，但远程云服务器是 Linux。若要求质检结果与真实 PowerPoint 渲染尽量一致，最稳妥的部署方案是？
-A. 直接在 Linux 上用 python-pptx 完全替代 COM
+A. 直接在 Linux 上用 `python-pptx` 完全替代 COM
 B. 在 Linux 上用 LibreOffice headless 渲染，并默认结果与 PowerPoint 完全一致
 C. 改用 Windows 云服务器，或把 COM 质检部分拆到 Windows Worker 上执行
-D. 把 PPT 后缀改成 .zip 后直接检查 XML，不需要考虑渲染
+D. 把 PPT 后缀改成 `.zip` 后直接检查 XML，不需要考虑渲染
 E. 在 Linux 上安装 Microsoft PowerPoint 的 Linux 原生版
 F. 关闭安全组 22 端口以提高兼容性
-答案：C</textarea>
+**答案：C**</textarea>
       </div>
     </div>
     <div style="display:flex;gap:10px;align-items:center">
@@ -174,13 +175,29 @@ const toast = t => { const e = $('#toast'); e.textContent = t; e.classList.add('
   clearTimeout(toast._t); toast._t = setTimeout(() => e.classList.remove('on'), 2600); };
 
 /* ---------- 一键录入解析器（真实实现预览） ---------- */
+/* 粘贴内容常带 Markdown 痕迹（**加粗**、`代码`、行首列表符等），先洗干净再解析 */
+const NOISE_HEADER = /^(?:单选|多选|选择|判断)题?[:：]?$/;
+function cleanLine(s) {
+  return s
+    .replace(/^\s*(?:[-*+•·>]\s*)+/, '')
+    .replace(/^#+\s*/, '')
+    .replace(/\*\*([^*]+)\*\*/g, '$1')
+    .replace(/__([^_]+)__/g, '$1')
+    .replace(/~~([^~]+)~~/g, '$1')
+    .replace(/`([^`]*)`/g, '$1')
+    .replace(/\*/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
 function parseQuestionBlock(raw) {
-  const lines = raw.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+  const lines = raw.split(/\r?\n/)
+    .map(cleanLine)
+    .filter(s => s && !NOISE_HEADER.test(s) && !/^!\[[^\]]*\]\([^)]*\)$/.test(s));
   let type = null, answer = null, ansIdx = -1;
   lines.forEach((l, i) => {
     const t = l.match(/^【(单选|多选)题?】\s*(.*)$/);          // 【单选题】/【多选题】前缀
     if (t) { type = t[1] === '多选' ? 'multiple' : 'single'; lines[i] = t[2]; }
-    const a = lines[i].match(/^(?:正确答案|参考答案|答案)\s*[:：]?\s*([A-Fa-f]{1,6})\s*$/);
+    const a = lines[i].match(/^(?:【答案】|(?:正确答案|参考答案|答案))\s*[:：]?\s*([A-Fa-f]{1,6})\s*[。.．]?$/);
     if (a && answer === null) { answer = a[1].toUpperCase(); ansIdx = i; }
   });
   if (answer === null) return { error: '没找到「答案：X」这一行，无法自动识别正确答案' };

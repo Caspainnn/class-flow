@@ -85,7 +85,7 @@ input:focus,select:focus{border-color:var(--blue);background:#fff}
       <div class="card">
         <h2>一键录入 <span>把题目整段粘贴进来，自动识别题干、选项和答案</span></h2>
         <div class="row">
-          <div class="col" style="flex:3 1 420px"><label for="pasteBox">粘贴完整题目（支持「答案：C / 正确答案：AC / 【多选题】」，选项 A–F 各占一行）</label>
+          <div class="col" style="flex:3 1 420px"><label for="pasteBox">粘贴完整题目（支持「答案：C / 正确答案：AC / 【多选题】」；**加粗**、`代码`、列表符等 Markdown 痕迹自动清理；选项 A–F 各占一行）</label>
             <textarea id="pasteBox" rows="7" placeholder="例如：&#10;你的问题是……？&#10;A. 选项一&#10;B. 选项二&#10;C. 选项三&#10;D. 选项四&#10;答案：C"></textarea></div>
         </div>
         <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
@@ -280,13 +280,29 @@ renderAnswerChoices();
 $('#course').onchange = renderRecent;
 
 /* ---------- 一键录入：解析粘贴的整段题目 ---------- */
+/* 粘贴内容常带 Markdown 痕迹（**加粗**、`代码`、行首列表符等），先洗干净再解析 */
+const NOISE_HEADER = /^(?:单选|多选|选择|判断)题?[:：]?$/;
+function cleanLine(s) {
+  return s
+    .replace(/^\s*(?:[-*+•·>]\s*)+/, '')        // 行首列表符 / 引用符
+    .replace(/^#+\s*/, '')                       // 行首 # 标题
+    .replace(/\*\*([^*]+)\*\*/g, '$1')           // **加粗**
+    .replace(/__([^_]+)__/g, '$1')               // __加粗__
+    .replace(/~~([^~]+)~~/g, '$1')               // ~~删除线~~
+    .replace(/`([^`]*)`/g, '$1')                 // `行内代码`
+    .replace(/\*/g, '')                          // 残留的散星号
+    .replace(/\s+/g, ' ')
+    .trim();
+}
 function parseQuestionBlock(raw) {
-  const lines = raw.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+  const lines = raw.split(/\r?\n/)
+    .map(cleanLine)
+    .filter(s => s && !NOISE_HEADER.test(s) && !/^!\[[^\]]*\]\([^)]*\)$/.test(s));  // 丢掉「选择题：」这类小标题和图片行
   let type = null, answer = null, ansIdx = -1;
   lines.forEach((l, i) => {
     const t = l.match(/^【(单选|多选)题?】\s*(.*)$/);
     if (t) { type = t[1] === '多选' ? 'multiple' : 'single'; lines[i] = t[2]; }
-    const a = lines[i].match(/^(?:正确答案|参考答案|答案)\s*[:：]?\s*([A-Fa-f]{1,6})\s*$/);
+    const a = lines[i].match(/^(?:【答案】|(?:正确答案|参考答案|答案))\s*[:：]?\s*([A-Fa-f]{1,6})\s*[。.．]?$/);
     if (a && answer === null) { answer = a[1].toUpperCase(); ansIdx = i; }
   });
   if (answer === null) return { error: '没找到「答案：X」这一行，无法自动识别正确答案' };
