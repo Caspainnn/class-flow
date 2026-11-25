@@ -2,9 +2,9 @@
 const path=require('node:path'),crypto=require('node:crypto'),{SaxesParser}=require('saxes');
 const NS={types:'http://schemas.openxmlformats.org/package/2006/content-types',rels:'http://schemas.openxmlformats.org/package/2006/relationships',p:'http://schemas.openxmlformats.org/presentationml/2006/main'};
 function invalid(message='PPTX结构损坏，请用PowerPoint重新保存后导入。'){const error=new Error(message);error.status=400;throw error;}
-function xml(value){const nodes=[],parser=new SaxesParser({xmlns:true});let root;
+function xml(value,includeText=false){const nodes=[],parser=new SaxesParser({xmlns:true});let root;
  parser.on('doctype',()=>invalid());parser.on('error',()=>invalid());
- parser.on('opentag',tag=>{const node={name:tag.local,ns:tag.uri,attrs:Object.fromEntries(Object.entries(tag.attributes).map(([key,a])=>[key,a.value])),children:[],relationshipId:Object.values(tag.attributes).find(a=>a.local==='id'&&a.uri==='http://schemas.openxmlformats.org/officeDocument/2006/relationships')?.value};if(nodes.length)nodes.at(-1).children.push(node);else if(root)invalid();else root=node;nodes.push(node);});parser.on('closetag',()=>nodes.pop());parser.write(value).close();if(!root)invalid();return root;
+ parser.on('opentag',tag=>{const node={name:tag.local,ns:tag.uri,attrs:Object.fromEntries(Object.entries(tag.attributes).map(([key,a])=>[key,a.value])),children:[],relationshipId:Object.values(tag.attributes).find(a=>a.local==='id'&&a.uri==='http://schemas.openxmlformats.org/officeDocument/2006/relationships')?.value};if(nodes.length)nodes.at(-1).children.push(node);else if(root)invalid();else root=node;nodes.push(node);});if(includeText){const append=value=>{if(nodes.length)nodes.at(-1).text=(nodes.at(-1).text||'')+value;};parser.on('text',append);parser.on('cdata',append);}parser.on('closetag',()=>nodes.pop());parser.write(value).close();if(!root)invalid();return root;
 }
 async function validatePackage(zip){
  const read=async name=>{const f=zip.file(name);if(!f)invalid();return f.async('string');};

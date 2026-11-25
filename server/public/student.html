@@ -140,6 +140,18 @@ const $ = id => document.getElementById(id);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const LS_SID = 'inclass_sid', LS_NAME = 'inclass_name';
 
+/* 带超时的请求：防火墙丢包时连接会一直挂起，8 秒后强制失败并给出可操作的提示 */
+function fetchJSON(url, opts, ms = 8000) {
+  const ac = ('AbortController' in window) ? new AbortController() : null;
+  const t = ac ? setTimeout(() => ac.abort(), ms) : null;
+  return fetch(url, Object.assign({}, opts, ac ? { signal: ac.signal } : {}))
+    .finally(() => { if (t) clearTimeout(t); });
+}
+function netFail(e) {
+  fail(e && e.name === 'AbortError' ? '讲台电脑没有响应' : '连不上讲台电脑',
+    '请确认手机和讲台电脑连的是同一个 Wi-Fi；还不行就举手告诉老师，看投影上网址里的 IP 是否和你手机的网络一致。');
+}
+
 const token = new URLSearchParams(location.search).get('t') || '';
 let MODE = token ? 'qr' : 'code';
 let TICKET = null, PICK = null, LEFT = 0, timerId = null;
@@ -164,7 +176,7 @@ function fail(msg, hint) {
 async function claim(payload) {
   view('vLoading');
   try {
-    const r = await fetch('/api/claim', {
+    const r = await fetchJSON('/api/claim', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     });
@@ -175,7 +187,7 @@ async function claim(payload) {
     if (d.title) $('course').textContent = d.title;
     buildForm(d.question, d.late);
   } catch (e) {
-    fail('网络不通', '请确认手机和讲台电脑连的是同一个 Wi-Fi。');
+    netFail(e);
   }
 }
 
@@ -281,7 +293,7 @@ $('submit').onclick = async () => {
   $('submit').disabled = true;
   $('submit').textContent = '提交中…';
   try {
-    const r = await fetch('/api/submit', {
+    const r = await fetchJSON('/api/submit', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ticket: TICKET, studentId: sid, studentName: name, answer: PICK })
     });
@@ -314,7 +326,7 @@ $('submit').onclick = async () => {
   } catch (e) {
     $('submit').textContent = '提交并签到';
     sync();
-    fail('提交失败', '网络不稳，请重试一次。');
+    netFail(e);
   }
 };
 

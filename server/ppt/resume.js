@@ -17,8 +17,8 @@ function inspect({task,taskDir}){
    try{
     const sub='pages/'+String(i+1).padStart(3,'0'),original=read(sub+'/slide.html',require('./html-deck').pageLimit(task));let html=original.toString('utf8');const raw=JSON.parse(read(sub+'/slide.json',256*1024));
     let ready=null;try{ready=JSON.parse(read(sub+'/ready.json',256*1024));}catch(e){if(e.code!=='ENOENT')throw e;}
-    if(ready&&ready.sha256!==hash(original))break;
-    const meta=ready?.meta||raw;
+    if(!ready||ready.sha256!==hash(original))break;
+    const meta=ready.meta||raw;
     if(meta.title!==task.outline.sections[i].title||typeof meta.speech!=='string'||meta.speech.trim().length<40||meta.speech.length>40000||typeof meta.notes!=='string'||meta.notes.length>20000)break;
     const image=plan[i]||null;
     if(source){html=require('./source-images').inline(html,{runDir:root,htmlFile:path.join(root,sub,'slide.html'),pages:source.pages.filter(p=>task.outline.sections[i].sourcePages.includes(p.number))});}

@@ -1,4 +1,5 @@
 'use strict';
+const tempPath = require('./temp-path.cjs');
 // Isolated prototype preview with temporary PPT rendering; formal data/business APIs stay private.
 const http=require('node:http'),fs=require('node:fs'),path=require('node:path');
 const root=path.resolve(__dirname,'..');
@@ -57,7 +58,7 @@ const files={
   '/server/public/shell.css':['server/public/shell.css','text/css; charset=utf-8'],
   '/server/public/assets/logo.svg':['server/public/assets/logo.svg','image/svg+xml']
 };
-const previewUpload=require('./ppt-template-preview-server.cjs').createPreview({root:path.join(root,'.tmp-ppt-template-prototype-uploads')});
+const previewUpload=require('./ppt-template-preview-server.cjs').createPreview({root:tempPath('.tmp-ppt-template-prototype-uploads')});
 http.createServer(async(req,res)=>{
   if(await previewUpload(req,res))return;
   const name=new URL(req.url,'http://127.0.0.1').pathname;

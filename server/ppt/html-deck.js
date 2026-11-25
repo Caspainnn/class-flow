@@ -62,7 +62,7 @@ function collectHtml({task,runId,taskDir,readFile,phase,page,imagePlan=null,rest
  const sources=sourceFiles.map((source,i)=>{const file=`html/${versionId}/source-${i}-${source.name}`;fs.copyFileSync(source.full,path.join(taskDir,file));return {name:source.name,file};});
  const number=(task.htmlVersions?.length||0)+1;
  let speechFile=null;
- if(slides.every(s=>s.speech)){speechFile=`html/${versionId}/逐页演讲稿.md`;const manuscript=[`# ${task.title}｜逐页演讲稿`,`课件版本：${number}；总课时：${task.minutes}分钟；共${slides.length}页。`,`教师动作以方括号标注，无需念出。`,...slides.flatMap(s=>[`## 第${s.number}页｜${s.title}`,s.speech])].join('\n\n');fs.writeFileSync(path.join(taskDir,speechFile),manuscript,{flag:'wx'});}
+ if(slides.every(s=>s.speech)){speechFile=`html/${versionId}/逐页演讲稿.md`;const manuscript=[`# ${task.title}｜逐页演讲稿`,`课件版本：${number}；${task.minutes==null?'未指定总课时':`总课时：${task.minutes}分钟`}；共${slides.length}页。`,`教师动作以方括号标注，无需念出。`,...slides.flatMap(s=>[`## 第${s.number}页｜${s.title}`,s.speech])].join('\n\n');fs.writeFileSync(path.join(taskDir,speechFile),manuscript,{flag:'wx'});}
  return {number,creationMode:task.creationMode||'create',createdAt:Date.now(),requirementsRevision:task.requirementsRevision||0,outlineHash:outlineHash(task),template:task.template?{id:task.template.id,name:task.template.name,sha256:task.template.sha256}:null,slides,sources,speechFile,hash:crypto.createHash('sha256').update(JSON.stringify(slides.map(s=>({sha256:s.sha256,notes:s.notes,...(s.speech?{speech:s.speech}:{})})))).digest('hex'),summary:String(manifest.summary||'').slice(0,6000)};
 }
 function approvedHtml(task,version,approved){

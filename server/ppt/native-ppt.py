@@ -7,6 +7,7 @@ from pptx.dml.color import RGBColor
 from pptx.enum.shapes import MSO_SHAPE,MSO_CONNECTOR
 from pptx.enum.text import MSO_ANCHOR
 from pptx.oxml.xmlchemy import OxmlElement
+from export_audit import audit
 
 folder=Path(sys.argv[1]); data=json.loads((folder/'scene.json').read_text('utf-8')); deck=Presentation()
 deck.slide_width=Inches(1280/96);deck.slide_height=Inches(720/96)
@@ -36,12 +37,19 @@ for index,page in enumerate(data['pages']):
    if o.get('radius') and min(o['w'],o['h'])>0: shape.adjustments[0]=min(.5,o['radius']/min(o['w'],o['h']))
    count['shapes']+=1
   elif kind=='line':
-   a,b,c,d=o['points'];shape=slide.shapes.add_connector(MSO_CONNECTOR.STRAIGHT,unit(a),unit(b),unit(c),unit(d));shape.line.color.rgb=color(o['color']);shape.line.width=Pt(o['width']*.75);count['shapes']+=1
+   a,b,c,d=o['points'];shape=slide.shapes.add_connector(MSO_CONNECTOR.STRAIGHT,unit(a),unit(b),unit(c),unit(d));shape.line.color.rgb=color(o['color']);opacity(shape._element.spPr.xpath('./a:ln/a:solidFill/a:srgbClr')[0],o['color']);shape.line.width=Pt(o['width']*.75);count['shapes']+=1
   elif kind=='text':
    shape=slide.shapes.add_textbox(x,y,w+unit(2),max(h,unit(o['size']*1.3)));frame=shape.text_frame;frame.clear();frame.word_wrap=False
    frame.margin_left=frame.margin_right=frame.margin_top=frame.margin_bottom=0;frame.vertical_anchor=MSO_ANCHOR.TOP
    p=frame.paragraphs[0];p.space_before=p.space_after=Pt(0);p.line_spacing=1.0
    run=p.add_run();run.text=o['text'];font=run.font;font.name=o['font'].split(',')[0].strip(' "\'');font.size=Pt(o['size']*.75);font.bold=int(o['weight'])>=600 if o['weight'].isdigit() else o['weight']=='bold';font.italic=o['italic'];font.color.rgb=color(o['color']);font.underline='underline' in o['decoration'];count['text']+=1
+   if font.name in ('Microsoft YaHei','微软雅黑'):
+    properties=run._r.get_or_add_rPr()
+    for script in ('ea','cs'):
+     typeface=OxmlElement(f'a:{script}');typeface.set('typeface',font.name);properties.append(typeface)
+   color_parts=re.findall(r'[\d.]+',o['color'])
+   alpha=o.get('opacity',1)*(float(color_parts[3]) if len(color_parts)==4 else 1)
+   opacity(run._r.xpath('./a:rPr/a:solidFill/a:srgbClr')[0],f'rgba(0,0,0,{alpha:.6f})')
   elif kind in ['image','raster']:
    if kind=='raster': stream=str(folder/o['file']);count['svgFragments']+=1
    else:
@@ -58,5 +66,5 @@ for index,page in enumerate(data['pages']):
  target=folder/'lesson.pptx';temporary=folder/'lesson.partial';deck.save(str(temporary));os.replace(temporary,target)
  (folder/'progress.json').write_text(json.dumps({'completed':index+1,'total':len(data['pages']),'stage':'ppt saved'}),encoding='utf-8')
  print(json.dumps({'type':'local_export_progress','stage':'exporting','completed':index+1,'total':len(data['pages']),'message':f'已导出 {index+1} / {len(data["pages"])} 页'},ensure_ascii=False),flush=True)
-(folder/'report.json').write_text(json.dumps({'counts':counts,'warnings':[p['warnings'] for p in data['pages']],'imageCredits':[{'page':i+1,**p['imageCredit']} for i,p in enumerate(data['pages']) if p.get('imageCredit')]},ensure_ascii=False,indent=2),encoding='utf-8')
+(folder/'report.json').write_text(json.dumps({'counts':counts,'layoutFindings':audit(Presentation(str(target))),'warnings':[p['warnings'] for p in data['pages']],'imageCredits':[{'page':i+1,**p['imageCredit']} for i,p in enumerate(data['pages']) if p.get('imageCredit')]},ensure_ascii=False,indent=2),encoding='utf-8')
 print(json.dumps({'pages':len(deck.slides),'nativeTextRuns':sum(c['text'] for c in counts),'svgRasterFragments':sum(c['svgFragments'] for c in counts)}))

@@ -1,4 +1,5 @@
 'use strict';
+const tempPath = require('./temp-path.cjs');
 // Isolated questionnaire prototype plus local AI drafts. No formal survey data.
 const http=require('node:http'),fs=require('node:fs'),path=require('node:path'),QR=require('../server/node_modules/qrcode');
 const root=path.resolve(__dirname,'..'),port=Number(process.env.QUESTIONNAIRE_PREVIEW_PORT||3013);
@@ -12,7 +13,7 @@ const files={
  '/server/public/shell.css':['server/public/shell.css','text/css; charset=utf-8'],
  '/server/public/assets/logo.svg':['server/public/assets/logo.svg','image/svg+xml']
 };
-function createServer({ai}={}){ai||=require('./questionnaire-ai.cjs').createService({root:path.join(root,'.tmp-questionnaire-ai'),getSettings:()=>{try{return {workbuddy:JSON.parse(fs.readFileSync(path.join(root,'data/settings.json'),'utf8')).workbuddy};}catch{return {};}}});return http.createServer(async(req,res)=>{
+function createServer({ai}={}){ai||=require('./questionnaire-ai.cjs').createService({root:tempPath('.tmp-questionnaire-ai'),getSettings:()=>{try{return {workbuddy:JSON.parse(fs.readFileSync(path.join(root,'data/settings.json'),'utf8')).workbuddy};}catch{return {};}}});return http.createServer(async(req,res)=>{
  const host=req.headers.host||'';if(!/^(localhost|127\.0\.0\.1|\[::1\])(?::\d+)?$/.test(host)){res.writeHead(403);return res.end('Local prototype only');}
  const url=new URL(req.url,'http://127.0.0.1');
  if(url.pathname.startsWith('/api/questionnaire-ai')){

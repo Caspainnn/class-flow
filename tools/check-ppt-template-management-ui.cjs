@@ -15,5 +15,9 @@ await action('save-layout');assert.equal(record.profile.slideCount,2);assert.equ
 console.log('PASS: real-API UI mapping, original-page viewer, manual addition preserves draft, failed edit stays open, metadata and layout writes persist, delete needs explicit confirmation');
 })().catch(e=>{console.error(e);process.exitCode=1;});
 
+// Rendering can occur while the shell is being replaced in the embedded workspace.
+// The page must keep working when the scrolling host has not mounted yet.
+{const ui=fs.readFileSync('server/ppt/public/ppt-templates.js','utf8'),ctx=require('node:vm').createContext({document:{querySelector:()=>null}});require('node:vm').runInContext(ui.slice(ui.indexOf('function resetMainScroll'),ui.indexOf('function editInfo')),ctx);assert.doesNotThrow(()=>require('node:vm').runInContext('resetMainScroll()',ctx));}
+
 // A deduplicated cover/body/ending group must still expose its interior representative.
 {const ui=fs.readFileSync('server/ppt/public/ppt-templates.js','utf8'),ctx=require('node:vm').createContext({});require('node:vm').runInContext(ui.slice(ui.indexOf('function convert('),ui.indexOf('function replace(')),ctx);const value=require('node:vm').runInContext(`convert({id:'role-test',name:'Test.pptx',createdAt:1,profile:{confirmed:false},previewReady:true,analysis:{slideCount:3,smart:{selectedIds:['same']},layoutGroups:[{id:'same',name:'Same',representativeSlide:1,sourceSlides:[1,2,3]}]}})`,ctx);assert.equal(value.layouts[0].source,2);assert.match(value.layouts[0].preview,/002\.png/);}

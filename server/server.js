@@ -33,11 +33,15 @@ function loadSecret() {
 }
 const SECRET = loadSecret();
 
+// ima 知识库绑定：密钥只在服务端持有，接口与日志都不返回。
+
 const reload = () => { SETTINGS = store.read('settings', {}); };
 const num = (v, d) => (Number.isFinite(Number(v)) && Number(v) > 0 ? Number(v) : d);
 
 const refreshMs = () => num(SETTINGS.codeRefreshMs, 3000);
-const graceSlices = () => Math.max(0, Math.floor(Number(SETTINGS.tokenGrace) || 0));
+const graceSlices = () => SETTINGS.tokenGrace == null
+  ? 3   // 全新部署没有 settings.json 时也保证码有效 4 片（12s），不至于扫慢一点就过期
+  : Math.max(0, Math.floor(Number(SETTINGS.tokenGrace) || 0));
 const windowMs = () => num(SETTINGS.windowMs, 90000);
 const lateGraceMs = () => num(SETTINGS.lateGraceMs, 600000);
 const ticketTtlMs = () => num(SETTINGS.ticketTtlMs, 120000);
@@ -200,6 +204,7 @@ function sessionState(s) {
     id: s.id,
     courseId: s.courseId,
     course: course ? course.name : '',
+    joinUrl: ORIGIN + '/join',
     question: { text: s.question.text, options: s.question.options, correct: s.question.correct, type: s.question.type || (Array.isArray(s.question.correct) ? 'multiple' : 'single') },
     startedAt: s.startedAt,
     open: now < s.endsAt,
@@ -346,14 +351,23 @@ function cellText(v) {
 }
 
 /* ---------------- 网络 ---------------- */
-function lanIP() {
+/* 收集所有局域网 IPv4，并标记虚拟网卡（VMware/WSL/VPN 等手机连不上） */
+function lanCandidates() {
+  const VIRTUAL = /vmware|virtualbox|vbox|hyper-v|wsl|loopback|tap|tun|wintun|ppp|vpn|npcap|qemu|docker|virtual/i;
   const nets = os.networkInterfaces();
+  const out = [];
   for (const name of Object.keys(nets)) {
     for (const n of nets[name] || []) {
-      if (n.family === 'IPv4' && !n.internal) return n.address;
+      if (n.family !== 'IPv4' || n.internal) continue;
+      out.push({ name, address: n.address, virtual: VIRTUAL.test(name) });
     }
   }
-  return '127.0.0.1';
+  return out;
+}
+const LAN_LIST = lanCandidates();
+/* 二维码用的 IP：优先真实物理网卡，避免落在虚拟网卡上导致手机扫了连不上 */
+function lanIP() {
+  return (LAN_LIST.find(x => !x.virtual) || LAN_LIST[0] || { address: '127.0.0.1' }).address;
 }
 const LOCAL_IP = lanIP();
 const ORIGIN = process.env.PUBLIC_ORIGIN || `http://${HOST === '127.0.0.1' ? HOST : LOCAL_IP}:${PORT}`;
@@ -388,6 +402,11 @@ const handler = async (req, res) => {
   }
 
   if (m === 'GET' && p === '/admin' && url.searchParams.get('pane') === 'set' && (url.hash === '#data' || url.searchParams.get('section') === 'data')) { res.writeHead(302,{Location:'/backup'}); return res.end(); }
+  // 旧课程管理入口先重定向，避免被工作区壳层接管后返回 200。
+  if (m === 'GET' && p === '/admin' && url.searchParams.get('pane') === 'course') {
+    const id = url.searchParams.get('courseId');
+    res.writeHead(302, {Location: '/courses' + (id ? '#edit/' + encodeURIComponent(id) : '')}); return res.end();
+  }
   // Old dashboard bookmarks keep course context; the dashboard itself is teacher-only.
   if (m === 'GET' && p === '/xueqing' && url.searchParams.get('tab') === 'dash') {
     const q = new URLSearchParams(); if (url.searchParams.get('courseId')) q.set('courseId',url.searchParams.get('courseId'));
@@ -402,7 +421,10 @@ const handler = async (req, res) => {
     return sendFile(res, '../..' + p);
   }
   const workspacePages = ['/', '/session', '/compose', '/live', '/courses', '/preparation', '/homework', '/grading', '/workbuddy', '/xueqing', '/admin', '/questionnaires', '/dashboard', '/backup'];
-  if (m === 'GET' && workspacePages.includes(p) && req.headers['sec-fetch-dest'] !== 'iframe') return sendFile(res, 'workspace.html');
+  // 课程工作区有独立地址，刷新后仍停留在同一门课。
+  const courseSpace = /^\/course\/[\w-]+\/?$/;
+  if (m === 'GET' && p === '/course') { res.writeHead(302, {Location:'/courses'}); return res.end(); }
+  if (m === 'GET' && (workspacePages.includes(p) || courseSpace.test(p)) && req.headers['sec-fetch-dest'] !== 'iframe') return sendFile(res, 'workspace.html');
   if (p === '/ppt-notifications.js') return sendFile(res, 'ppt-notifications.js');
   if (p === '/workspace.js') return sendFile(res, 'workspace.js');
   if (await require('./questionnaire/routes')(req,res,{url,m,json,store,getCourses,getStudents,isLocal,studentOrigin:ORIGIN})) return;
@@ -415,6 +437,8 @@ const handler = async (req, res) => {
   if (p === '/shell.css') return sendFile(res, 'shell.css');
   if (p === '/shell.js') return sendFile(res, 'shell.js');
   if (p === '/courses') return sendFile(res, 'courses.html');
+  if (p === '/ima' && m === 'GET') { res.writeHead(302, { Location: '/courses' }); return res.end(); }
+  if (courseSpace.test(p)) return sendFile(res, 'course.html');
   if (p === '/preparation') return sendFile(res, url.searchParams.get('type') === 'plan' ? '../lesson-plan/public/plan.html' : url.searchParams.get('section') === 'templates' ? '../ppt/public/ppt-templates.html' : '../ppt/public/ppt.html');
   if (p === '/lesson-plan.css') return sendFile(res, '../lesson-plan/public/plan.css');
   if (p === '/lesson-plan.js') return sendFile(res, '../lesson-plan/public/plan.js');
@@ -427,10 +451,6 @@ const handler = async (req, res) => {
   if (p === '/ppt-html-view.js') return sendFile(res, '../ppt/public/ppt-html-view.js');
   if (p === '/vendor/element-upload.js') return sendFile(res, 'vendor/element-upload.js');
   if (p === '/vendor/element-upload.css') return sendFile(res, 'vendor/element-upload.css');
-  if (p === '/admin' && url.searchParams.get('pane') === 'course') {
-    const id = url.searchParams.get('courseId');
-    res.writeHead(302, {Location: '/courses' + (id ? '#edit/' + encodeURIComponent(id) : '')}); return res.end();
-  }
   if (p === '/admin') return sendFile(res, 'admin.html');
   if (p === '/join') return sendFile(res, 'student.html');
   if (p.startsWith('/s/')) return sendFile(res, 'student.html');
@@ -563,7 +583,45 @@ const handler = async (req, res) => {
 
   /* ---- 课程 ---- */
   const courseService = require('./lib/courses')(store, () => { const session=currentSession(); return session && !session.closed ? session.courseId : null; });
+  const courseGuide = require('./lib/course-guide');
+  const guideMatch = p.match(/^\/api\/courses\/([\w-]+)\/guide$/);
+  if (guideMatch) {
+    const id = guideMatch[1];
+    if (!findCourse(id)) return json(res, 404, { error: '课程不存在，可能已被删除。' });
+    try {
+      if (m === 'GET') return json(res, 200, { ...courseGuide.read(store, id), categories: courseGuide.categories(), limits: courseGuide.LIMITS });
+      if (m === 'PUT') {
+        const body = await readBody(req);
+        // 读取请求体期间课程可能被并发删除，落盘前再确认一次。
+        if (!findCourse(id)) return json(res, 404, { error: '课程不存在，可能已被删除。' });
+        const saved = courseGuide.save(store, id, body);
+        return json(res, 200, { ...saved, categories: courseGuide.categories(), limits: courseGuide.LIMITS });
+      }
+      return json(res, 405, { error: '课程导学只提供查看与保存。' });
+    } catch (e) {
+      return json(res, e.status || 500, { error: e.status ? e.message : '课程导学保存失败，请重试。' });
+    }
+  }
   let mm = p.match(/^\/api\/courses\/([\w-]+)$/);
+  const courseBoard = require('./lib/course-board');
+  const boardMatch = p.match(/^\/api\/courses\/([\w-]+)\/board$/);
+  if (boardMatch) {
+    const id = boardMatch[1];
+    if (!findCourse(id)) return json(res, 404, { error: '课程不存在，可能已被删除。' });
+    try {
+      if (m === 'GET') return json(res, 200, { ...courseBoard.read(store, id), limits: courseBoard.LIMITS });
+      if (m === 'PUT') {
+        const body = await readBody(req);
+        // 与导学一致：读取请求体期间课程可能被删除，落盘前再确认。
+        if (!findCourse(id)) return json(res, 404, { error: '课程不存在，可能已被删除。' });
+        const saved = courseBoard.save(store, id, body);
+        return json(res, 200, { ...saved, limits: courseBoard.LIMITS });
+      }
+      return json(res, 405, { error: '教学任务台只提供查看与保存。' });
+    } catch (e) {
+      return json(res, e.status || 500, { error: e.status ? e.message : '教学任务台保存失败，请重试。' });
+    }
+  }
   if (p === '/api/courses' || mm) {
     try {
       if (p === '/api/courses' && m === 'GET') return json(res,200,{items:courseService.list()});
@@ -724,7 +782,8 @@ const handler = async (req, res) => {
     return json(res, 200, { ok: true });
   }
 
-  /* ---- 设置 ---- */
+  /* ---- ima 知识库绑定 ---- */
+  // 只做官方只读查询（get_knowledge_base）。不提供资料上传、文件夹关联或条目增删改。
   if (p === '/api/settings' && m === 'PUT') {
     const b = await readBody(req);
     const s = store.read('settings', {});
@@ -915,6 +974,9 @@ http.createServer(handler).listen(PORT, HOST, () => {
   console.log('  课中签到 v3  已启动');
   console.log(`  老师端  http://127.0.0.1:${PORT}/`);
   console.log(`  学生端  ${ORIGIN}/join  ${HOST === '127.0.0.1' ? '（仅限本机）' : '（同一 Wi-Fi）'}`);
+  LAN_LIST.forEach(n => console.log(`          本机网卡 ${n.name} → http://${n.address}:${PORT}/join${n.virtual ? '（虚拟网卡，手机多半连不上）' : ''}`));
+  console.log('  手机扫不开时依次检查：① Windows 防火墙放行本服务 ② 手机与电脑同一 Wi-Fi（部分课堂 Wi-Fi 开了设备隔离）');
+  console.log('  ③ 投影上网址里的 IP 与手机所在网段一致；不一致时用 PUBLIC_ORIGIN 环境变量指定正确地址');
   console.log(`  数据目录  ${store.DATA_DIR}`);
   console.log(`  码 ${refreshMs() / 1000}s 刷新 · 有效 ${(refreshMs() * (graceSlices() + 1)) / 1000}s · 窗口 ${windowMs() / 1000}s`);
   if (activeSessionId) console.log(`  接着上次未结束的签到：${activeSessionId}`);

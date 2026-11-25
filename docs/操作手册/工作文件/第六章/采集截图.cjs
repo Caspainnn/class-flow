@@ -1,0 +1,70 @@
+'use strict';
+const fs=require('node:fs'),os=require('node:os'),path=require('node:path'),{spawn}=require('node:child_process');
+const runtime='C:/Program Files/WindowsApps/OpenAI.CodexPrimaryRuntime.v26-1104-1290-0_26.1104.1290.0_x64__3k8sg7r9htsxt/dependencies/node/node_modules';
+const {chromium}=require(runtime+'/playwright');
+const root=path.resolve(__dirname,'../../../..');
+const out=path.join(__dirname,'原始截图');fs.mkdirSync(out,{recursive:true});
+const data=fs.mkdtempSync(path.join(os.tmpdir(),'inclass-ch6-manual-'));
+const save=(key,value)=>fs.writeFileSync(path.join(data,key+'.json'),JSON.stringify(value));
+const courseId='manual-course';
+const question={text:'下列哪些做法有助于保护实验数据？',options:['保留原始记录','随意覆盖原文件','定期备份数据','共享账号密码'],type:'multiple',correct:[0,2]};
+const students=['示例甲','示例乙','示例丙','示例丁','示例戊','示例己'].map((name,i)=>({id:String(20260001+i),name,courseId}));
+save('courses',[{id:courseId,name:'课堂操作示例',term:'2026秋',recentQuestions:[{...question,at:Date.now()}]}]);save('students',students);
+save('settings',{windowMs:90000,lateGraceMs:600000});
+save('sessions',[0,1,2].map((n)=>{const t=Date.now()-(4-n)*86400000;return {id:'manual-history-'+n,courseId,question,startedAt:t,endsAt:t+90000,closed:true,records:students.slice(0,4+n%2).map((s,i)=>({studentId:s.id,name:s.name,status:i===3?'late':'present',claimedAt:t+10000,submittedAt:t+20000,answer:i%2?[0]:[0,2],correct:i%2===0}))};}));
+const port=31848,origin=`http://127.0.0.1:${port}`;
+const child=spawn(process.execPath,[path.join(root,'server/server.js')],{cwd:root,env:{...process.env,DATA_DIR:data,HOST:'127.0.0.1',PORT:String(port)},windowsHide:true,stdio:'pipe'});
+let logs='';child.stderr.on('data',b=>logs+=b);child.stdout.on('data',b=>logs+=b);
+const api=async(url,body)=>{const r=await fetch(origin+url,body===undefined?{}:{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const v=await r.json();if(!r.ok)throw Error(JSON.stringify(v));return v;};
+const manifest=[];let browser;
+async function shot(page,name,region,targets,sensitive=[]){
+  await page.locator(region).scrollIntoViewIfNeeded();
+  const clip=await page.locator(region).boundingBox();
+  const rects=[];
+  for(const sel of targets){const b=await page.locator(sel).first().boundingBox();if(!b)throw Error('Missing '+sel);rects.push([b.x-clip.x,b.y-clip.y,b.x+b.width-clip.x,b.y+b.height-clip.y]);}
+  const hides=[];
+  for(const sel of sensitive){for(const el of await page.locator(sel).all()){const b=await el.boundingBox();if(b)hides.push([b.x-clip.x,b.y-clip.y,b.x+b.width-clip.x,b.y+b.height-clip.y]);}}
+  await (page.page ? page.page() : page).screenshot({path:path.join(out,name+'.png'),clip});manifest.push({name,boxes:rects,redact:hides});
+}
+(async()=>{try{
+ for(let i=0;i<60;i++){try{await api('/api/ping');break;}catch(e){if(i===59)throw Error(logs);await new Promise(r=>setTimeout(r,100));}}
+ browser=await chromium.launch({headless:true,executablePath:'C:/Program Files/Google/Chrome/Application/chrome.exe'});
+ const shell=await browser.newPage({viewport:{width:1100,height:900},deviceScaleFactor:1});
+ shell.on('pageerror',e=>console.error('pageerror',e.message));
+ await shell.goto(origin+'/session');await shell.frameLocator('#workspaceFrame').locator('#stage1').waitFor({state:'visible'});
+ const page=await shell.locator('#workspaceFrame').contentFrame().owner().elementHandle().then(e=>e.contentFrame());
+ await shot(page,'01-选课','main',['#course','#attendanceRecordsTab'],['#course']);
+ await page.locator('#qText').fill('下列哪一项属于良好的实验记录习惯？');for(const [i,text] of ['及时记录数据','随意删除数据','只记录结论','共用账号'].entries())await page.locator('#o'+i).fill(text);
+ await shot(page,'02-单选','#stage1 > .card:first-child',['#questionType','#correctChoices','#qText','#o0','#startBtn'],['#course']);
+ await page.locator('#questionType').selectOption('multiple');await page.locator('#qText').fill(question.text);for(let i=0;i<4;i++)await page.locator('#o'+i).fill(question.options[i]);await page.locator('[name="correctAnswer"][value="2"]').check();
+ await shot(page,'03-多选','#stage1 > .card:first-child',['#questionType','#correctChoices'],['#course']);
+ await shot(page,'04-复用','#stage1 > .card:last-child',['.crow']);
+ await page.locator('#startBtn').click();await page.locator('#stage2').waitFor({state:'visible'});await page.locator('#code').filter({hasText:/\d{4}/}).waitFor();await page.locator('#clock').filter({hasText:/剩余/}).waitFor();
+ await shot(page,'05-展示','#stage2',['.qr','#code','#clock'],['#liveTitle span','#absent .tag']);
+ await page.locator('#cancelSessionBtn').click();await page.locator('#cancelSessionPanel').waitFor({state:'visible'});
+ await shot(page,'09-取消','#cancelSessionPanel',['#cancelSessionPanel h2','#cancelSessionPanel .feedback-actions']);
+ await page.locator('#cancelSessionPanel button').first().click();
+ const mobile=await browser.newContext({viewport:{width:430,height:790},isMobile:true,deviceScaleFactor:1});const student=await mobile.newPage();await student.goto(origin+'/join');
+ await shot(student,'06-课堂码','.card',['#ccode','#codeGo']);
+ const st=await api('/api/session/state');await student.locator('#ccode').fill(st.code);await student.locator('#codeGo').click();await student.locator('#vForm').waitFor({state:'visible'});
+ await student.locator('#sid').fill(students[0].id);await student.locator('#sname').fill(students[0].name);await student.locator('#opts .opt').first().click();await student.locator('#opts .opt').nth(2).click();
+ await shot(student,'07-提交','.card',['#opts','#whoForm','#submit','#ticketTimer'],['#course','#sid','#sname']);
+ await student.locator('#submit').click();await student.locator('#vDone').waitFor({state:'visible'});
+ await shot(student,'08-成功','.card',['#vDone'],['#course','#doneSub']);
+ const claim=await api('/api/claim',{code:(await api('/api/session/state')).code});await api('/api/submit',{ticket:claim.ticket,studentId:students[1].id,studentName:students[1].name,answer:[0]});
+ await page.waitForFunction(()=>document.querySelector('#nPresent').textContent==='2');
+ await shot(page,'10-实时','#stage2',['#nPresent','#nLate','#nAbsent','#nAnswered','#absent','#endBtn'],['#liveTitle span','#absent .tag']);
+ await page.locator('#endBtn').click();await page.locator('#stage3').waitFor({state:'visible'});
+ await shot(page,'11-归档','#stage3',['#archiveAnswer','#archiveOptions','#archiveStats','#againBtn'],['#archiveMeta']);
+ await page.locator('#attendancePrev').click();await page.locator('#backToArchiveBtn').waitFor({state:'visible'});
+ await shot(page,'12-回看','#stage2',['#code','#backToArchiveBtn'],['#liveTitle span','#absent .tag']);
+ await page.locator('#attendanceRecordsTab').click();await page.locator('#historyRate').filter({hasText:/%/}).waitFor();
+ await page.waitForFunction(()=>!document.querySelector('#toast').classList.contains('on'));
+ await shot(page,'13-总览','#historyContent > .card:first-child',['#historyRate','#historyCount','#historyStudents','#historyCorrect']);
+ await shot(page,'14-趋势','#historyContent > .card:nth-child(2)',['#historyTrend']);
+ await shot(page,'15-历次','#historyContent > .card:nth-child(3)',['#historyList']);
+ await shot(page,'16-累计','#historyContent > .card:nth-child(4)',['#historyPerStudent'],['#historyPerStudent tbody tr td:nth-child(1)','#historyPerStudent tbody tr td:nth-child(2)']);
+ await shot(page,'17-导出','#attendanceHistory > .card:first-child',['#historyCourse','#historyExportAll'],['#historyCourse']);
+ fs.writeFileSync(path.join(__dirname,'截图坐标.json'),JSON.stringify({dataDirectory:data,origin,items:manifest},null,2));
+ console.log(JSON.stringify({screenshots:manifest.length,dataDirectory:data}));
+ }finally{if(browser)await browser.close();child.kill();}})().catch(e=>{console.error(e);process.exitCode=1;});

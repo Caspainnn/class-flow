@@ -31,8 +31,17 @@ async function convert(){
   await call('Runtime.evaluate',{expression:'Promise.all([document.fonts.ready,...Array.from(document.images).map(i=>i.decode().catch(()=>{}))])',awaitPromise:true},sessionId);
   const result=await call('Runtime.evaluate',{expression:`(${extract.toString()})()`,returnByValue:true},sessionId);if(result.exceptionDetails)throw Error(`第${i+1}页排版读取失败：`+String(result.exceptionDetails.exception?.description||'页面过于复杂').split('\n')[0].replace(/^Error:\s*/,''));const scene=result.result.value;
   if(!scene?.objects?.length||scene.objects.length>25000)throw Error(`第${i+1}页内容为空或过于复杂，尚未导出。`);
-  for(let k=0;k<scene.objects.length;k++){const o=scene.objects[k];if(o.kind!=='raster')continue;const x=Math.max(0,o.x),y=Math.max(0,o.y),w=Math.min(1280,o.x+o.w)-x,h=Math.min(720,o.y+o.h)-y;
-   const snap=await call('Page.captureScreenshot',{format:'png',clip:{x,y,width:w,height:h,scale:1}},sessionId);o.x=x;o.y=y;o.w=w;o.h=h;o.file=`${i+1}-${k}.png`;fs.writeFileSync(path.join(output,o.file),Buffer.from(snap.data,'base64'));
+  for(let k=0;k<scene.objects.length;k++){const o=scene.objects[k];if(o.kind!=='raster'&&o.kind!=='decoration')continue;const x=Math.max(0,o.x),y=Math.max(0,o.y),w=Math.min(1280,o.x+o.w)-x,h=Math.min(720,o.y+o.h)-y;
+   if(o.marker){
+    const selector=`[data-ppt-decoration="${o.marker}"]`;
+    const isolated=o.kind==='decoration'?`${selector}{visibility:visible!important;color:transparent!important;text-shadow:none!important}`:`${selector},${selector} *{visibility:visible!important}`;
+    const css='html,body{background:transparent!important}*{visibility:hidden!important}'+isolated;
+    await call('Runtime.evaluate',{expression:`(()=>{const s=document.createElement('style');s.id='ppt-decoration-capture';s.textContent=${JSON.stringify(css)};document.head.append(s)})()`},sessionId);
+    await call('Emulation.setDefaultBackgroundColorOverride',{color:{r:0,g:0,b:0,a:0}},sessionId);
+   }
+   const snap=await call('Page.captureScreenshot',{format:'png',clip:{x,y,width:w,height:h,scale:1}},sessionId);
+   if(o.marker){await call('Runtime.evaluate',{expression:"document.getElementById('ppt-decoration-capture').remove()"},sessionId);await call('Emulation.setDefaultBackgroundColorOverride',{},sessionId);o.kind='raster';delete o.marker;}
+   o.x=x;o.y=y;o.w=w;o.h=h;o.file=`${i+1}-${k}.png`;fs.writeFileSync(path.join(output,o.file),Buffer.from(snap.data,'base64'));
   }
   const shot=await call('Page.captureScreenshot',{format:'png'},sessionId);fs.writeFileSync(path.join(output,`${i+1}-html.png`),Buffer.from(shot.data,'base64'));
   scene.speech=slides[i].speech||'';scene.notes=slides[i].notes||'';scene.imageCredit=slides[i].image?.status==='ready'?slides[i].image:null;pages.push(scene);fs.writeFileSync(path.join(output,`page-${i+1}.json`),JSON.stringify(scene));progress('reading',i+1,`已读取 ${i+1} / ${slides.length} 页排版`);
@@ -40,7 +49,9 @@ async function convert(){
  fs.writeFileSync(path.join(output,'scene.json'),JSON.stringify({title:input.requirements.title,pages}));
  progress('exporting',0,'正在写入可编辑文字和图形');await convert();
  const report=JSON.parse(fs.readFileSync(path.join(output,'report.json'),'utf8')),fragments=report.counts.reduce((n,c)=>n+c.svgFragments,0);
- const summary=`已在本机完成 ${pages.length} 页转换；备注留空，逐页讲稿单独保留。${fragments?`${fragments}处复杂图示按图片保留，图示内部暂不可编辑。`:''}请下载检查实际排版。`;
+ const findings=report.layoutFindings||[];
+ const review=findings.length?`成品对象检查发现第 ${findings.map(f=>f.page).join('、')} 页疑似存在越界或重复叠字，请优先核对。`:'请下载检查实际排版。';
+ const summary=`已在本机完成 ${pages.length} 页转换；备注留空，逐页讲稿单独保留。${fragments?`${fragments}处复杂图示按图片保留，图示内部暂不可编辑。`:''}${review}`;
  fs.writeFileSync(path.join(output,'timing.json'),JSON.stringify({pages:pages.length,elapsedMs:Date.now()-started}));
  fs.writeFileSync(path.join(run,'delivery.json'),JSON.stringify({pptx:'native-export/lesson.pptx',sources:['native-export/report.json'],previews:pages.map((_,i)=>`native-export/${i+1}-html.png`),summary}));
  progress('delivery',pages.length,'所有页面已导出，正在校验文件');
@@ -49,4 +60,4 @@ async function convert(){
  if(child.exitCode===null)await Promise.race([new Promise(resolve=>child.once('close',resolve)),sleep(2000)]);
  if(child.exitCode===null&&child.pid){if(process.platform==='win32')await new Promise(resolve=>{const killer=spawn('taskkill',['/pid',String(child.pid),'/T','/F'],{windowsHide:true,stdio:'ignore'});killer.once('error',resolve);killer.once('close',resolve);});else child.kill();}
  if(profile.startsWith(output+path.sep)&&path.basename(profile).startsWith('browser-')){try{fs.rmSync(profile,{recursive:true,force:true,maxRetries:2,retryDelay:100});}catch{}}
-}})().catch(e=>{console.error(e.message);process.exitCode=1;});
+}})().catch(e=>{console.error(e.stack||e.message);process.exitCode=1;});

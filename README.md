@@ -19,6 +19,7 @@
 | 作业管理 | 创建作业、成绩维护、未交/补交、文件批改启用与分析关联 | `/homework` |
 | 自动批改 | 先选课程再选作业，评分标准、文件匹配、自动调用或手工交接、原文复核与成绩归档 | `/grading` |
 | 工具与设置 | CLI连接、模型/超时配置、签到与预警规则 | `/workbuddy`、`/admin?pane=set` |
+| ima 知识库 | 在课程工作区使用 ima 官方网页 | `/course/:id#ima` |
 | 数据与备份 | 容量概况、完整备份、下载、上传检查与安全恢复 | `/backup` |
 
 以上是正式服务入口。`prototype/`为独立交互原型，不是教师日常入口。旧`/xueqing?tab=dash`兼容跳转至全平台数据看板。
@@ -240,6 +241,10 @@ Windows 推荐双击根目录的 `一堂课.exe`（本机已创建桌面快捷�
 
 首次启动会创建演示课程与示例名单，请在“课程管理”核对并替换，不能作为真实教学记录。问卷、PPT、教案的原型样例不会自动迁入正式教学库。
 
+### ima 知识库
+
+打开任意课程的「ima 知识库」标签，在内嵌的 ima 官方网页登录、选库和提问。
+
 ### 课堂网络
 
 - 教师管理页面仅在老师电脑本机访问，使用`127.0.0.1`或`localhost`。
@@ -305,6 +310,7 @@ node tools/connect-workbuddy.js --path ".local-codebuddy-cli/node_modules/@tence
 - 原生模板页面截图依赖**Windows、Microsoft PowerPoint与PowerShell COM**。缺少组件时不能获得该路径的真实模板视觉参考，结构示意不能替代原页截图。
 - 平台“导出可编辑PPT”使用本机固定程序，读取已确认HTML，不调用模型。需要本机 Chrome 或 Edge、Python 的 `python-pptx` 与 `Pillow`；读取 `ppt.pythonPath`，浏览器自动查找，亦可配置 `ppt.browserPath`。普通文字和常规图形可编辑，复杂SVG图示暂作为图片保留。手动交接流程仍可在外部制作和导回文件。
 - PPT任务默认最长两小时，可配置缩短，不能超过两小时。默认不启用更宽的Shell权限，任务目录不是操作系统沙箱。
+- PPT模型默认使用 **DeepSeek-V4.1-Flash**（`deepseek-v4.1-flash`）；专用`ppt.model`优先，其次沿用明确指定的`workbuddy.model`。HTML默认低推理强度，其他模型阶段默认中等强度。逐页制作默认每页最多7分钟、128轮调用和80,000个流式输出字符（含推理与文件内容，不是token数）；整轮仍受两小时上限约束。超限停止当前页，已通过校验的页面保留，可手动从中断处续做，不自动重试。说明及验收见[HTML生成性能优化](docs/ppt-preparation/2026-11-06-HTML生成性能优化.md)。
 
 首次配置的命令示例（项目根目录PowerShell；Git目标目录必须尚不存在；`py -3.12`需替换为本机已安装、可安装这些依赖的真实Python入口，本机已验证Python 3.12）：
 
@@ -326,6 +332,11 @@ PPT专用配置示例（合并到`settings.json`的`ppt`字段，或作为兼容
   "skillPath": "D:/ClassFlow/.local-ppt-skills/ppt-master-repo/skills/ppt-master",
   "pythonPath": "D:/ClassFlow/.local-ppt-python/Scripts/python.exe",
   "revision": "5832c3a8ca77e22284198407f0a7e4485ada9688",
+  "model": "deepseek-v4.1-flash",
+  "htmlReasoningEffort": "low",
+  "pageTimeoutMs": 420000,
+  "pageMaxTurns": 128,
+  "pageMaxOutputChars": 80000,
   "timeoutMs": 7200000,
   "allowShell": false
 }
@@ -348,7 +359,7 @@ $env:PPT_PYTHON = (Resolve-Path '.local-ppt-python/Scripts/python.exe').Path
 node tools/check-ppt-native-export.cjs --geometry
 ```
 
-成功时输出包含`pages: 1`和实际`pptx`路径的JSON；脚本已校验真实PPTX页数、原生文字、图片比例与图层。产物留在项目`.tmp-native-service-*`隔离目录，不写正式教学库。基础服务另需验证`/api/ping`、`/api/dashboard`、`/api/gb/settings`、`/api/ppt/connection`及正式页面。`ready`只检查CLI/skill配置，`exportReady`只检查浏览器/Python路径；它们不能代替模型回复、Python导入和实际转换。
+成功时输出包含`pages: 1`和实际`pptx`路径的JSON；脚本已校验真实PPTX页数、原生文字、图片比例与图层。产物留在项目`.tmp/.tmp-native-service-*`隔离目录，不写正式教学库。基础服务另需验证`/api/ping`、`/api/dashboard`、`/api/gb/settings`、`/api/ppt/connection`及正式页面。`ready`只检查CLI/skill配置，`exportReady`只检查浏览器/Python路径；它们不能代替模型回复、Python导入和实际转换。
 
 部署结果应分别记录“基础平台HTTP通过、CLI实际回复通过、PPT本机转换通过、模板截图通过/待验证”。未启动真实PowerPoint渲染时，模板截图只能记为待验证；手机同网和真实教学内容生成仍由老师验收。详细检查与本次发布范围见[部署与发布记录](docs/部署与发布-2026-11-03.md)。
 

@@ -41,6 +41,14 @@
 .ppt .html-slide-frame{position:relative;width:100%;aspect-ratio:16/9;overflow:hidden;background:white;border:1px solid #e0e6ed;border-radius:8px}.ppt .html-slide-frame iframe{position:absolute;top:0;left:0;width:1280px;height:720px;border:0;transform-origin:top left}.ppt .pptx-history-heading{margin-top:24px}
 .ppt .html-preview-status{position:absolute;inset:40% 20px auto;text-align:center;color:#71869a;z-index:1}
 
+/* Keep long decks inside a compact thumbnail rail instead of stretching the page. */
+.ppt .workspace>.panel{min-width:0}
+.ppt .deck-workspace .slide-list{position:sticky;top:18px;height:clamp(240px,calc(100dvh - 230px),760px);overflow-y:auto;overscroll-behavior:contain;scrollbar-gutter:stable;padding:2px 7px 2px 2px;align-self:start}
+.ppt .deck-workspace .slide-list::-webkit-scrollbar{width:7px}.ppt .deck-workspace .slide-list::-webkit-scrollbar-thumb{background:#c7d4e0;border-radius:8px}.ppt .deck-workspace .slide-list::-webkit-scrollbar-track{background:transparent}
+.ppt .deck-workspace .slide-list .slide-item{flex:none}
+@media(max-width:760px){.ppt .deck-workspace .slide-list{position:static;height:min(360px,45dvh);min-height:180px;max-height:360px}}
+@media(max-width:560px){.ppt .deck-workspace .slide-list{height:auto;min-height:0;max-height:none;overflow-x:auto;overflow-y:hidden;scrollbar-gutter:auto;padding:2px 0}.ppt .deck-workspace .slide-list::-webkit-scrollbar{height:7px}}
+
 .ppt .export-progress #runningProgress{margin:12px 0;max-width:none}.ppt .export-progress .execution-steps{display:none}.ppt .export-progress .execution-metrics{grid-template-columns:1fr;padding:10px}.ppt .export-progress .execution-metrics>div:not(:first-child){display:none}.ppt .export-progress .execution-history{font-size:11px}
 /* Templates share the persisted local Element Upload adapter. */
 .template-field{margin:28px 0;padding-top:24px;border-top:1px solid #e2e8f0}.template-field h3{margin:0 0 8px}.template-field select{width:100%;margin:8px 0 16px}.speech-panel{margin-top:22px}.speech-panel .pre-wrap{line-height:1.85}.speech-panel .download-button{display:inline-block;margin-top:12px}

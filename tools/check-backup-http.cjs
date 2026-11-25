@@ -1,6 +1,7 @@
 'use strict';
+const tempPath = require('./temp-path.cjs');
 const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),assert=require('node:assert/strict'),{spawn}=require('node:child_process');
-const root=path.resolve(__dirname,'..'),base=fs.mkdtempSync(path.join(root,'.tmp-backup-http-')),dir=path.join(base,'data'),port=31916,origin='http://127.0.0.1:'+port;fs.mkdirSync(dir);
+const root=path.resolve(__dirname,'..'),base=fs.mkdtempSync(tempPath('.tmp-backup-http-')),dir=path.join(base,'data'),port=31916,origin='http://127.0.0.1:'+port;fs.mkdirSync(dir);
 const put=(n,v)=>fs.writeFileSync(path.join(dir,n+'.json'),JSON.stringify(v));
 put('courses',[{id:'c',name:'original'}]);put('students',[{id:'s',courseId:'c',name:'isolated student'}]);put('sessions',[]);put('settings',{windowMs:90000,workbuddy:{enabled:false,path:'TARGET_MACHINE_ONLY'}});put('homework',[]);put('gradebatches',[]);put('questionnaires',{version:1,revision:0,surveys:[]});fs.writeFileSync(path.join(dir,'attachment.txt'),'real attachment roundtrip');
 const child=spawn(process.execPath,[path.join(root,'server/server.js')],{cwd:root,env:{...process.env,DATA_DIR:dir,PORT:String(port),HOST:'127.0.0.1'},windowsHide:true,stdio:['ignore','pipe','pipe']});let logs='';child.stdout.on('data',b=>logs+=b);child.stderr.on('data',b=>logs+=b);

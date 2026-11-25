@@ -1,8 +1,9 @@
 'use strict';
+const tempPath = require('./temp-path.cjs');
 // Explicit real-model check. Creates only isolated fictional data and consumes CLI quota.
 const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict'),{spawn}=require('node:child_process'),Q=require('../prototype/questionnaire-model');
 if(!process.argv.includes('--real')){console.log('Run with --real to verify the connected CLI using fictional survey data (uses model quota).');process.exit(0);}
-const root=path.resolve('.tmp-questionnaire-real-check-'+Date.now()),origin='http://127.0.0.1:31845';fs.mkdirSync(root);const wb=JSON.parse(fs.readFileSync('data/settings.json','utf8')).workbuddy;
+const root=tempPath('.tmp-questionnaire-real-check-'+Date.now()),origin='http://127.0.0.1:31845';fs.mkdirSync(root);const wb=JSON.parse(fs.readFileSync('data/settings.json','utf8')).workbuddy;
 for(const [name,data]of Object.entries({settings:{activeCourseId:'fiction',workbuddy:wb},courses:[{id:'fiction',name:'虚构课程验证'}],students:[],sessions:[]}))fs.writeFileSync(path.join(root,name+'.json'),JSON.stringify(data));
 const child=spawn(process.execPath,[path.resolve('server/server.js')],{env:{...process.env,HOST:'127.0.0.1',PORT:'31845',DATA_DIR:root},windowsHide:true,stdio:['ignore','pipe','pipe']});let logs='';child.stderr.on('data',b=>logs+=b);child.stdout.on('data',b=>logs+=b);
 async function api(p,body,method='POST'){const r=await fetch(origin+p,body?{method,headers:{'Content-Type':'application/json',Origin:origin},body:JSON.stringify(body)}:{});const d=await r.json();assert.ok(r.ok,JSON.stringify(d));return d;}

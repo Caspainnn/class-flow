@@ -6,7 +6,7 @@ const file='source-reference/media-5.png',pages=[{detailsFile:'source-reference/
 const html=src=>'<html><body><p>Original text &amp; spacing</p><img alt="diagram" src="'+src+'"></body></html>';
 const realpath=fs.realpathSync;fs.realpathSync=(file,...args)=>{assert.ok(String(file).startsWith(runDir),'Must not resolve untrusted paths outside the run directory');return realpath(file,...args);};
 try{
- for(const src of ['../../source-reference/media-5.png','source-reference/media-5.png','../../source-reference/media-%35.png']){const result=inline(html(src),{runDir,htmlFile,pages});assert.match(result,/src="data:image\/png;base64,/);assert.ok(result.includes('<p>Original text &amp; spacing</p>'));validateHtml(Buffer.from(result));}
+ for(const src of ['../../source-reference/media-5.png','../source-reference/media-5.png','source-reference/media-5.png','../../source-reference/media-%35.png']){const result=inline(html(src),{runDir,htmlFile,pages});assert.match(result,/src="data:image\/png;base64,/);assert.ok(result.includes('<p>Original text &amp; spacing</p>'));validateHtml(Buffer.from(result));}
  for(const src of ['https://outside.example/img.png','../../input.json','../../source-reference/media-9.png','../../../../secret.png','//untrusted-host/share/image.png','%2f%2funtrusted-host/share/image.png']){const result=inline(html(src),{runDir,htmlFile,pages});assert.equal(result,html(src));assert.throws(()=>validateHtml(Buffer.from(result)));}
  assert.throws(()=>validateHtml(Buffer.from(inline(html('../../source-reference/media-5.png'),{runDir,htmlFile,pages:[]}))));
  const ready=html('data:image/png;base64,aGVsbG8=');assert.equal(inline(ready,{runDir,htmlFile,pages}),ready);

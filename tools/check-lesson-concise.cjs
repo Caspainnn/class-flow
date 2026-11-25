@@ -1,7 +1,8 @@
 'use strict';
+const tempPath = require('./temp-path.cjs');
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),{EventEmitter}=require('node:events'),{PassThrough}=require('node:stream');
 const {createService}=require('../server/lesson-plan/service'),doc=require('../server/lesson-plan/document');
-const root=path.resolve('.tmp-lesson-concise-'+process.pid);let child;
+const root=tempPath('.tmp-lesson-concise-'+process.pid);let child;
 const service=createService({root,getSettings:()=>({workbuddy:{enabled:true,path:process.execPath}}),launch:()=>{child=new EventEmitter();child.stdout=new PassThrough();child.stderr=new PassThrough();return child;}});
 (async()=>{
  let t=service.create({title:'第二章 测试主题',audience:'隔离测试班',minutes:10,content:'隔离教学数据',courseName:'测试课程',textbook:'无指定教材',teacher:'测试教师',location:'测试教室',lessonType:'实践与结果研讨',previousTopic:'第一学时 基础概念'});

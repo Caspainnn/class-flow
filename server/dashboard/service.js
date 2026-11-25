@@ -25,7 +25,39 @@ function createService({root,now=Date.now}){
   const published=scoredHomes.filter(h=>h.published!==false);
   const R={absenceRun:2,corLastN:5,corMinAns:3,corRate:20,hwMiss:2,hwLow:2,hwLowScore:60,...(data('settings',{}).xqRules||{})};
   // Preserve existing xueqing rule semantics, including historical max absence run.
-  function warnCount(c){const ss=allSessions.filter(s=>s.courseId===c.id).sort((a,b)=>a.startedAt-b.startedAt),hh=published.filter(h=>h.courseId===c.id);return roster(c.id).filter(st=>{let run=0,max=0,ans=0,cor=0;ss.forEach(s=>{run=(s.records||[]).some(x=>x.studentId===st.id)?0:run+1;max=Math.max(max,run);});ss.slice(-R.corLastN).forEach(s=>{const v=(s.records||[]).find(x=>x.studentId===st.id);if(v&&answers.answered(v.answer)){ans++;if(v.correct)cor++;}});const done=hh.map(h=>(h.scores||{})[st.id]).filter(e=>e&&e.st!=='no');return max>=R.absenceRun||(ans>=R.corMinAns&&Math.round(cor/ans*100)<R.corRate)||(hh.length-done.length)>=R.hwMiss||done.filter(e=>e.score<R.hwLowScore).length>=R.hwLow;}).length;}
+  function warnCount(course) {
+   const courseSessions = allSessions.filter(session => session.courseId === course.id)
+    .sort((a, b) => a.startedAt - b.startedAt);
+   const recentSessions = courseSessions.slice(-R.corLastN);
+   const courseHomework = published.filter(homework => homework.courseId === course.id);
+
+   return roster(course.id).filter(student => {
+    let absenceRun = 0;
+    let longestAbsenceRun = 0;
+    for (const session of courseSessions) {
+     const present = (session.records || []).some(record => record.studentId === student.id);
+     absenceRun = present ? 0 : absenceRun + 1;
+     longestAbsenceRun = Math.max(longestAbsenceRun, absenceRun);
+    }
+
+    let answered = 0;
+    let correct = 0;
+    for (const session of recentSessions) {
+     const record = (session.records || []).find(entry => entry.studentId === student.id);
+     if (record && answers.answered(record.answer)) {
+      answered++;
+      if (record.correct) correct++;
+     }
+    }
+
+    const completedHomework = courseHomework.map(homework => (homework.scores || {})[student.id])
+     .filter(score => score && score.st !== 'no');
+    return longestAbsenceRun >= R.absenceRun
+     || (answered >= R.corMinAns && Math.round(correct / answered * 100) < R.corRate)
+     || courseHomework.length - completedHomework.length >= R.hwMiss
+     || completedHomework.filter(score => score.score < R.hwLowScore).length >= R.hwLow;
+   }).length;
+  }
   const courses=selected.map(c=>({id:c.id,name:c.name,term:c.term||'未设置',students:roster(c.id).length,warn:warnCount(c)}));
   const sessions=[],active=[],emptySessions=[];
   for(const s of allSessions.filter(x=>ids.has(x.courseId)&&!x.deletedAt)){

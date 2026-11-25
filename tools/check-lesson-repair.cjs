@@ -1,7 +1,8 @@
 'use strict';
+const tempPath = require('./temp-path.cjs');
 const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict'),{EventEmitter}=require('node:events'),{PassThrough}=require('node:stream');
 const {createService}=require('../server/lesson-plan/service');
-const root=path.resolve('.tmp-lesson-repair-'+process.pid);let children=[];
+const root=tempPath('.tmp-lesson-repair-'+process.pid);let children=[];
 const launch=()=>{const c=new EventEmitter();c.stdout=new PassThrough();c.stderr=new PassThrough();c.kill=()=>{};children.push(c);return c;};
 const service=createService({root,getSettings:()=>({workbuddy:{enabled:true,path:process.execPath}}),launch});
 function plan(t){const p=structuredClone(t.template.schema);for(const s of p.sections)for(const b of s.blocks)if(b.type==='text')b.text='可核对活动';else b.rows=b.headers.join('/')==='项目/内容'?b.rows.map(r=>[r[0],'待教师填写']):[b.headers.map(h=>h==='时间'?'10':h==='实际记录'?'':'具体活动')];return p;}
@@ -20,4 +21,4 @@ function start(){const t=service.create({title:'隔离格式修正课',audience:
  try{global.setTimeout=(fn,ms,...args)=>ms===7200000?(expire=fn,{testTimer:true}):originalSetTimeout(fn,ms,...args);t=start();}finally{global.setTimeout=originalSetTimeout;}
  expire();assert.equal(service.get(t.id).status,'failed');assert.equal(service.get(t.id).run.progress.stage,'failed','timeout must publish terminal progress');children.at(-1).emit('close',0);
  console.log('lesson repair: live progress, one bounded format repair, original retention, repeated failure, cancellation during repair PASS');
-})().catch(e=>{console.error(e);process.exitCode=1;}).finally(()=>{if(root.startsWith(path.resolve('.')+path.sep)&&path.basename(root).startsWith('.tmp-lesson-repair-'))fs.rmSync(root,{recursive:true,force:true});});
+})().catch(e=>{console.error(e);process.exitCode=1;}).finally(()=>{if(path.dirname(root)===path.resolve(__dirname,'..','.tmp')&&path.basename(root).startsWith('.tmp-lesson-repair-'))fs.rmSync(root,{recursive:true,force:true});});

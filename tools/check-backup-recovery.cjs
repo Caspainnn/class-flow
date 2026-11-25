@@ -1,6 +1,7 @@
 'use strict';
+const tempPath = require('./temp-path.cjs');
 const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict'),{transaction,recover,locations}=require('../server/backup/restore-worker'),{createService}=require('../server/backup/service');
-const base=fs.mkdtempSync(path.resolve('.tmp-backup-recovery-'));
+const base=fs.mkdtempSync(tempPath('.tmp-backup-recovery-'));
 function setup(key,phase){const data=path.join(base,key,'data'),id=key[0].repeat(24),loc=locations(data,id),jf=path.join(loc.backupRoot,'jobs',id,'job.json');fs.mkdirSync(data,{recursive:true});fs.writeFileSync(path.join(data,'marker'),'new');fs.mkdirSync(loc.original,{recursive:true});fs.writeFileSync(path.join(loc.original,'marker'),'original');fs.mkdirSync(path.dirname(jf),{recursive:true});fs.writeFileSync(jf,JSON.stringify({id,type:'restore',status:'running'}));fs.writeFileSync(loc.pending,JSON.stringify({jobId:id,dataRoot:data,workerPid:99999999,serverPid:process.pid,phase}));return {data,id,loc,jf};}
 (async()=>{
  const committed=setup('a-committed','committed');recover(committed.data);assert.equal(fs.readFileSync(path.join(committed.data,'marker'),'utf8'),'new');assert.equal(JSON.parse(fs.readFileSync(committed.jf)).status,'complete');assert.ok(fs.existsSync(committed.loc.original));assert.ok(!fs.existsSync(committed.loc.pending));

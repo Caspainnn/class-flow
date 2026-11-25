@@ -1,0 +1,222 @@
+{
+  "output": "E:\\MyProjects\\Inclass\\docs\\操作手册\\Word文档\\第四章 PPT管理.docx",
+  "reference": "E:\\MyProjects\\Inclass\\docs\\操作手册\\工作文件\\参考模板\\排版参考.docx",
+  "reference_sha256": "cd9cdcbe6070fd845319183250c1fe2fc1bb1c35a029aa42ffc7fd7e4d3cc7a7",
+  "figures": [
+    {
+      "source": "docs/ppt-preparation/real-review/element-upload.png",
+      "crop": [
+        240,
+        194,
+        974,
+        443
+      ],
+      "output": "第四章-图1-上传参考资料.png",
+      "boxes": [
+        [
+          255,
+          206,
+          960,
+          374
+        ],
+        [
+          259,
+          383,
+          961,
+          413
+        ]
+      ]
+    },
+    {
+      "source": "docs/ppt-preparation/template-pages-review/complete.jpg",
+      "crop": [
+        242,
+        292,
+        1170,
+        745
+      ],
+      "output": "第四章-图2-课件预览.png",
+      "boxes": [
+        [
+          262,
+          304,
+          412,
+          612
+        ],
+        [
+          426,
+          305,
+          1151,
+          715
+        ]
+      ]
+    },
+    {
+      "source": "docs/ppt-template-management/prototype-review/formal-templates.png",
+      "crop": [
+        235,
+        121,
+        1397,
+        756
+      ],
+      "output": "第四章-图3-模板管理.png",
+      "boxes": [
+        [
+          1276,
+          190,
+          1390,
+          238
+        ],
+        [
+          246,
+          256,
+          568,
+          323
+        ],
+        [
+          994,
+          257,
+          1389,
+          306
+        ],
+        [
+          266,
+          691,
+          597,
+          736
+        ]
+      ]
+    }
+  ],
+  "headings": [
+    [
+      "第四章 PPT管理",
+      1,
+      "ppt_manual_1"
+    ],
+    [
+      "4.1 概述",
+      2,
+      "ppt_manual_2"
+    ],
+    [
+      "4.2 填写课件要求",
+      2,
+      "ppt_manual_3"
+    ],
+    [
+      "4.2.1 新建课件与填写基本信息",
+      3,
+      "ppt_manual_4"
+    ],
+    [
+      "4.2.2 填写教学内容与上传资料",
+      3,
+      "ppt_manual_5"
+    ],
+    [
+      "4.2.3 更新原有课件与选择模板",
+      3,
+      "ppt_manual_6"
+    ],
+    [
+      "4.3 选择制作方式",
+      2,
+      "ppt_manual_7"
+    ],
+    [
+      "4.3.1 平台调用WorkBuddy",
+      3,
+      "ppt_manual_8"
+    ],
+    [
+      "4.3.2 手动调用WorkBuddy与导回课件",
+      3,
+      "ppt_manual_9"
+    ],
+    [
+      "4.4 审阅与调整逐页大纲",
+      2,
+      "ppt_manual_10"
+    ],
+    [
+      "4.4.1 检查内容与编辑页面",
+      3,
+      "ppt_manual_11"
+    ],
+    [
+      "4.4.2 选择布局与确认制作",
+      3,
+      "ppt_manual_12"
+    ],
+    [
+      "4.5 预览修改与导出课件",
+      2,
+      "ppt_manual_13"
+    ],
+    [
+      "4.5.1 查看页面与演讲稿",
+      3,
+      "ppt_manual_14"
+    ],
+    [
+      "4.5.2 提交逐页修改",
+      3,
+      "ppt_manual_15"
+    ],
+    [
+      "4.5.3 导出文件与标记可上课",
+      3,
+      "ppt_manual_16"
+    ],
+    [
+      "4.6 模板管理",
+      2,
+      "ppt_manual_17"
+    ],
+    [
+      "4.6.1 查找与上传模板",
+      3,
+      "ppt_manual_18"
+    ],
+    [
+      "4.6.2 查看原稿与确认布局",
+      3,
+      "ppt_manual_19"
+    ],
+    [
+      "4.6.3 编辑信息与删除模板",
+      3,
+      "ppt_manual_20"
+    ],
+    [
+      "4.7 制作进度与课件维护",
+      2,
+      "ppt_manual_21"
+    ],
+    [
+      "4.7.1 查看进度与取消制作",
+      3,
+      "ppt_manual_22"
+    ],
+    [
+      "4.7.2 失败后的重试与中断续做",
+      3,
+      "ppt_manual_23"
+    ],
+    [
+      "4.7.3 删除课件",
+      3,
+      "ppt_manual_24"
+    ]
+  ],
+  "sources": [
+    "README.md",
+    "server/ppt/public/ppt.js",
+    "server/ppt/public/ppt-method-view.js",
+    "server/ppt/public/ppt-html-view.js",
+    "server/ppt/public/ppt-templates.js",
+    "server/ppt/limits.js"
+  ],
+  "verification": "Reviewed current formal interface implementation. Reused matching crops from genuine formal-page screenshots with synthetic teaching data. No model calls or real teaching-data writes."
+}

@@ -1,7 +1,8 @@
 'use strict';
+const tempPath = require('./temp-path.cjs');
 const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
 const {createService}=require('../server/dashboard/service');
-const dir=fs.mkdtempSync(path.resolve('.tmp-dashboard-service-')),time=Date.parse('2026-11-01T12:00:00+08:00'),ts=s=>Date.parse(s+'T12:00:00+08:00');
+const dir=fs.mkdtempSync(tempPath('.tmp-dashboard-service-')),time=Date.parse('2026-11-01T12:00:00+08:00'),ts=s=>Date.parse(s+'T12:00:00+08:00');
 const write=(name,value)=>{const f=path.join(dir,name+'.json');fs.mkdirSync(path.dirname(f),{recursive:true});fs.writeFileSync(f,JSON.stringify(value));};
 write('courses',[{id:'a',name:'A',term:'秋'},{id:'b',name:'B',term:'春'},{id:'deleted',deletedAt:1}]);
 write('students',[{id:'1',courseId:'a'},{id:'2',courseId:'a'},{id:'3',courseId:'a'},{id:'1',courseId:'b'}]);

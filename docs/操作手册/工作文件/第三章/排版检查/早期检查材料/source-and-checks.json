@@ -1,0 +1,12 @@
+{
+  "output": "E:\\MyProjects\\Inclass\\docs\\操作手册\\第三章 课程管理.docx",
+  "template": "E:\\MyProjects\\Inclass\\docs\\操作手册\\参考模板\\排版参考.docx",
+  "image_sources": [
+    "docs/ui-course-2026-10-26/verification/course-list-desktop.png",
+    "docs/ui-course-2026-10-26/verification/course-management-mobile.png"
+  ],
+  "image_handling": "Cropped genuine stored formal-page screenshots; red outlined areas and white digits on red circles; fictional sample data only.",
+  "verification": "Current course HTML and server behavior reviewed; course management in-memory check passed. Live screenshot capture stopped because browser URL could not be confirmed. No production data used.",
+  "paragraphs": 73,
+  "figures": 2
+}

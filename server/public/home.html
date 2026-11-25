@@ -176,6 +176,7 @@ async function api(u) { try { const r = await fetch(u, { cache: 'no-store' }); r
 (async function boot() {
   const all = await api('/api/all');
   if (!all) { $('#sub').textContent = '连不上本地服务，双击桌面「一堂课」重新打开'; return; }
+
   const ses = ((await api('/api/sessions')) || {}).sessions || [];
   const courses = all.courses || [], students = all.students || [];
   const courseData = await Promise.all(courses.map(c => api('/api/xq/data?courseId=' + encodeURIComponent(c.id))));

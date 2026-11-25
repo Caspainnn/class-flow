@@ -1,7 +1,8 @@
 'use strict';
+const tempPath = require('./temp-path.cjs');
 const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
 const {createService}=require('../server/backup/service'),runtime=require('../server/backup/runtime'),{transaction,recover,locations}=require('../server/backup/restore-worker');
-const base=fs.mkdtempSync(path.resolve('.tmp-backup-service-')),dataRoot=path.join(base,'data');fs.mkdirSync(dataRoot);runtime.configure(dataRoot);
+const base=fs.mkdtempSync(tempPath('.tmp-backup-service-')),dataRoot=path.join(base,'data');fs.mkdirSync(dataRoot);runtime.configure(dataRoot);
 function seed(dir,name){fs.mkdirSync(dir,{recursive:true});for(const [f,v] of Object.entries({courses:[{id:'c',name}],students:[{id:'s',courseId:'c'}],sessions:[],settings:{},homework:[],gradebatches:[],questionnaires:{surveys:[]}}))fs.writeFileSync(path.join(dir,f+'.json'),JSON.stringify(v));}
 seed(dataRoot,'original');const service=createService({dataRoot,runtime,serverConfig:{projectRoot:base}}),sleep=ms=>new Promise(r=>setTimeout(r,ms));
 async function wait(id){for(let i=0;i<200;i++){const j=service.get(id);if(j.status!=='running')return j;await sleep(25);}throw Error('Job timeout');}

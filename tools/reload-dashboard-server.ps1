@@ -33,7 +33,9 @@ $dashboardListener = Get-NetTCPConnection -LocalPort 3000 -State Listen | Select
 $dashboardProcess = Get-CimInstance Win32_Process -Filter ('ProcessId = '+$dashboardListener.OwningProcess)
 if ($dashboardProcess.Name -ne 'node.exe' -or $dashboardProcess.CommandLine -notmatch 'server[\\/]server\.js') { throw 'Unexpected server process; no process was stopped.' }
 Stop-Process -Id $dashboardListener.OwningProcess
-Start-Process -FilePath (Get-Command node).Source -ArgumentList 'server/server.js' -WorkingDirectory $dashboardProject -WindowStyle Hidden -RedirectStandardOutput (Join-Path $dashboardProject '.tmp-dashboard-formal-server.log') -RedirectStandardError (Join-Path $dashboardProject '.tmp-dashboard-formal-server-error.log')
+$dashboardLogs = Join-Path $dashboardProject '.tmp'
+New-Item -ItemType Directory -Path $dashboardLogs -Force | Out-Null
+Start-Process -FilePath (Get-Command node).Source -ArgumentList 'server/server.js' -WorkingDirectory $dashboardProject -WindowStyle Hidden -RedirectStandardOutput (Join-Path $dashboardLogs '.tmp-dashboard-formal-server.log') -RedirectStandardError (Join-Path $dashboardLogs '.tmp-dashboard-formal-server-error.log')
 for ($dashboardAttempt=0; $dashboardAttempt -lt 30; $dashboardAttempt++) {
     try { $dashboardResult = Invoke-RestMethod -TimeoutSec 2 http://127.0.0.1:3000/api/dashboard; Write-Output ('Dashboard online; courses='+$dashboardResult.courses.Count); exit 0 } catch { Start-Sleep -Milliseconds 250 }
 }

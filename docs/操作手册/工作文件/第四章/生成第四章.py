@@ -1,0 +1,266 @@
+from pathlib import Path
+from copy import deepcopy
+import hashlib, json, shutil
+from PIL import Image, ImageDraw, ImageFont
+from docx import Document
+from docx.shared import Cm, Pt, RGBColor
+from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_TAB_ALIGNMENT, WD_TAB_LEADER
+from docx.enum.style import WD_STYLE_TYPE
+from docx.oxml import OxmlElement
+from docx.oxml.ns import qn
+
+ROOT=Path(r'E:\MyProjects\Inclass')
+WORK=Path(__file__).parent
+MANUAL=WORK.parent.parent
+REFERENCE=MANUAL/'工作文件/参考模板/排版参考.docx'
+OUTPUT=MANUAL/'Word文档/第四章 PPT管理.docx'
+QA=WORK/'排版检查'
+ASSETS=WORK/'图片'
+
+figures=[]
+def figure(source,crop,name,boxes):
+    original=ROOT/source
+    shutil.copy2(original,WORK/'原始截图'/original.name)
+    im=Image.open(original).convert('RGB').crop(crop)
+    pad=34
+    canvas=Image.new('RGB',(im.width+pad*2,im.height+pad*2),'white')
+    canvas.paste(im,(pad,pad))
+    draw=ImageDraw.Draw(canvas)
+    font=ImageFont.truetype(r'C:\Windows\Fonts\arialbd.ttf',20)
+    for n,(x1,y1,x2,y2) in enumerate(boxes,1):
+        box=(x1-crop[0]+pad,y1-crop[1]+pad,x2-crop[0]+pad,y2-crop[1]+pad)
+        draw.rectangle(box,outline='#d5252c',width=3)
+        cx,cy=box[0]-15,box[1]-15
+        if name=='第四章-图1-上传参考资料.png' and n==2:
+            cy=box[1]+15
+        draw.ellipse((cx-13,cy-13,cx+13,cy+13),fill='#d5252c')
+        draw.text((cx,cy-1),str(n),font=font,fill='white',anchor='mm')
+    target=ASSETS/name
+    canvas.save(target)
+    figures.append({'source':source,'crop':crop,'output':name,'boxes':boxes})
+    return target
+
+UPLOAD=figure('docs/ppt-preparation/real-review/element-upload.png',
+    (240,194,974,443),'第四章-图1-上传参考资料.png',
+    [(255,206,960,374),(259,383,961,413)])
+PREVIEW=figure('docs/ppt-preparation/template-pages-review/complete.jpg',
+    (242,292,1170,745),'第四章-图2-课件预览.png',
+    [(262,304,412,612),(426,305,1151,715)])
+LIBRARY=figure('docs/ppt-template-management/prototype-review/formal-templates.png',
+    (235,121,1397,756),'第四章-图3-模板管理.png',
+    [(1276,190,1390,238),(246,256,568,323),(994,257,1389,306),(266,691,597,736)])
+
+doc=Document(REFERENCE)
+body=doc._element.body
+sect=deepcopy(body.find(qn('w:sectPr')))
+for child in list(body): body.remove(child)
+body.append(sect)
+section=doc.sections[0]
+section.page_width=Cm(21);section.page_height=Cm(29.7)
+section.top_margin=section.bottom_margin=Cm(2.54)
+section.left_margin=section.right_margin=Cm(3.175)
+section.header_distance=Cm(1.5);section.footer_distance=Cm(1.75)
+
+def font(run,name='仿宋',size=12,bold=False):
+    run.font.name=name;run.font.size=Pt(size);run.font.bold=bold
+    run.font.color.rgb=RGBColor(0,0,0)
+    rf=run._element.get_or_add_rPr().get_or_add_rFonts()
+    for k in ['ascii','hAnsi','eastAsia','cs']: rf.set(qn('w:'+k),name)
+    for k in ['asciiTheme','hAnsiTheme','eastAsiaTheme','cstheme']: rf.attrib.pop(qn('w:'+k),None)
+
+normal=doc.styles['Normal']
+if 'Title' not in doc.styles:
+    title_style=doc.styles.add_style('Title',WD_STYLE_TYPE.PARAGRAPH)
+    title_style.base_style=normal
+normal.font.name='仿宋';normal.font.size=Pt(12);normal.font.color.rgb=RGBColor(0,0,0)
+pf=normal.paragraph_format
+pf.line_spacing=1.5;pf.space_before=Pt(0);pf.space_after=Pt(0)
+pf.first_line_indent=Pt(0);pf.widow_control=True
+for style,size in [('Heading 1',16),('Heading 2',15),('Heading 3',12),('Title',16)]:
+    s=doc.styles[style]
+    s.font.name='黑体';s.font.size=Pt(size);s.font.bold=False;s.font.color.rgb=RGBColor(0,0,0)
+    pf=s.paragraph_format
+    pf.keep_with_next=True;pf.keep_together=True;pf.line_spacing=1.5
+    pf.space_before=Pt(13 if style!='Heading 3' else 7)
+    pf.space_after=Pt(10 if style!='Heading 3' else 4)
+
+entries=[]
+sources=[]
+def h(text,level=2,page=False):
+    p=doc.add_paragraph(style='Title' if level==1 else f'Heading {level}')
+    p.paragraph_format.page_break_before=page
+    if level==1:p.alignment=WD_ALIGN_PARAGRAPH.CENTER
+    font(p.add_run(text),'黑体',{1:16,2:15,3:12}[level])
+    index=len(entries)+1;name=f'ppt_manual_{index}'
+    start=OxmlElement('w:bookmarkStart');start.set(qn('w:id'),str(index));start.set(qn('w:name'),name)
+    end=OxmlElement('w:bookmarkEnd');end.set(qn('w:id'),str(index))
+    p._p.insert(0,start);p._p.append(end)
+    entries.append((text,level,name));sources.append('#'*level+' '+text)
+    return p
+def p(text,keep=False):
+    q=doc.add_paragraph();q.paragraph_format.keep_with_next=keep
+    font(q.add_run(text));sources.append(text);return q
+def pic(path,caption,width=14.63):
+    q=doc.add_paragraph();q.alignment=WD_ALIGN_PARAGRAPH.CENTER
+    q.paragraph_format.line_spacing=1;q.paragraph_format.space_before=Pt(6)
+    q.paragraph_format.keep_with_next=True
+    q.add_run().add_picture(str(path),width=Cm(width))._inline.docPr.set('descr',caption)
+    q=doc.add_paragraph();q.alignment=WD_ALIGN_PARAGRAPH.CENTER
+    q.paragraph_format.space_after=Pt(6);q.paragraph_format.keep_with_next=True
+    font(q.add_run(caption));sources.append(caption)
+
+# Directory is filled after all headings have bookmarks.
+directory=doc.add_paragraph()
+directory.alignment=WD_ALIGN_PARAGRAPH.CENTER
+directory.paragraph_format.space_before=Pt(13);directory.paragraph_format.space_after=Pt(24)
+font(directory.add_run('目录'),'黑体',16)
+
+h('第四章 PPT管理',1,True)
+p('本章介绍如何在“一堂课”中准备教学课件，包括填写制作要求、更新已有PPT、确认逐页大纲、预览和修改课件、导出可编辑文件，以及维护可重复使用的模板。')
+h('4.1 概述')
+p('教师在左侧导航中点击“PPT管理”，进入本模块。页面分为“课件管理”和“模板管理”：前者用于制作、查看和维护教学课件，后者用于整理可重复使用的字体、配色和页面布局。')
+p('在“课件管理”中，可通过“搜索课件名称”查找课件。课件卡片显示封面、名称、当前状态、关联课程、课时、版本和更新时间。草稿可点击“继续编辑”，其他课件可点击“查看课件”进入当前进度或结果页面。')
+p('平台制作的基本流程为“填写要求—选择方式—生成大纲—生成PPT”。教师先确认每一页讲什么，再开始制作；成品可继续逐页修改，需要带走或在PowerPoint中编辑时再导出。')
+p('制作方式有两种：在平台内调用WorkBuddy，或复制任务到独立的WorkBuddy对话中手动制作。两种方式共用课件要求；手动方式需要自行提交任务和附件，并将最终PPTX导回平台。')
+p('课件要求、上传资料和历史文件保存在本机。调用WorkBuddy或CodeBuddy时，相关资料由所连接的模型服务处理，请使用适合提交给该服务的教学材料。')
+p('操作过程中，可使用内容底部左侧的“← 上一步”返回前一步，也可使用“返回列表”回到课件列表。页面提示有未保存内容时，按提示选择保存、放弃或继续编辑。')
+
+h('4.2 填写课件要求',page=True)
+h('4.2.1 新建课件与填写基本信息',3)
+p('第1步：在“课件管理”中点击“＋ 新建课件”，填写“本课主题”“授课对象”和“课时”。主题应明确到本节课，授课对象可补充年级或知识基础。')
+p('第2步：按需填写封面用的“授课人”“授课日期”，选择“关联课程”或保留“暂不关联”，在“视觉风格”中描述配色或排版要求。')
+p('第3步：课时为5—240分钟，默认45分钟。“PPT 页数”可填1—150之间的整数，包含封面和结束页；也可留空，新建内容由系统安排页数，更新课件保留原稿页数。')
+h('4.2.2 填写教学内容与上传资料',3)
+p('第1步：在“教学内容或参考资料”中输入知识点、教材章节、教学重点或课堂安排，也可上传资料，两者至少提供一种。可同时输入说明并上传文件，明确需要保留或重点讲解的内容。',True)
+pic(UPLOAD,'图1. 填写教学内容与上传参考资料')
+p('图中①支持点击上传或拖入文件，②显示已上传文件。支持PDF、DOCX、PPTX、TXT、MD、PNG、JPG和JPEG，单份不超过20MB，每个任务最多12份，文件不能为空。')
+p('第2步：需要时展开“补充要求”，填写课堂活动、例题处理或其他要求。暂时不制作可点击“保存草稿”；继续时点击“下一步：选择制作方式 →”。')
+
+h('4.2.3 更新原有课件与选择模板',3,True)
+p('已有PPT需要更新排版或内容时，先将原稿作为参考资料上传，再选择“更新课件”，并在“要更新的原稿”中指定本次使用的PPTX。未上传PPTX时，不能选择更新模式。')
+p('更新课件默认以原稿为内容依据，保留原页数、顺序、例题、数据和必要图片；模板用于决定外观。需要修改内容时，应在要求和大纲中写清具体改动，避免只写“优化一下”等笼统要求。')
+p('如果指定的目标页数与原稿不同，应在大纲中确认内容如何拆分、合并以及对应哪些原页。页数相差5页及以上时，平台会提示“原稿与目标页数差异较大”，可选择“返回修改”“按原稿 X 页”或“按目标 Y 页”，其中X、Y为实际页数。')
+p('选择较少的目标页数意味着可能精简、归纳和合并内容；选择较多的目标页数意味着可能扩充、解释和拆分内容。确认页数后仍需逐页检查大纲，尤其要检查原稿内容是否遗漏、例题和数据是否保持准确。')
+p('在“课件模板（可选）”中，可从“选择已保存模板”选择模板，也可保留“不使用模板”。需要新模板时可上传一份不超过20MB的PPTX，并先完成布局确认；也可通过“管理模板库”集中整理模板，具体操作见4.6节。')
+p('上传后出现“确认可复用布局”时，可选择“智能精简（推荐）”或“手动选择”，查看候选布局、勾选保留并修改名称，最后点击“确认生成 N 页模板并用于本课件”。N为所选布局数量，布局示意用于识别结构，不代表实际成品。')
+p('课件会保存本次选用的模板快照。后续调整模板库不会自动改写已有课件。若重新修改课件要求或更换模板，需要重新检查后续大纲和制作结果；已有历史版本仍可查看。')
+p('更新原稿时，平台需要本机PowerPoint生成原页预览。预览准备失败时，先按页面提示处理后重试。原始PPTX不会被覆盖，制作结果另存为课件版本。')
+
+h('4.3 选择制作方式',page=True)
+h('4.3.1 平台调用WorkBuddy',3)
+p('第1步：在“选择制作方式”页面点击“平台调用 WorkBuddy”，查看下方连接状态。连接未就绪时，“先生成教学大纲”不可点击，可按页面原因完成连接设置后再继续。')
+p('第2步：点击“先生成教学大纲”。平台将根据本次要求和资料生成逐页大纲；此时尚未生成完整PPT。等待完成后，按4.4节检查每一页的内容、时长和布局。')
+p('第3步：确认大纲后开始制作。每轮最长等待两小时，实际耗时受页数、资料和服务状态影响。制作时可切换到其他板块，完成、失败或需要确认时会在侧栏“PPT管理”显示提示。')
+h('4.3.2 手动调用WorkBuddy与导回课件',3)
+p('第1步：选择“手动调用 WorkBuddy”，点击“准备完整任务”。任务准备完成后，点击“复制完整任务”，也可使用“下载任务文本”保存要求。')
+p('第2步：在独立的WorkBuddy对话中粘贴任务，并另行添加所需原稿、模板和参考文件。复制任务文本不会同时提交附件，应检查文件是否已完整加入该对话。')
+p('第3步：在WorkBuddy中先确认大纲，再检查课件。返回平台后，可点击“我已交给 WorkBuddy”记录已在外部开始制作；该按钮只记录进度，不会代替粘贴任务或上传文件。')
+p('第4步：取得实际PPTX成品后，在“导回外部制作的课件”区域选择文件，点击“导入课件”。平台校验并保存为新版本，供后续查看和下载。不得将任务文本或未完成的文件当作PPTX导入。')
+p('第5步：下载导入后的课件，在PowerPoint中检查内容、版式和可编辑性。平台提取出的预览内容不能替代实际PPTX的排版检查；检查完成后，再按页面提示标记可上课。')
+
+h('4.4 审阅与调整逐页大纲',page=True)
+h('4.4.1 检查内容与编辑页面',3)
+p('大纲中每张卡片对应一页PPT，显示标题、时长和内容。先检查教学目标、知识顺序、例题数据、课堂活动与总课时；更新课件还应核对来源原页码。')
+p('第1步：点击某页“编辑大纲”或“调整大纲”，修改“标题”“时长（分钟）”和“本页展示内容、图示与课堂安排”。页面保留重点，详细讲解留给演讲稿。')
+p('第2步：用“↑ 上移”“↓ 下移”“＋ 在下方新增”“＋ 新增一页”或“删除”调整结构。总时长应等于本课课时；指定了PPT页数时，页数也应一致。')
+p('第3步：更新课件时核对“来源原页码”。拆合页应填写全部相关原页码，确认必要图片、数据和例题未被遗漏。')
+p('第4步：点击“保存大纲”，返回整体审阅，直接编辑保存不会调用模型。输入补充意见后点击“发送调整建议”，则会重新调用模型生成大纲，需要再次审阅。')
+h('4.4.2 选择布局与确认制作',3)
+p('使用模板时，大纲旁显示当前布局。普通页点击“更换布局”，选择后点击“应用布局”；封面和结束页使用专用布局，可点击“查看布局”。未使用模板时不显示布局选项。')
+p('编辑大纲时更换的布局，随“保存大纲”一起保存；整体审阅时点击“应用布局”即保存。布局示意用于理解区域安排，成品仍需检查。')
+p('新建内容需外部配图时，选择“制作时网上找图”，填写“图片内容”和“教学用途”，整套最多一张。更新课件保留原稿必要配图，不另加网上图片。')
+p('全部页面检查完成后，点击“确认全部页面，生成PPT”。内容、顺序或布局变化后应重新整体确认。旧任务显示“旧版教学环节大纲”时，先点击“重新生成逐页大纲”。')
+
+h('4.5 预览修改与导出课件',page=True)
+h('4.5.1 查看页面与演讲稿',3)
+p('制作完成后进入“PPT预览”。依次点击左侧页面检查内容与图示，展开“本页演讲稿”核对讲解，确认两者一致。',True)
+pic(PREVIEW,'图2. 逐页查看课件预览')
+p('图中①为页面列表，点击可切换页码；②为当前页面预览。示例采用教学测试内容，实际显示以本次制作的课件为准。')
+h('4.5.2 提交逐页修改',3)
+p('第1步：在右侧“提出修改要求”中选择“修改页面”，填写“修改内容”，例如“第2页增加一个反例，并放大图中标注”，点击“提交修改”。')
+p('第2步：检查新版本，也可在“课件历史版本”中“查看”旧版。继续修改和导出应使用最新版；任务处理中或连接未就绪时不能提交修改。')
+p('第3步：有外部配图时可查看来源、作者和许可，点击“换一张”或“取消配图”。课件修改后，重新导出并检查对应文件。')
+
+h('4.5.3 导出文件与标记可上课',3,True)
+p('第1步：确认最新预览后，在右侧点击“导出可编辑PPT”。此步骤使用本机转换工具生成PPTX，不会重新调用模型制作另一套课件。导出依赖未就绪时，按按钮下方提示检查本机浏览器和Python设置。')
+p('第2步：导出成功后，平台会自动下载一次PPTX；需要再次下载时，可在预览下方找到PPTX文件行，点击“下载”。“逐页讲稿.docx”在单独的Word文件行中下载，应与对应课件版本配套使用。')
+p('第3步：用PowerPoint打开下载的PPTX，逐页检查文字是否溢出、图示和公式是否正确、图片是否完整、页序是否一致，并尝试编辑所需内容。常用文字和形状可编辑，部分复杂图示内部可能以图片形式保留。')
+p('第4步：打开“逐页讲稿.docx”，核对讲稿与课件页码、内容和课堂时长。完整讲稿在单独的Word文件中，导出PPT的备注区默认不填入整份讲稿。')
+p('第5步：检查当前导出版本无误后，勾选“我已核对课件内容与实际呈现”，再点击“标记可上课”。标记表示教师已完成检查，不代表系统已自动验证知识内容和教学适用性。')
+p('第6步：后续如提交修改，应检查新预览、重新导出对应PPTX，并再次核对后标记。可在“课件历史版本”查看旧预览，在“导出历史”下载旧文件，避免将旧文件误当作最新成品。')
+p('导出失败或取消时，已生成课件会保留。按页面提示处理后点击“重试导出”；无需仅因导出失败就重新生成全部课件。导回外部制作的PPTX则可直接按其文件入口下载并检查。')
+
+h('4.6 模板管理',page=True)
+h('4.6.1 查找与上传模板',3)
+p('在“PPT管理”中切换到“模板管理”，可集中查看模板。通过状态切换“全部模板”“可复用”“待确认布局”，也可按名称、简介或文件名搜索，并按“最近更新”或“使用次数”排序。',True)
+pic(LIBRARY,'图3. 模板列表与管理入口')
+p('图中①用于上传模板；②用于按状态筛选；③用于搜索和排序；④提供拆解确认、编辑信息和删除入口。')
+p('第1步：点击“＋ 上传模板”，通过点击或拖拽选择一份非空PPTX，单份不超过20MB。选择文件后自动填写模板名称，可修改为易于辨认且不重复的名称；简介可按需填写。')
+p('第2步：确认是否勾选“使用 WorkBuddy 编写模板布局说明书”。默认勾选，会结合模板预览分析布局用途、内容容量和限制；取消勾选时只使用程序识别，不调用WorkBuddy编写说明书。')
+p('第3步：点击“拆解并预览 →”。上传完全相同的模板文件时，平台会复用已有模板。布局说明书分析失败时，模板仍会保留，可按提示重试；重试会再次调用模型。')
+
+h('4.6.2 查看原稿与确认布局',3,True)
+p('第1步：打开待确认模板，检查原文件信息和页面预览。原PPT预览依赖本机PowerPoint；尚无预览时点击“生成原PPT预览”，失败后按页面提示处理并重试。')
+p('第2步：点击“查看原PPT”或布局预览，逐页查看原稿的真实外观。检查标题、文字、图片和表格区域是否适合复用，不将结构示意当作实际PPT排版效果。')
+p('第3步：在“确认通用布局”中逐个检查推荐布局，勾选“保留此布局”，并按用途修改布局名称，例如“左文右图”“双栏对比”。模板首页和结尾页另行保留，不会因外观相近而合并。')
+p('第4步：推荐布局未覆盖需要的页面时，点击“＋ 从原PPT补充布局”，找到目标原页，点击“＋ 将此页加入布局”，再返回检查选择和名称。')
+p('第5步：确认后点击“确认布局，加入模板库”。模板变为“可复用”，新建或更新课件时即可选择。已可复用模板需要调整时，点击“调整布局”，完成后再次确认保存。')
+h('4.6.3 编辑信息与删除模板',3)
+p('修改名称或简介时，点击“编辑信息”，填写后点击“保存修改”。模板名称不能为空，也不能与已有模板重名。修改模板信息或布局，不会改变已经制作的课件和已保存的任务模板快照。')
+p('不再需要模板时，点击红框“删除”或“删除模板”，在确认窗口中核对名称，点击“确认删除模板”；取消时点击“保留模板”。删除后不能再为新任务选择该模板，已有课件的模板快照和历史文件保留。')
+
+h('4.7 制作进度与课件维护',page=True)
+h('4.7.1 查看进度与取消制作',3)
+p('制作过程中可查看当前阶段、已用时间、最近活动和文件情况。生成速度会随资料和服务状态变化，应以页面反馈判断进度。切换板块后任务继续在后台运行，期间应保持本机和平台服务运行。')
+p('需要停止时，点击红框“取消本次制作”，再按弹窗确认；导出期间显示“取消本次导出”。取消后保留课件要求和已有版本。平台不会在失败后自动再次调用模型，可先检查错误原因再决定重试。')
+h('4.7.2 失败后的重试与中断续做',3)
+p('制作未完成时，先查看错误提示和“阶段反馈”。生成大纲失败，可调整要求后“重新发起”；导出失败，可保留当前课件并“重试导出”。需要时也可选择“改用手动调用”。')
+p('课件页面生成失败或取消后，平台会检查可续做进度。符合条件时显示已完成页数，点击“从第 N 页继续生成”可保留前面连续通过检查的页面及讲稿，N为下一页页码。全部页已完成时，点击“收集已完成的全部页面”。')
+p('续做要求课件要求、大纲和模板保持一致。修改这些内容后，旧进度可能无法复用；页面显示无可续做内容时，按提示处理或选择“全部重新生成”。续做和重新生成会继续调用模型，需按当前需要选择。')
+h('4.7.3 删除课件',3)
+p('第1步：在“课件管理”列表找到目标课件。正在制作的课件不能直接删除，应先进入任务取消制作。')
+p('第2步：点击卡片上的红框“删除”，在“删除这份课件？”窗口核对名称和影响。需要保留时点击“保留课件”；确认移除时点击“确认删除课件”。')
+p('第3步：删除后，平台内该课件的要求、讲稿、历史版本和下载入口一并移除，页面不提供恢复入口。请先下载需要留存的文件。模板库和已经下载到本机的副本保留。')
+
+# Populate directory with real PAGEREF fields, refreshed through Word during QA.
+def field(paragraph,instruction):
+    for tag,value in [('begin',None),(None,instruction),('separate',None),(None,'2'),('end',None)]:
+        run=OxmlElement('w:r')
+        if tag:
+            elem=OxmlElement('w:fldChar');elem.set(qn('w:fldCharType'),tag)
+        elif value==instruction:
+            elem=OxmlElement('w:instrText');elem.set(qn('xml:space'),'preserve');elem.text=value
+        else:
+            elem=OxmlElement('w:t');elem.text=value
+        run.append(elem);paragraph._p.append(run)
+
+anchor=directory
+for text,level,bookmark in entries:
+    q=doc.add_paragraph()
+    q.paragraph_format.left_indent=Cm((level-1)*.45)
+    q.paragraph_format.space_after=Pt(3)
+    q.paragraph_format.tab_stops.add_tab_stop(Cm(14.63),WD_TAB_ALIGNMENT.RIGHT,WD_TAB_LEADER.DOTS)
+    font(q.add_run(text+'\t'))
+    field(q,f' PAGEREF {bookmark} \\h ')
+    anchor._p.addnext(q._p);anchor=q
+
+properties=doc.core_properties
+properties.title='第四章 PPT管理';properties.subject='一堂课操作手册'
+properties.author='';properties.last_modified_by='';properties.comments='';properties.keywords='PPT管理,操作手册'
+settings=doc.settings._element
+update=settings.find(qn('w:updateFields'))
+if update is None:update=OxmlElement('w:updateFields');settings.append(update)
+update.set(qn('w:val'),'true')
+used=set(doc._element.xpath('//@r:embed | //@r:id | //@r:link'))
+for rid,rel in list(doc.part.rels.items()):
+    if rel.reltype.endswith(('/image','/hyperlink')) and rid not in used:doc.part.drop_rel(rid)
+doc.save(OUTPUT)
+(WORK/'正文.txt').write_text('\n\n'.join(sources),encoding='utf-8')
+manifest={'output':str(OUTPUT),'reference':str(REFERENCE),'reference_sha256':hashlib.sha256(REFERENCE.read_bytes()).hexdigest(),'figures':figures,'headings':entries,'sources':['README.md','server/ppt/public/ppt.js','server/ppt/public/ppt-method-view.js','server/ppt/public/ppt-html-view.js','server/ppt/public/ppt-templates.js','server/ppt/limits.js'],'verification':'Reviewed current formal interface implementation. Reused matching crops from genuine formal-page screenshots with synthetic teaching data. No model calls or real teaching-data writes.'}
+(QA/'内容与配图依据.json').write_text(json.dumps(manifest,ensure_ascii=False,indent=2),encoding='utf-8')
+check=Document(OUTPUT)
+assert len(check.inline_shapes)==3 and len(check.sections)==1
+assert len(check._element.xpath('//w:instrText'))==len(entries)
+assert '第三章' not in '\n'.join(q.text for q in check.paragraphs)
+print(str(OUTPUT))
+print('headings',len(entries),'paragraphs',len(check.paragraphs),'characters',sum(len(q.text) for q in check.paragraphs))

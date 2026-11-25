@@ -1,7 +1,8 @@
 'use strict';
+const tempPath = require('./temp-path.cjs');
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),{EventEmitter}=require('node:events'),{PassThrough}=require('node:stream');
 const {createService}=require('../server/lesson-plan/service'),doc=require('../server/lesson-plan/document');
-const root=path.resolve('.tmp-lesson-service-'+process.pid);fs.mkdirSync(root,{recursive:true});
+const root=tempPath('.tmp-lesson-service-'+process.pid);fs.mkdirSync(root,{recursive:true});
 let launchCount=0,child;
 const settings={workbuddy:{enabled:true,path:process.execPath}};
 const launch=()=>{launchCount++;child=new EventEmitter();child.stdout=new PassThrough();child.stderr=new PassThrough();child.kill=()=>{};return child;};
@@ -40,4 +41,4 @@ async function settle(){for(let i=0;i<30;i++)await new Promise(r=>setTimeout(r,1
  t=service.start(t.id,{revision:t.revision});const restarted=createService({root,getSettings:()=>settings,getCourses:()=>[]});assert.equal(restarted.get(t.id).status,'failed');
  service.cancel(t.id,{runId:t.run.id});child.emit('close',0);
  console.log('lesson service: conflict, immutable versions, safe downloads, cancellation race, real file requirement, restart PASS');
-})().catch(e=>{console.error(e);process.exitCode=1;}).finally(()=>{if(!root.startsWith(path.resolve('.')+path.sep)||!path.basename(root).startsWith('.tmp-lesson-service-'))throw Error('refusing cleanup outside isolated test root');fs.rmSync(root,{recursive:true,force:true});});
+})().catch(e=>{console.error(e);process.exitCode=1;}).finally(()=>{if(path.dirname(root)!==path.resolve(__dirname,'..','.tmp')||!path.basename(root).startsWith('.tmp-lesson-service-'))throw Error('refusing cleanup outside isolated test root');fs.rmSync(root,{recursive:true,force:true});});

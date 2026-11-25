@@ -8,7 +8,7 @@ function inline(html,{runDir,htmlFile,pages=[]}){
  const edits=[];
  function walk(node){for(const attr of node.attrs||[]){if(!(node.tagName==='img'&&attr.name==='src'||node.tagName==='image'&&attr.name==='href'))continue;const value=attr.value.trim();if(!value||/^(?:data:|#|[a-z][a-z\d+.-]*:)/i.test(value))continue;
   let decoded;try{decoded=decodeURIComponent(value);}catch{continue;}if(path.isAbsolute(decoded)||/^[\\/]|^[a-z][a-z\d+.-]*:/i.test(decoded))continue;
-  const lexical=path.resolve(path.dirname(htmlFile),decoded);let asset=allowed.get(canonical(lexical));if(!asset){asset=[...allowed.values()].find(a=>a.relative===decoded);}
+  const lexical=path.resolve(path.dirname(htmlFile),decoded);let asset=allowed.get(canonical(lexical));if(!asset){const relative=decoded.replaceAll('\\','/').replace(/^(?:\.\.\/)+/,'');asset=[...allowed.values()].find(a=>a.relative===decoded||a.relative===relative);}
   const location=node.sourceCodeLocation?.attrs?.[attr.prefix?attr.prefix+':'+attr.name:attr.name];if(!asset||!location)continue;
   const ext=path.extname(asset.file).slice(1).toLowerCase(),mime=ext==='svg'?'svg+xml':ext==='jpg'?'jpeg':ext,bytes=fs.readFileSync(asset.file);if(bytes.length>20*1024*1024)throw Error('原稿图片超过可内嵌大小限制。');
   edits.push({start:location.startOffset,end:location.endOffset,text:`${attr.prefix?attr.prefix+':':''}${attr.name}="data:image/${mime};base64,${bytes.toString('base64')}"`});

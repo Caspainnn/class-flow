@@ -1,9 +1,10 @@
 'use strict';
+const tempPath = require('./temp-path.cjs');
 // User-authorized single synthetic workflow; no real teaching data is written.
 const fs=require('node:fs'),path=require('node:path');
 const {createService}=require('../server/ppt/service');
 if(!process.argv.includes('--run-live')){console.error('Use --run-live only with explicit authorization for model usage.');process.exit(1);}
-const project=path.resolve(__dirname,'..'),root=path.join(project,'.tmp-ppt-live-check');
+const project=path.resolve(__dirname,'..'),root=tempPath('.tmp-ppt-live-check');
 const ppt={name:'PPT Master',revision:'5832c3a8ca77e22284198407f0a7e4485ada9688',skillPath:path.join(project,'.local-ppt-skills/ppt-master'),pythonPath:path.join(project,'.local-ppt-python/Scripts/python.exe'),timeoutMs:900000,allowShell:process.argv.includes('--allow-shell-once')};
 fs.writeFileSync(path.join(project,'.local-ppt-skills/config.json'),JSON.stringify({...ppt,allowShell:false},null,2));
 const settings=JSON.parse(fs.readFileSync(path.join(project,'data/settings.json'),'utf8'));

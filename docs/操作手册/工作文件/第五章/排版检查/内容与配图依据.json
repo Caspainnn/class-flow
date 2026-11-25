@@ -1,0 +1,397 @@
+{
+  "output": "E:\\MyProjects\\Inclass\\docs\\操作手册\\Word文档\\第五章 教案制作.docx",
+  "reference": "E:\\MyProjects\\Inclass\\docs\\操作手册\\工作文件\\参考模板\\排版参考.docx",
+  "reference_sha256": "cd9cdcbe6070fd845319183250c1fe2fc1bb1c35a029aa42ffc7fd7e4d3cc7a7",
+  "figures": [
+    {
+      "source": "docs/lesson-plan/detail-review/library-card-refresh.png",
+      "source_sha256": "5e3c853318154e0addadc9e86fc6860a9eb08d5b92b7e4cf8f33c2effa61afc0",
+      "crop": [
+        230,
+        14,
+        1265,
+        431
+      ],
+      "output": "第五章-图1-教案列表.png",
+      "boxes": [
+        [
+          1171,
+          28,
+          1262,
+          73
+        ],
+        [
+          448,
+          360,
+          545,
+          391
+        ]
+      ]
+    },
+    {
+      "source": "docs/lesson-plan/detail-review/teacher-basic-requirements.png",
+      "source_sha256": "61cf4fd06deea32b745fb749dc3ba826732807e44db79aaa0184f27e10dfa6f7",
+      "crop": [
+        243,
+        381,
+        1235,
+        688
+      ],
+      "output": "第五章-图2-填写要求.png",
+      "boxes": [
+        [
+          250,
+          388,
+          728,
+          458
+        ],
+        [
+          746,
+          483,
+          1225,
+          554
+        ]
+      ]
+    },
+    {
+      "source": "docs/lesson-plan/progress-review/live-progress.png",
+      "source_sha256": "47697a9e80e013a35b0abb69dbf846e5d387a70b5aa1d14c3af30d8ada339b99",
+      "crop": [
+        248,
+        150,
+        1223,
+        404
+      ],
+      "output": "第五章-图3-生成进度.png",
+      "boxes": [
+        [
+          600,
+          162,
+          883,
+          222
+        ],
+        [
+          278,
+          256,
+          755,
+          397
+        ]
+      ]
+    },
+    {
+      "source": "docs/lesson-plan/progress-review/live-progress.png",
+      "source_sha256": "47697a9e80e013a35b0abb69dbf846e5d387a70b5aa1d14c3af30d8ada339b99",
+      "crop": [
+        674,
+        573,
+        805,
+        630
+      ],
+      "output": "第五章-图4-停止生成.png",
+      "boxes": [
+        [
+          681,
+          579,
+          795,
+          622
+        ]
+      ]
+    },
+    {
+      "source": "docs/lesson-plan/detail-review/process-heading.png",
+      "source_sha256": "2c5b4f051cc319fb387af7765a0b9252d485dba60d3f67720ccfcbd3ca3d5461",
+      "crop": [
+        233,
+        86,
+        1243,
+        606
+      ],
+      "output": "第五章-图5-按章阅读.png",
+      "boxes": [
+        [
+          242,
+          381,
+          444,
+          434
+        ],
+        [
+          508,
+          105,
+          1213,
+          441
+        ]
+      ]
+    },
+    {
+      "source": "docs/lesson-plan/detail-review/floating-section-actions.png",
+      "source_sha256": "802cb9aa023bd3ffa309c32f5bd8f894ce7131fa4caa98db7e24824961bb60b7",
+      "crop": [
+        505,
+        357,
+        1263,
+        705
+      ],
+      "output": "第五章-图6-保存本节.png",
+      "boxes": [
+        [
+          530,
+          441,
+          1189,
+          544
+        ],
+        [
+          1210,
+          596,
+          1258,
+          646
+        ],
+        [
+          1210,
+          650,
+          1258,
+          701
+        ]
+      ]
+    },
+    {
+      "source": "docs/lesson-plan/detail-review/pending-fields.png",
+      "source_sha256": "9af57cebfa0544fbcfa5c7bd189e289247cc7eca547f5731c0048625ca918495",
+      "crop": [
+        676,
+        475,
+        1216,
+        628
+      ],
+      "output": "第五章-图7-补充核对内容.png",
+      "boxes": [
+        [
+          940,
+          591,
+          1038,
+          623
+        ]
+      ]
+    },
+    {
+      "source": "docs/lesson-plan/detail-review/process-heading.png",
+      "source_sha256": "2c5b4f051cc319fb387af7765a0b9252d485dba60d3f67720ccfcbd3ca3d5461",
+      "crop": [
+        508,
+        103,
+        1216,
+        442
+      ],
+      "output": "第五章-图8-教学环节与课时.png",
+      "boxes": [
+        [
+          532,
+          207,
+          834,
+          271
+        ],
+        [
+          1127,
+          206,
+          1193,
+          241
+        ]
+      ]
+    },
+    {
+      "source": "docs/lesson-plan/detail-review/board-row-menu.png",
+      "source_sha256": "293fa7bd98454c51e2e451e34428178e33a08d41d4b905b02ff647817fb2059c",
+      "crop": [
+        494,
+        100,
+        1224,
+        448
+      ],
+      "output": "第五章-图9-调整表格.png",
+      "boxes": [
+        [
+          533,
+          110,
+          1211,
+          133
+        ],
+        [
+          510,
+          201,
+          534,
+          375
+        ],
+        [
+          511,
+          382,
+          845,
+          432
+        ]
+      ]
+    },
+    {
+      "source": "docs/lesson-plan/detail-review/reflection-grid-menu.png",
+      "source_sha256": "440a01931ea93afa437a68fb4e2949bcbbd347fa909d2cfd6daf001362d3cd55",
+      "crop": [
+        508,
+        174,
+        1218,
+        471
+      ],
+      "output": "第五章-图10-课后反思.png",
+      "boxes": [
+        [
+          986,
+          203,
+          1209,
+          468
+        ]
+      ]
+    },
+    {
+      "source": "docs/lesson-plan/detail-review/version-name-dialog.png",
+      "source_sha256": "7c0328c9f18c52b545b68dd1bea95ba281506d0a1a9a0c287d952c40887bbf9e",
+      "crop": [
+        516,
+        231,
+        977,
+        489
+      ],
+      "output": "第五章-图11-保存版本.png",
+      "boxes": [
+        [
+          539,
+          356,
+          954,
+          407
+        ],
+        [
+          862,
+          422,
+          952,
+          466
+        ]
+      ]
+    },
+    {
+      "source": "docs/lesson-plan/detail-review/chapter-save-and-version.png",
+      "source_sha256": "52f1c32b2fd8ccb489807d304a815a10dd3bd7f4686714805ce860370ad9f6f1",
+      "crop": [
+        235,
+        293,
+        1244,
+        449
+      ],
+      "output": "第五章-图12-下载与历史.png",
+      "boxes": [
+        [
+          1114,
+          320,
+          1227,
+          365
+        ],
+        [
+          315,
+          388,
+          580,
+          434
+        ]
+      ]
+    }
+  ],
+  "headings": [
+    [
+      "第五章 教案制作",
+      1,
+      "plan_manual_1"
+    ],
+    [
+      "5.1 概述",
+      2,
+      "plan_manual_2"
+    ],
+    [
+      "5.2 填写教案要求",
+      2,
+      "plan_manual_3"
+    ],
+    [
+      "5.3 选择教案模板",
+      2,
+      "plan_manual_4"
+    ],
+    [
+      "5.4 生成教案",
+      2,
+      "plan_manual_5"
+    ],
+    [
+      "5.4.1 开始生成与查看进展",
+      3,
+      "plan_manual_6"
+    ],
+    [
+      "5.4.2 停止生成与失败重试",
+      3,
+      "plan_manual_7"
+    ],
+    [
+      "5.5 查看与编辑教案",
+      2,
+      "plan_manual_8"
+    ],
+    [
+      "5.5.1 按目录查看章节",
+      3,
+      "plan_manual_9"
+    ],
+    [
+      "5.5.2 编辑与保存本节",
+      3,
+      "plan_manual_10"
+    ],
+    [
+      "5.5.3 补充与核对标记内容",
+      3,
+      "plan_manual_11"
+    ],
+    [
+      "5.5.4 调整教学过程与课时",
+      3,
+      "plan_manual_12"
+    ],
+    [
+      "5.5.5 调整表格行列",
+      3,
+      "plan_manual_13"
+    ],
+    [
+      "5.5.6 课后填写教学反思",
+      3,
+      "plan_manual_14"
+    ],
+    [
+      "5.6 保存与使用Word版本",
+      2,
+      "plan_manual_15"
+    ],
+    [
+      "5.6.1 保存并命名完整版本",
+      3,
+      "plan_manual_16"
+    ],
+    [
+      "5.6.2 下载与恢复历史版本",
+      3,
+      "plan_manual_17"
+    ]
+  ],
+  "sources": [
+    "README.md",
+    "server/lesson-plan/public/plan.html",
+    "server/lesson-plan/public/plan.js",
+    "server/lesson-plan/service.js",
+    "server/lesson-plan/routes.js",
+    "server/lesson-plan/document.js"
+  ],
+  "verification": "Current formal implementation reviewed. Matching crops from genuine retained screenshots only. Obsolete controls excluded. No model calls or teaching data writes. Browser capture unavailable in Work settings."
+}

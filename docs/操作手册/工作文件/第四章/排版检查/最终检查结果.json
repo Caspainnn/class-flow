@@ -1,0 +1,132 @@
+{
+  "page_count": 11,
+  "figure_count": 3,
+  "directory_entries": [
+    {
+      "heading": "第四章 PPT管理",
+      "page": 2
+    },
+    {
+      "heading": "4.1 概述",
+      "page": 2
+    },
+    {
+      "heading": "4.2 填写课件要求",
+      "page": 3
+    },
+    {
+      "heading": "4.2.1 新建课件与填写基本信息",
+      "page": 3
+    },
+    {
+      "heading": "4.2.2 填写教学内容与上传资料",
+      "page": 3
+    },
+    {
+      "heading": "4.2.3 更新原有课件与选择模板",
+      "page": 4
+    },
+    {
+      "heading": "4.3 选择制作方式",
+      "page": 5
+    },
+    {
+      "heading": "4.3.1 平台调用WorkBuddy",
+      "page": 5
+    },
+    {
+      "heading": "4.3.2 手动调用WorkBuddy与导回课件",
+      "page": 5
+    },
+    {
+      "heading": "4.4 审阅与调整逐页大纲",
+      "page": 6
+    },
+    {
+      "heading": "4.4.1 检查内容与编辑页面",
+      "page": 6
+    },
+    {
+      "heading": "4.4.2 选择布局与确认制作",
+      "page": 6
+    },
+    {
+      "heading": "4.5 预览修改与导出课件",
+      "page": 7
+    },
+    {
+      "heading": "4.5.1 查看页面与演讲稿",
+      "page": 7
+    },
+    {
+      "heading": "4.5.2 提交逐页修改",
+      "page": 7
+    },
+    {
+      "heading": "4.5.3 导出文件与标记可上课",
+      "page": 8
+    },
+    {
+      "heading": "4.6 模板管理",
+      "page": 9
+    },
+    {
+      "heading": "4.6.1 查找与上传模板",
+      "page": 9
+    },
+    {
+      "heading": "4.6.2 查看原稿与确认布局",
+      "page": 10
+    },
+    {
+      "heading": "4.6.3 编辑信息与删除模板",
+      "page": 10
+    },
+    {
+      "heading": "4.7 制作进度与课件维护",
+      "page": 11
+    },
+    {
+      "heading": "4.7.1 查看进度与取消制作",
+      "page": 11
+    },
+    {
+      "heading": "4.7.2 失败后的重试与中断续做",
+      "page": 11
+    },
+    {
+      "heading": "4.7.3 删除课件",
+      "page": 11
+    }
+  ],
+  "final_visual_review": "All 11 pages inspected. Pages 1, 3, 7 reinspected after final corrections; other 8 pages pixel-identical to inspected prior render. No clipping, text overlap, isolated overflow paragraph, or mismatched figure labels.",
+  "renderer": "Word COM field update and native PDF export; Poppler page images. Packaged LibreOffice renderer unavailable on this Windows host.",
+  "final_visual_changes": {
+    "页-01.png": true,
+    "页-02.png": false,
+    "页-03.png": true,
+    "页-04.png": false,
+    "页-05.png": false,
+    "页-06.png": false,
+    "页-07.png": true,
+    "页-08.png": false,
+    "页-09.png": false,
+    "页-10.png": false,
+    "页-11.png": false
+  },
+  "deliverables": [
+    {
+      "name": "第三章 课程管理.docx",
+      "sha256": "4dd6b2157c270ce3fb5ac31ae4c42caf1c0ce66373bd75fa3a2b0881a35dcb9d",
+      "bytes": 227742
+    },
+    {
+      "name": "第四章 PPT管理.docx",
+      "sha256": "4c0240beb27c166982d500ec450fb442db9730e11ac2a79d13caaf73a8705141",
+      "bytes": 319831
+    }
+  ],
+  "template_preserved": true,
+  "product_code_modified": false,
+  "model_calls_or_real_data_writes": false
+}

@@ -1,6 +1,7 @@
 'use strict';
+const tempPath = require('./temp-path.cjs');
 const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),assert=require('node:assert/strict');
-const root=fs.mkdtempSync(path.resolve('.tmp-desktop-api-')),runtime={locked:false,isLocked(){return this.locked;},acquire(){if(this.locked)throw Error('locked');this.locked=true;}};let exits=0,backup=false;
+const root=fs.mkdtempSync(tempPath('.tmp-desktop-api-')),runtime={locked:false,isLocked(){return this.locked;},acquire(){if(this.locked)throw Error('locked');this.locked=true;}};let exits=0,backup=false;
 const desktop=require('../server/desktop').createDesktop({projectRoot:root,dataRoot:root,runtime,backupActive:()=>backup,exit:()=>exits++});
 const server=http.createServer((req,res)=>desktop.handle(req,res,{url:new URL(req.url,'http://localhost'),json(r,status,v){r.writeHead(status,{'Content-Type':'application/json'});r.end(JSON.stringify(v));}}));
 (async()=>{await new Promise(r=>server.listen(0,'127.0.0.1',r));const base='http://127.0.0.1:'+server.address().port;

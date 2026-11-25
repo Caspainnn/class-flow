@@ -1,0 +1,730 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>课程工作区 · 一堂课</title><link rel="stylesheet" href="/shell.css">
+<style>
+:root{--cg-line:#e3e7ed;--cg-radius:12px}
+.cg-loading{padding:44px 0;color:var(--ink2);font-size:13px}
+.cg-crumb{display:flex;gap:8px;flex-wrap:wrap;font-size:12px;color:var(--ink3);margin-bottom:12px}
+.cg-crumb a{color:var(--ink2);text-decoration:none}
+.cg-crumb a:hover{color:var(--blue);text-decoration:underline}
+.cg-head{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:18px;padding:24px;border:1px solid #d9e5f4;border-radius:16px;background:linear-gradient(110deg,#fff 35%,#eaf3ff);box-shadow:0 6px 20px #254d7510}
+.cg-head-main{flex:1;min-width:0}
+.cg-head h1{margin:0;font-size:26px;font-weight:700;line-height:1.3;letter-spacing:-.5px;overflow-wrap:anywhere}
+.cg-sub{margin:6px 0 0;font-size:13px;line-height:1.7;color:var(--ink2)}
+.cg-head-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.cg-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:38px;padding:8px 15px;border:1px solid var(--cg-line);border-radius:9px;background:#fff;color:var(--ink);font:inherit;font-size:13px;line-height:1.4;text-decoration:none;cursor:pointer;white-space:nowrap}
+.cg-btn:hover{background:#f5f7fa;border-color:#cfd8e3}
+.cg-btn:disabled{opacity:.5;cursor:default}
+.cg-btn.cg-primary{background:var(--ink);border-color:var(--ink);color:#fff;font-weight:600}
+.cg-btn.cg-primary:hover{background:#2c323b;border-color:#2c323b}
+.cg-btn.cg-primary:disabled:hover{background:var(--ink);border-color:var(--ink)}
+/* 分段式标签：浅底容器 + 白色选中药丸，去掉文字下划线。 */
+.cg-tabs{display:flex;gap:4px;margin:0 0 18px;padding:4px;border:1px solid var(--cg-line);border-radius:11px;background:#f2f5f9;overflow-x:auto;scrollbar-width:none}
+.cg-tabs::-webkit-scrollbar{display:none}
+.cg-tab{flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:34px;padding:7px 16px;border:1px solid transparent;border-radius:8px;font-size:13px;line-height:1.3;color:#5b6472;text-decoration:none;white-space:nowrap;transition:background-color .15s,color .15s,border-color .15s,box-shadow .15s}
+.cg-tab:hover{background:#e7edf4;color:var(--ink)}
+.cg-tab.on,.cg-tab.on:hover{background:#e0edfd;border-color:#c6dcf7;color:#164f86;font-weight:650}
+.cg-tab:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.cg-tab[aria-disabled=true]{color:#a8b0ba;cursor:default}
+.cg-soon{padding:0 4px;border:1px dashed var(--cg-line);border-radius:4px;font-size:10px;color:var(--ink3)}
+.cg-alert{margin:0 0 16px;padding:11px 13px;border:1px solid #f1b5b0;border-radius:9px;background:#fff1f0;color:#b42318;font-size:13px;line-height:1.7;overflow-wrap:anywhere}
+.cg-alert[hidden]{display:none}
+.cg-card{min-width:0;margin-bottom:16px;padding:22px;border:1px solid var(--cg-line);border-radius:var(--cg-radius);background:#fff}
+.cg-card-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+.cg-card h2{margin:0;font-size:18px;font-weight:700;line-height:1.4}
+.cg-meta{font-size:12px;color:var(--ink3)}
+.cg-prose p{margin:0 0 10px;font-size:14px;line-height:1.9;color:#2b3038;white-space:pre-wrap;overflow-wrap:anywhere}
+.cg-prose p:last-child{margin-bottom:0}
+.cg-placeholder{margin:0;padding:15px;border:1px dashed var(--cg-line);border-radius:9px;background:#fafbfd;font-size:13px;line-height:1.8;color:var(--ink3)}
+.cg-label{display:block;margin-bottom:7px;font-size:13px;font-weight:500;color:#525964}
+.cg-textarea{width:100%;min-height:122px;padding:10px 12px;border:1px solid var(--cg-line);border-radius:9px;background:#fff;color:var(--ink);font:inherit;font-size:13.5px;line-height:1.85;resize:vertical}
+.cg-textarea:focus-visible{outline:2px solid var(--blue);outline-offset:1px;border-color:#9fc0e2}
+.cg-field-meta{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:7px;font-size:12px;line-height:1.7;color:var(--ink3)}
+#courseInfoForm{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr);gap:12px 16px}
+#courseInfoForm label{display:grid;gap:6px;font-size:13px}
+#courseInfoForm input,#courseInfoForm textarea{width:100%;min-width:0;padding:9px 12px;border:1px solid var(--cg-line);border-radius:8px;font:inherit}
+#courseInfoForm label:last-of-type,#courseInfoForm .cg-alert{grid-column:1/-1}
+#courseInfoForm textarea{min-height:54px;resize:vertical}
+#courseInfoForm button{grid-column:1/-1;justify-self:end}
+.cg-intro .cg-prose{max-width:76ch;padding-left:14px;border-left:3px solid #bfd6f6}
+.cg-map-card{background:#f8fafc}
+@media(max-width:560px){#courseInfoForm{grid-template-columns:1fr}}
+.cg-map{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+.cg-col{--accent:#245893;--tint:#eaf3ff;display:flex;flex-direction:column;min-width:0;padding:10px;border:1px solid var(--cg-line);border-radius:13px;background:#fff}
+.cg-col[data-cat="literacy"]{--accent:#216453;--tint:#e8f6ef}
+.cg-col[data-cat="knowledge"]{--accent:#64468d;--tint:#f2ecfa}
+.cg-col[data-cat="ideology"]{--accent:#835019;--tint:#fcf1e0}
+.cg-col-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px;padding:11px 12px;border-radius:8px;background:var(--tint);color:var(--accent)}
+.cg-col-head h3{display:flex;align-items:baseline;flex-wrap:wrap;gap:6px;margin:0;font-size:15px;font-weight:700}
+.cg-col-hint{font-size:11px;font-weight:400;color:var(--ink3)}
+.cg-count{padding:2px 7px;border-radius:999px;background:#ffffffbf;color:var(--accent);font-size:11px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.cg-list{display:flex;flex-direction:column;gap:10px;margin:0;padding:0;list-style:none}
+.cg-list li{display:flex;flex-direction:column;gap:3px;min-width:0;padding:9px 11px;border-radius:8px;background:#f6f8fb}
+.cg-name{font-size:13px;font-weight:650;line-height:1.6;color:#23272d;overflow-wrap:anywhere}
+.cg-note{font-size:12px;line-height:1.7;color:#536071;overflow-wrap:anywhere}
+.cg-col-empty{margin:0;padding:4px 0;font-size:12px;line-height:1.8;color:#b0b8c2}
+.cg-rows{display:flex;flex-direction:column;gap:8px;margin-bottom:8px}
+.cg-row{display:flex;flex-direction:column;gap:6px;min-width:0;padding:8px;border:1px solid transparent;border-radius:8px;background:#fff}
+.cg-row.invalid{border-color:#f0b4ae;background:#fff8f7}
+.cg-row-line{display:flex;align-items:center;gap:6px;min-width:0}
+.cg-input{width:100%;min-width:0;padding:7px 9px;border:1px solid var(--cg-line);border-radius:7px;background:#fff;color:var(--ink);font:inherit;font-size:12.5px;line-height:1.5}
+.cg-input-note{font-size:12px;color:#4a5462}
+.cg-input:focus-visible{outline:2px solid var(--blue);outline-offset:1px;border-color:#9fc0e2}
+.cg-del{flex:none;width:28px;height:28px;padding:0;border:1px solid transparent;border-radius:7px;background:transparent;color:#9aa4b0;font:inherit;font-size:12px;line-height:1;cursor:pointer}
+.cg-del:hover{background:#fdecea;border-color:#f2c6c0;color:#b42318}
+.cg-del:disabled{opacity:.4;cursor:default}
+.cg-add{margin-top:auto;padding:7px;border:1px dashed #cfd9e6;border-radius:8px;background:#fff;color:#526b84;font:inherit;font-size:12px;cursor:pointer}
+.cg-add:hover{background:#f2f7fd;border-color:#9db9d6;color:var(--blue)}
+.cg-add:disabled{opacity:.5;cursor:default}
+.cg-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.cg-edit-foot{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-top:16px;padding-top:16px;border-top:1px solid #edf0f4}
+.cg-toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);z-index:1300;padding:10px 18px;border-radius:999px;background:#23282f;color:#fff;font-size:13px;box-shadow:0 8px 28px #16202b33;max-width:calc(100vw - 40px)}
+.cg-toast[hidden]{display:none}
+#cgDialog button{min-height:36px;padding:7px 14px;border:1px solid var(--cg-line);border-radius:8px;background:#fff;color:var(--ink);font:inherit;font-size:13px;cursor:pointer}
+#cgDialog button:hover{background:#f5f7fa}
+#cgDialog .btn.danger{color:#b42318;border-color:#d92d20;background:#fff}
+#cgDialog .btn.danger:hover{background:#fff1f0;color:#912018}
+/* ---------- 教学任务台 ---------- */
+.tb-hint{margin:5px 0 0;font-size:12px;line-height:1.7;color:var(--ink3)}
+.tb-sm{min-height:32px;padding:5px 11px;font-size:12px}
+.tb-week{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px;padding:14px 16px;border:1px solid #dce8f7;border-radius:12px;background:#eff5fd}
+.tb-week-label{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;min-width:0;font-size:14px;font-weight:600;font-variant-numeric:tabular-nums}
+.tb-week-label small{font-size:12px;font-weight:400;color:#536681}
+.tb-week-tag{padding:2px 8px;border-radius:999px;background:#d9e9fc;color:#245893;font-size:11px;font-weight:600}
+.tb-week-nav{display:flex;gap:6px;margin-left:auto}
+.tb-table-wrap{overflow-x:auto;border:1px solid var(--cg-line);border-radius:12px}
+.tb-table{width:100%;border-collapse:collapse;font-size:13px}
+.tb-table th{padding:9px 12px;border-bottom:1px solid var(--cg-line);background:#f6f8fb;font-size:12px;font-weight:600;color:#52647b;text-align:left;white-space:nowrap}
+.tb-table td{padding:12px;border-bottom:1px solid #e9eef5;vertical-align:middle;line-height:1.6}
+.tb-table tbody tr:hover{background:#f8fbff}
+.tb-table tbody tr.tb-is-today{background:#f0f6ff}
+.tb-table tbody tr:last-child td{border-bottom:0}
+.tb-day{width:1%;white-space:nowrap;font-variant-numeric:tabular-nums;color:#245893;font-weight:650}
+.tb-day small{display:block;font-size:11px;font-weight:400;color:#536681}
+.tb-title{font-weight:650;color:#23272d;overflow-wrap:anywhere}
+.tb-note{margin:0;color:#536071;overflow-wrap:anywhere}
+.tb-note-inline{display:none}
+.tb-actions{text-align:right;white-space:nowrap}
+.tb-link{padding:2px 4px;border:0;background:transparent;color:#526b84;font:inherit;font-size:12px;line-height:1.6;cursor:pointer;white-space:nowrap}
+.tb-link:hover{color:var(--blue);text-decoration:underline}
+.tb-link.danger{color:#b42318}
+.tb-link:disabled{opacity:.45;cursor:default;text-decoration:none}
+.tb-empty{margin:0;padding:20px 16px;border:1px dashed #dbe5f1;border-radius:12px;background:#fafcff;font-size:13px;line-height:1.8;color:#536681}
+.tb-editor{margin-bottom:14px;padding:14px;border:1px solid #dbe4ef;border-radius:10px;background:#fafcff}
+.tb-grid{display:grid;grid-template-columns:180px minmax(0,1fr);gap:10px 12px}
+.tb-grid .tb-wide{grid-column:1/-1}
+.tb-label{display:block;margin-bottom:5px;font-size:12px;color:#525964}
+.tb-input,.tb-textarea{width:100%;padding:8px 10px;border:1px solid var(--cg-line);border-radius:8px;background:#fff;color:var(--ink);font:inherit;font-size:13px;line-height:1.6}
+.tb-textarea{min-height:60px;resize:vertical}
+.tb-input:focus-visible,.tb-textarea:focus-visible{outline:2px solid var(--blue);outline-offset:1px;border-color:#9fc0e2}
+.tb-input:disabled,.tb-textarea:disabled{background:#f5f7fa;color:#8b95a1}
+.tb-editor-foot{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-top:10px}
+.tb-editor-foot .tb-week-nav{margin-left:0}
+.tb-inline-error{margin:0;font-size:12px;line-height:1.7;color:#b42318;overflow-wrap:anywhere}
+.tb-inline-error:empty{display:none}
+.tb-todo-add{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+.tb-todo-add .tb-input{flex:1;min-width:190px}
+.tb-todos{margin:0;padding:0;list-style:none}
+.tb-todo{display:flex;align-items:flex-start;gap:10px;padding:10px 2px;border-bottom:1px solid #eef1f5}
+.tb-todo:last-child{border-bottom:0}
+.tb-check{flex:none;width:20px;height:20px;margin-top:2px;padding:0;border:1px solid #c7d2df;border-radius:6px;background:#fff;color:transparent;font:inherit;font-size:12px;line-height:1;cursor:pointer}
+.tb-check:hover{border-color:#8fa6bf}
+.tb-check[aria-pressed=true]{background:var(--ink);border-color:var(--ink);color:#fff}
+.tb-check:disabled{opacity:.5;cursor:default}
+.tb-todo-text{flex:1;min-width:0;font-size:13.5px;line-height:1.7;color:#23272d;overflow-wrap:anywhere}
+.tb-todo.done .tb-todo-text{color:#98a2ae;text-decoration:line-through}
+.tb-todo-edit{display:flex;flex:1;gap:8px;flex-wrap:wrap;min-width:0;align-items:center}
+.tb-todo-edit .tb-input{flex:1;min-width:160px}
+.tb-todo-edit .tb-actions{flex:none}
+/* ---------- ima 知识库 ---------- */
+.ima-native-frame{display:block;width:100%;height:clamp(520px,74vh,980px);margin-top:14px;border:1px solid var(--cg-line);border-radius:12px;background:#fff}
+@media(max-width:1180px){.cg-map{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:700px){
+.cg-card{padding:16px}.cg-head h1{font-size:23px}.cg-map{grid-template-columns:minmax(0,1fr)}
+.cg-head-actions{width:100%}.cg-head-actions .cg-btn{flex:1}
+.cg-tabs{gap:3px;padding:3px}
+.cg-tab{flex:1 1 0;min-width:0;min-height:33px;padding:7px 8px;font-size:12.5px;gap:5px}
+.tb-grid{grid-template-columns:minmax(0,1fr)}
+.tb-week-nav{width:100%;margin-left:0}
+.tb-week-nav .cg-btn{flex:1}
+.tb-table th:nth-child(3),.tb-table td:nth-child(3){display:none}
+.tb-note-inline{display:block;margin-top:2px;font-size:12px;line-height:1.65}
+.tb-todo-add .cg-btn{flex:1}
+}
+</style>
+<link rel="icon" type="image/svg+xml" href="/assets/logo.svg?v=20261026">
+</head>
+<body class="shelled" data-active="course">
+<div class="app"><aside class="sh-side" id="shSide"></aside><main class="sh-main"><div class="wrap">
+<div id="cgRoot" aria-live="polite"><div class="cg-loading">正在载入课程工作区…</div></div>
+</div></main></div>
+<dialog id="cgDialog" class="feedback-dialog" aria-labelledby="cgDialogTitle"></dialog>
+<div id="cgToast" class="cg-toast" role="status" hidden></div>
+<script src="/shell.js"></script>
+<script>
+'use strict';
+const $=id=>document.getElementById(id);
+const esc=value=>String(value==null?'':value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const CATS=[
+  {key:'skill',label:'技能',hint:'能做什么'},
+  {key:'literacy',label:'素养',hint:'形成什么'},
+  {key:'knowledge',label:'知识',hint:'掌握什么'},
+  {key:'ideology',label:'思政',hint:'内化什么'}
+];
+const LIMITS={intro:2000,name:60,note:160,items:40,boardTitle:80,boardNote:300,todo:120};
+const ROOT=()=>$('cgRoot');
+let course=null,guide=null,draft=null,editing=false,busy=false,alertText='',invalid=null,loadError='',seq=0,toastTimer=null;
+let tab='guide',board=null,boardLoading=false,boardError='',boardBusy=false,boardAlert='';
+let weekStartKey='',scheduleEdit=null,todoEdit=null,scheduleError='',todoError='',todoDraft='';
+
+function courseId(){const match=location.pathname.match(/^\/course\/([\w-]+)\/?$/);return match?decodeURIComponent(match[1]):''}
+function api(url,method='GET',body){
+  return fetch(url,method==='GET'?{}:{method,headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})
+    .then(async res=>{const data=await res.json().catch(()=>({error:''}));if(!res.ok){const error=new Error(data.error||('请求失败（'+res.status+'），请稍后重试。'));error.field=data.field||'';error.status=res.status;throw error}return data;});
+}
+function toast(message){const el=$('cgToast');if(!el)return;el.textContent=message;el.hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>{el.hidden=true},3200)}
+function fmt(ts){const d=new Date(Number(ts)||0);if(!Number.isFinite(d.getTime())||!ts)return '';const p=n=>String(n).padStart(2,'0');return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`}
+
+/* ---------- 日期与周 ---------- */
+const pad2=n=>String(n).padStart(2,'0');
+const WEEKDAYS=['周日','周一','周二','周三','周四','周五','周六'];
+function keyOf(date){return `${date.getFullYear()}-${pad2(date.getMonth()+1)}-${pad2(date.getDate())}`}
+function todayKey(){return keyOf(new Date())}
+function parseDay(value){const match=/^(\d{4})-(\d{2})-(\d{2})$/.exec(String(value||''));if(!match)return null;const date=new Date(Number(match[1]),Number(match[2])-1,Number(match[3]));if(Number.isNaN(date.getTime())||keyOf(date)!==match[0])return null;return date}
+function shiftDay(value,days){const date=parseDay(value);if(!date)return '';date.setDate(date.getDate()+days);return keyOf(date)}
+function weekStartOf(value){const date=parseDay(value);if(!date)return '';date.setDate(date.getDate()-((date.getDay()+6)%7));return keyOf(date)}
+function weekDays(start){return Array.from({length:7},(_,index)=>shiftDay(start,index))}
+function dayLabel(value){const date=parseDay(value);return date?`${date.getMonth()+1}月${date.getDate()}日`:value}
+function weekRangeLabel(start){const end=shiftDay(start,6);const a=parseDay(start),b=parseDay(end);if(!a||!b)return '本周';const sameYear=a.getFullYear()===b.getFullYear();return `${a.getFullYear()}年${a.getMonth()+1}月${a.getDate()}日 – ${sameYear?`${b.getMonth()+1}月${b.getDate()}日`:`${b.getFullYear()}年${b.getMonth()+1}月${b.getDate()}日`}`}
+const courseTabs={guide:'课程导学',roster:'课程名单',tasks:'教学任务台',ima:'ima 知识库'};
+function tabFromHash(){const key=(location.hash||'').slice(1);return Object.hasOwn(courseTabs,key)?key:'guide'}
+function pageTitle(){return course.name+' · '+courseTabs[tab]+' · 一堂课'}
+function focusField(id){const el=$(id);if(!el)return;if(el.focus)el.focus();if(el.scrollIntoView)el.scrollIntoView({block:'center'})}
+
+function emptyMap(){return Object.fromEntries(CATS.map(cat=>[cat.key,[]]))}
+function cloneGuide(source){return {intro:String(source&&source.intro||''),map:Object.fromEntries(CATS.map(cat=>[cat.key,((source&&source.map&&source.map[cat.key])||[]).map(entry=>({id:entry.id,name:String(entry.name||''),note:String(entry.note||'')}))]))}}
+function serialize(value){
+  const clean=cloneGuide(value);
+  clean.intro=clean.intro.trim();
+  clean.map=Object.fromEntries(CATS.map(cat=>[cat.key,clean.map[cat.key].map(entry=>({name:entry.name.trim(),note:entry.note.trim()})).filter(entry=>entry.name||entry.note)]));
+  return JSON.stringify(clean);
+}
+function isDirty(){return Boolean(editing&&draft&&serialize(draft)!==serialize(guide))}
+function statusLine(){
+  const parts=[(Number(course.count)||0)+' 名学生'];
+  if(Number(course.sessions))parts.push(Number(course.sessions)+' 次签到');
+  if(Number(course.assignments))parts.push(Number(course.assignments)+' 份作业');
+  parts.push(course.ready?'名单已就绪':'待录入名单');
+  return parts.join(' · ');
+}
+
+/* ---------- 编辑中的增删与校验 ---------- */
+function entryOf(cat,id){const list=draft&&draft.map[cat];return list?list.find(entry=>entry.id===id):null}
+function nextId(){let id;do{id='n'+(++seq)}while(CATS.some(cat=>(draft.map[cat.key]||[]).some(entry=>entry.id===id)));return id}
+function addEntry(catKey){
+  if(!editing||busy)return;
+  const cat=CATS.find(item=>item.key===catKey);if(!cat)return;
+  const list=draft.map[cat.key];
+  if(list.length>=LIMITS.items){alertText=`「${cat.label}」最多 ${LIMITS.items} 条，请先合并或删减。`;render();return}
+  const entry={id:nextId(),name:'',note:''};list.push(entry);invalid=null;render();focusInput(cat.key,entry.id,'name');
+}
+function removeEntry(catKey,id){
+  if(!editing||busy)return;
+  const list=draft.map[catKey];if(!list)return;
+  draft.map[catKey]=list.filter(entry=>entry.id!==id);
+  if(invalid&&invalid.cat===catKey&&invalid.id===id)invalid=null;
+  render();
+}
+function problems(){
+  const intro=draft.intro.trim();
+  if(intro.length>LIMITS.intro)return {message:`课程简介最多 ${LIMITS.intro} 字，当前 ${intro.length} 字。`,focus:{kind:'intro'}};
+  for(const cat of CATS){
+    const seen=new Map();
+    const list=draft.map[cat.key];
+    for(let i=0;i<list.length;i++){
+      const entry=list[i],name=entry.name.trim(),note=entry.note.trim();
+      if(!name){
+        if(!note)continue;                                     // 整条空行保存时忽略
+        return {message:`「${cat.label}」第 ${i+1} 条只有说明，还没有填写名称。`,focus:{kind:'entry',cat:cat.key,id:entry.id,field:'name'}};
+      }
+      if(name.length>LIMITS.name)return {message:`「${cat.label}」第 ${i+1} 条名称最多 ${LIMITS.name} 字，当前 ${name.length} 字。`,focus:{kind:'entry',cat:cat.key,id:entry.id,field:'name'}};
+      if(note.length>LIMITS.note)return {message:`「${cat.label}」第 ${i+1} 条说明最多 ${LIMITS.note} 字，当前 ${note.length} 字。`,focus:{kind:'entry',cat:cat.key,id:entry.id,field:'note'}};
+      if(seen.has(name))return {message:`「${cat.label}」里「${name}」重复了，请合并或改名。`,focus:{kind:'entry',cat:cat.key,id:seen.get(name),field:'name'}};
+      seen.set(name,entry.id);
+    }
+  }
+  return null;
+}
+function payload(){
+  const clean=cloneGuide(draft);
+  clean.intro=clean.intro.trim();
+  clean.map=Object.fromEntries(CATS.map(cat=>[cat.key,clean.map[cat.key]
+    .map(entry=>({id:entry.id,name:entry.name.trim(),note:entry.note.trim()}))
+    .filter(entry=>entry.name)]));
+  return clean;
+}
+function focusTarget(target){
+  if(!target)return;
+  if(target.kind==='intro'){const el=$('cgIntro');if(el&&el.focus){el.focus();el.scrollIntoView&&el.scrollIntoView({block:'center'})}return}
+  focusInput(target.cat,target.id,target.field);
+}
+function focusInput(cat,id,field){
+  const el=$(inputId(cat,id,field));if(!el)return;
+  if(el.focus)el.focus();
+  if(el.scrollIntoView)el.scrollIntoView({block:'center'});
+}
+function inputId(cat,id,field){return 'cg-'+cat+'-'+id+'-'+field}
+function inputElement(cat,id,field){return $(inputId(cat,id,field))}
+
+/* ---------- 弹窗 ---------- */
+function openDialog(options){
+  const dialog=$('cgDialog');
+  dialog.innerHTML=`<h2 id="cgDialogTitle">${esc(options.title)}</h2><p>${esc(options.body)}</p><div class="feedback-actions"><button type="button" id="cgDialogCancel">${esc(options.cancel||'继续编辑')}</button><button type="button" id="cgDialogConfirm" class="${options.danger===false?'':'btn danger'}">${esc(options.confirm||'确认')}</button></div>`;
+  if(dialog.showModal)dialog.showModal();
+  const close=()=>{if(dialog.close)dialog.close();dialog.innerHTML=''};
+  const cancel=()=>close();
+  $('cgDialogCancel').onclick=cancel;
+  $('cgDialogConfirm').onclick=()=>{close();if(options.onConfirm)options.onConfirm()};
+  dialog.oncancel=()=>{dialog.innerHTML=''};
+  const safe=$('cgDialogCancel');safe.focus&&safe.focus();
+}
+
+/* ---------- 编辑动作 ---------- */
+function startEdit(){
+  if(busy||editing)return;
+  draft=cloneGuide(guide);editing=true;invalid=null;alertText='';render();
+  const el=$('cgIntro');if(el&&el.focus)el.focus();
+}
+function cancelEdit(){
+  if(busy||!editing)return;
+  if(!isDirty()){editing=false;draft=null;invalid=null;alertText='';render();return}
+  openDialog({title:'放弃未保存的导学修改？',body:'课程简介和能力图谱的改动还没有保存，放弃后需要重新填写。',cancel:'继续编辑',confirm:'放弃修改',onConfirm:()=>{editing=false;draft=null;invalid=null;alertText='';render()}});
+}
+async function save(){
+  if(busy||!editing)return;
+  const problem=problems();
+  if(problem){invalid=problem.focus&&problem.focus.kind==='entry'?problem.focus:null;alertText=problem.message;render();focusTarget(problem.focus);return}
+  busy=true;alertText='';invalid=null;render();
+  try{
+    const data=await api('/api/courses/'+encodeURIComponent(course.id)+'/guide','PUT',payload());
+    guide={intro:data.intro||'',map:data.map||emptyMap(),updatedAt:data.updatedAt||0};
+    editing=false;draft=null;render();toast('课程导学已保存');
+  }catch(error){
+    alertText=error.message||'保存失败，请稍后重试。';
+    render();
+  }finally{
+    busy=false;
+    if(editing)render();
+  }
+}
+window.appCanNavigate=nextUrl=>{
+  if(busy||boardBusy){toast('正在保存，请稍候再切换页面');return false}
+  if(!isDirty())return true;
+  openDialog({title:'离开导学编辑？',body:'当前修改还没有保存，离开后会丢失。',cancel:'继续编辑',confirm:'放弃修改并离开',onConfirm:()=>{editing=false;draft=null;location.href=nextUrl||'/courses'}});
+  return false;
+};
+
+/* ---------- 渲染 ---------- */
+function crumb(){return `<nav class="cg-crumb" aria-label="位置"><a href="/courses">课程管理</a><span aria-hidden="true">/</span><span>${esc(course?course.name:'课程工作区')}</span></nav>`}
+function tabs(){
+  const link=(key,label)=>`<a class="cg-tab ${tab===key?'on':''}" href="#${key}" data-tab="${key}" ${tab===key?'aria-current="page"':''}>${label}</a>`;
+  return `<nav class="cg-tabs" aria-label="课程工作区功能">${Object.entries(courseTabs).map(([key,label])=>link(key,label)).join('')}</nav>`;
+}
+function head(){
+  const actions=tab!=='guide'?'':editing
+    ?`<button type="button" class="cg-btn" data-action="cancel" ${busy?'disabled':''}>取消编辑</button><button type="button" class="cg-btn cg-primary" data-action="save" ${busy?'disabled':''}>${busy?'正在保存…':'保存导学'}</button>`
+    :`<button type="button" class="cg-btn cg-primary" data-action="edit">编辑导学</button>`;
+  return `${crumb()}<header class="cg-head"><div class="cg-head-main"><h1>${esc(course.name)}</h1><p class="cg-sub">${esc(course.term||'未填写学期')} · ${esc(statusLine())}</p></div><div class="cg-head-actions">${actions}</div></header>
+  ${tabs()}
+  <p class="cg-alert" id="cgAlert" role="alert" ${tab==='guide'&&alertText?'':'hidden'}>${tab==='guide'?esc(alertText):''}</p>`;
+}
+function introCard(){
+  if(!editing){
+    const lines=String(guide.intro||'').split('\n').filter(line=>line.trim());
+    return `<section class="cg-card cg-intro" aria-labelledby="cgIntroTitle"><div class="cg-card-head"><h2 id="cgIntroTitle">课程简介</h2><span class="cg-meta">${guide.updatedAt?'更新于 '+fmt(guide.updatedAt):'还没有保存过'}</span></div>${lines.length?`<div class="cg-prose">${lines.map(line=>`<p>${esc(line)}</p>`).join('')}</div>`:`<p class="cg-placeholder">还没有填写课程简介。点击右上角「编辑导学」，说明这门课学什么、怎么学、学完能做什么。</p>`}</section>`;
+  }
+  const value=String(draft.intro||'');
+  return `<section class="cg-card cg-intro" aria-labelledby="cgIntroTitle"><div class="cg-card-head"><h2 id="cgIntroTitle">课程简介</h2><span class="cg-meta">最多 ${LIMITS.intro} 字</span></div>
+  <label class="cg-label" for="cgIntro">课程简介</label>
+  <textarea id="cgIntro" class="cg-textarea" data-field="intro" rows="5" maxlength="${LIMITS.intro}" placeholder="例如：本课程面向……，通过……，帮助学生形成……">${esc(value)}</textarea>
+  <div class="cg-field-meta"><span>导学页开头会展示这段说明，建议写清学习目标与学习方式。</span><span id="cgIntroCount">${value.length} / ${LIMITS.intro}</span></div></section>`;
+}
+function columnView(cat){
+  const items=guide.map[cat.key]||[];
+  return `<section class="cg-col" data-cat="${cat.key}"><header class="cg-col-head"><h3>${cat.label}</h3><span class="cg-count">${items.length}</span></header>${items.length?`<ul class="cg-list">${items.map(entry=>`<li><span class="cg-name">${esc(entry.name)}</span>${entry.note?`<span class="cg-note">${esc(entry.note)}</span>`:''}</li>`).join('')}</ul>`:`<p class="cg-col-empty">暂无条目</p>`}</section>`;
+}
+function rowEdit(cat,entry,index){
+  const bad=invalid&&invalid.cat===cat.key&&invalid.id===entry.id?' invalid':'';
+  return `<div class="cg-row${bad}" data-row="${esc(entry.id)}">
+  <label class="cg-sr" for="${inputId(cat.key,entry.id,'name')}">${cat.label}第 ${index+1} 条名称</label>
+  <input id="${inputId(cat.key,entry.id,'name')}" class="cg-input" data-field="name" data-cat="${cat.key}" data-id="${esc(entry.id)}" value="${esc(entry.name)}" maxlength="${LIMITS.name}" placeholder="条目名称，如：能独立完成数据清洗" autocomplete="off">
+  <div class="cg-row-line"><label class="cg-sr" for="${inputId(cat.key,entry.id,'note')}">${cat.label}第 ${index+1} 条说明</label>
+  <input id="${inputId(cat.key,entry.id,'note')}" class="cg-input cg-input-note" data-field="note" data-cat="${cat.key}" data-id="${esc(entry.id)}" value="${esc(entry.note)}" maxlength="${LIMITS.note}" placeholder="补充说明（可选）" autocomplete="off">
+  <button type="button" class="cg-del" data-action="remove" data-cat="${cat.key}" data-id="${esc(entry.id)}" aria-label="删除${cat.label}第 ${index+1} 条" ${busy?'disabled':''}>✕</button></div></div>`;
+}
+function columnEdit(cat){
+  const items=draft.map[cat.key]||[];
+  return `<section class="cg-col" data-cat="${cat.key}"><header class="cg-col-head"><h3>${cat.label}<span class="cg-col-hint">${cat.hint}</span></h3><span class="cg-count">${items.length} / ${LIMITS.items}</span></header>
+  <div class="cg-rows">${items.map((entry,index)=>rowEdit(cat,entry,index)).join('')}</div>
+  ${items.length?'':'<p class="cg-col-empty">还没有条目，在下面添加。</p>'}
+  <button type="button" class="cg-add" data-action="add" data-cat="${cat.key}" ${busy?'disabled':''}>＋ 添加${cat.label}条目</button></section>`;
+}
+function mapCard(){
+  const total=CATS.reduce((sum,cat)=>sum+((editing?draft:guide).map[cat.key]||[]).length,0);
+  return `<section class="cg-card cg-map-card" aria-labelledby="cgMapTitle"><div class="cg-card-head"><h2 id="cgMapTitle">能力图谱</h2><span class="cg-meta">共 ${total} 条</span></div>
+  <div class="cg-map">${CATS.map(cat=>editing?columnEdit(cat):columnView(cat)).join('')}</div>
+  ${editing?`<div class="cg-edit-foot"><span class="cg-meta">保存后立即生效，可随时继续修改。</span><span class="cg-head-actions"><button type="button" class="cg-btn" data-action="cancel" ${busy?'disabled':''}>取消编辑</button><button type="button" class="cg-btn cg-primary" data-action="save" ${busy?'disabled':''}>${busy?'正在保存…':'保存导学'}</button></span></div>`:''}</section>`;
+}
+/* ---------- 教学任务台：日程与待办 ---------- */
+function setTab(next){
+  const target=Object.hasOwn(courseTabs,next)?next:'guide';
+  if(target===tab)return;
+  tab=target;
+  if(tab!=='guide'){editing=false;draft=null;invalid=null;alertText=''}
+  try{if(window.history&&window.history.replaceState)window.history.replaceState(null,'','#'+tab)}catch{}
+  if(course)document.title=pageTitle();
+  render();
+  if(tab==='tasks'&&!board)loadBoard();
+}
+async function loadBoard(){
+  if(boardLoading||board)return;
+  boardLoading=true;boardError='';render();
+  try{
+    const data=await api('/api/courses/'+encodeURIComponent(course.id)+'/board');
+    board={
+      schedule:(data.schedule||[]).map(item=>({id:item.id,date:item.date,title:item.title,note:item.note||''})),
+      todos:(data.todos||[]).map(item=>({id:item.id,text:item.text,done:Boolean(item.done)})),
+      updatedAt:data.updatedAt||0
+    };
+    if(!weekStartKey)weekStartKey=weekStartOf(todayKey());
+  }catch(error){
+    boardError=error.message||'教学任务台加载失败，请重试。';
+  }finally{
+    boardLoading=false;render();
+  }
+}
+async function saveBoard(payload,options={}){
+  if(boardBusy)return false;
+  boardBusy=true;boardAlert='';render();
+  try{
+    const data=await api('/api/courses/'+encodeURIComponent(course.id)+'/board','PUT',payload);
+    board={
+      schedule:(data.schedule||[]).map(item=>({id:item.id,date:item.date,title:item.title,note:item.note||''})),
+      todos:(data.todos||[]).map(item=>({id:item.id,text:item.text,done:Boolean(item.done)})),
+      updatedAt:data.updatedAt||0
+    };
+    boardBusy=false;
+    if(options.toast)toast(options.toast);
+    render();
+    return true;
+  }catch(error){
+    boardBusy=false;
+    const message=error.message||'保存失败，请稍后重试。';
+    if(options.inline==='schedule')scheduleError=message;
+    else if(options.inline==='todo')todoError=message;
+    else boardAlert=message;
+    render();
+    return false;
+  }
+}
+
+function scheduleEditor(){
+  if(!scheduleEdit)return '';
+  const item=scheduleEdit;
+  return `<div class="tb-editor" role="group" aria-label="${item.id?'编辑日程':'新增日程'}">
+  <div class="tb-grid">
+    <div><label class="tb-label" for="tbDate">日期<span style="color:#b42318"> *</span></label><input class="tb-input" id="tbDate" type="date" value="${esc(item.date)}" ${boardBusy?'disabled':''}></div>
+    <div><label class="tb-label" for="tbTitle">标题<span style="color:#b42318"> *</span></label><input class="tb-input" id="tbTitle" maxlength="${LIMITS.boardTitle}" value="${esc(item.title)}" placeholder="例如：第三章 极限与连续" autocomplete="off" ${boardBusy?'disabled':''}></div>
+    <div class="tb-wide"><label class="tb-label" for="tbNote">备注 <span style="font-weight:400;color:#9aa4b1">（可选）</span></label><textarea class="tb-textarea" id="tbNote" rows="2" maxlength="${LIMITS.boardNote}" placeholder="例如：带例题册，安排 20 分钟课堂练习" ${boardBusy?'disabled':''}>${esc(item.note)}</textarea></div>
+  </div>
+  <div class="tb-editor-foot"><p class="tb-inline-error" id="tbScheduleError" role="alert">${esc(scheduleError)}</p><div class="tb-week-nav"><button type="button" class="cg-btn tb-sm" data-action="schedule-cancel" ${boardBusy?'disabled':''}>取消</button><button type="button" class="cg-btn cg-primary tb-sm" data-action="schedule-save" ${boardBusy?'disabled':''}>${boardBusy?'正在保存…':(item.id?'保存修改':'保存日程')}</button></div></div>
+  </div>`;
+}
+function scheduleTable(items){
+  const today=todayKey();
+  return `<div class="tb-table-wrap"><table class="tb-table"><thead><tr><th scope="col">日期</th><th scope="col">标题</th><th scope="col">备注</th><th scope="col" class="tb-actions">操作</th></tr></thead><tbody>${items.map(item=>{
+    const date=parseDay(item.date);
+    const day=date?`${date.getMonth()+1}月${date.getDate()}日`:'日期待确认';
+    const week=date?WEEKDAYS[date.getDay()]:'';
+    return `<tr class="${item.date===today?'tb-is-today':String()}"><td class="tb-day">${day}<small>${week}${date&&item.date===today?' · 今天':''}</small></td><td><span class="tb-title">${esc(item.title)}</span>${item.note?`<span class="tb-note tb-note-inline">${esc(item.note)}</span>`:''}</td><td class="tb-note">${item.note?esc(item.note):'—'}</td><td class="tb-actions"><button type="button" class="tb-link" data-action="schedule-edit" data-id="${esc(item.id)}" ${boardBusy?'disabled':''}>编辑</button><button type="button" class="tb-link danger" data-action="schedule-remove" data-id="${esc(item.id)}" ${boardBusy?'disabled':''}>删除</button></td></tr>`;
+  }).join('')}</tbody></table></div>`;
+}
+function scheduleCard(){
+  const start=weekStartKey||weekStartOf(todayKey());
+  const days=weekDays(start);
+  const items=board.schedule.filter(item=>item.date>=days[0]&&item.date<=days[6]);
+  const thisWeek=start===weekStartOf(todayKey());
+  return `<section class="cg-card" aria-labelledby="tbScheduleTitle">
+  <div class="cg-card-head"><div><h2 id="tbScheduleTitle">教学日程</h2><p class="tb-hint">按周查看课程安排，仅自己可见，不向学生发布任务。</p></div><button type="button" class="cg-btn cg-primary tb-sm" data-action="schedule-add" ${boardBusy?'disabled':''}>＋ 新增日程</button></div>
+  ${scheduleEditor()}
+  <div class="tb-week"><div class="tb-week-label">${weekRangeLabel(start)}${thisWeek?'<span class="tb-week-tag">本周</span>':''}<small>${items.length?`${items.length} 项安排`:'本周暂无安排'}</small></div><div class="tb-week-nav"><button type="button" class="cg-btn tb-sm" data-action="week-prev" ${boardBusy?'disabled':''}>‹ 上一周</button><button type="button" class="cg-btn tb-sm" data-action="week-now" ${thisWeek?'disabled':''}>本周</button><button type="button" class="cg-btn tb-sm" data-action="week-next" ${boardBusy?'disabled':''}>下一周 ›</button></div></div>
+  ${items.length?scheduleTable(items):'<p class="tb-empty">本周还没有安排。点击「＋ 新增日程」写下日期与内容，例如本周的教学进度、课堂活动或需要带的教学材料。</p>'}
+  </section>`;
+}
+function todoRow(item){
+  const editingThis=todoEdit&&todoEdit.id===item.id;
+  return `<li class="tb-todo ${item.done?'done':''}"><button type="button" class="tb-check" data-action="todo-toggle" data-id="${esc(item.id)}" aria-pressed="${item.done?'true':'false'}" aria-label="${item.done?'撤销完成':'标记完成'}：${esc(item.text)}" ${boardBusy?'disabled':''}>✓</button>${editingThis
+    ?`<div class="tb-todo-edit"><label class="cg-sr" for="tbTodoEdit">编辑待办</label><input class="tb-input" id="tbTodoEdit" maxlength="${LIMITS.todo}" value="${esc(todoEdit.text)}" ${boardBusy?'disabled':''}><span class="tb-actions"><button type="button" class="tb-link" data-action="todo-save" ${boardBusy?'disabled':''}>保存</button><button type="button" class="tb-link" data-action="todo-cancel" ${boardBusy?'disabled':''}>取消</button></span></div>`
+    :`<span class="tb-todo-text">${esc(item.text)}</span><span class="tb-actions"><button type="button" class="tb-link" data-action="todo-edit" data-id="${esc(item.id)}" ${boardBusy?'disabled':''}>编辑</button><button type="button" class="tb-link danger" data-action="todo-remove" data-id="${esc(item.id)}" ${boardBusy?'disabled':''}>删除</button></span>`}</li>`;
+}
+function todoCard(){
+  const todos=board.todos;
+  const open=todos.filter(item=>!item.done).length;
+  const meta=todos.length?(open?`${open} 项待完成 · 共 ${todos.length} 项`:`全部完成 · 共 ${todos.length} 项`):'还没有待办';
+  return `<section class="cg-card" aria-labelledby="tbTodoTitle">
+  <div class="cg-card-head"><div><h2 id="tbTodoTitle">课程待办</h2><p class="tb-hint">课程内的个人待办，用于备课与跟进，不关联学生。</p></div><span class="cg-meta">${meta}</span></div>
+  <div class="tb-todo-add"><label class="cg-sr" for="tbTodoInput">新待办</label><input class="tb-input" id="tbTodoInput" maxlength="${LIMITS.todo}" value="${esc(todoDraft)}" placeholder="添加待办，例如：准备第三周课件" autocomplete="off" ${boardBusy?'disabled':''}><button type="button" class="cg-btn cg-primary" data-action="todo-add" ${boardBusy?'disabled':''}>添加</button></div>
+  <p class="tb-inline-error" id="tbTodoError" role="alert">${esc(todoError)}</p>
+  ${todos.length?`<ul class="tb-todos">${todos.map(todoRow).join('')}</ul>`:'<p class="tb-empty">还没有待办。可以添加「准备第三周课件」「核对实验分组」这类课程内的待办事项。</p>'}
+  </section>`;
+}
+function tasksView(){
+  if(boardError)return `<section class="cg-card"><h2>暂时打不开教学任务台</h2><p class="cg-alert" role="alert">${esc(boardError)}</p><div class="cg-head-actions"><button type="button" class="cg-btn cg-primary" data-action="board-retry">重新加载</button></div></section>`;
+  if(boardLoading||!board)return '<p class="cg-loading">正在载入教学任务台…</p>';
+  return `<p class="cg-alert" role="alert" ${boardAlert?'':'hidden'}>${esc(boardAlert)}</p>${scheduleCard()}${todoCard()}`;
+}
+
+/* ---- 日程动作 ---- */
+function openScheduleAdd(){
+  if(!board||boardBusy)return;
+  const start=weekStartKey||weekStartOf(todayKey());
+  const today=todayKey();
+  const date=today>=start&&today<=shiftDay(start,6)?today:start;
+  scheduleEdit={id:null,date,title:'',note:''};scheduleError='';render();focusField('tbTitle');
+}
+function openScheduleEdit(id){
+  if(!board||boardBusy)return;
+  const item=board.schedule.find(entry=>entry.id===id);if(!item)return;
+  scheduleEdit={id:item.id,date:item.date,title:item.title,note:item.note};scheduleError='';render();focusField('tbTitle');
+}
+async function saveSchedule(){
+  if(!scheduleEdit||boardBusy)return;
+  const value={date:String(scheduleEdit.date||'').trim(),title:String(scheduleEdit.title||'').trim(),note:String(scheduleEdit.note||'').trim()};
+  if(!parseDay(value.date)){scheduleError='请选择日程日期。';render();focusField('tbDate');return}
+  if(!value.title){scheduleError='请填写日程标题。';render();focusField('tbTitle');return}
+  if(value.title.length>LIMITS.boardTitle){scheduleError=`日程标题最多 ${LIMITS.boardTitle} 字，当前 ${value.title.length} 字。`;render();focusField('tbTitle');return}
+  if(value.note.length>LIMITS.boardNote){scheduleError=`日程备注最多 ${LIMITS.boardNote} 字，当前 ${value.note.length} 字。`;render();focusField('tbNote');return}
+  const id=scheduleEdit.id;
+  const schedule=[...board.schedule.filter(item=>item.id!==id),id?{id,...value}:value];
+  scheduleError='';
+  const ok=await saveBoard({schedule,todos:board.todos},{inline:'schedule',toast:id?'日程已更新':'日程已添加'});
+  if(ok){scheduleEdit=null;weekStartKey=weekStartOf(value.date);render()}
+}
+function confirmRemoveSchedule(id){
+  if(!board||boardBusy)return;
+  const item=board.schedule.find(entry=>entry.id===id);if(!item)return;
+  openDialog({title:'删除这条日程？',body:`${dayLabel(item.date)}「${item.title}」会从教学日程中删除，删除后无法恢复。`,cancel:'保留日程',confirm:'删除日程',onConfirm:()=>removeSchedule(id)});
+}
+async function removeSchedule(id){
+  if(!board||boardBusy)return;
+  const ok=await saveBoard({schedule:board.schedule.filter(item=>item.id!==id),todos:board.todos},{toast:'日程已删除'});
+  if(ok&&scheduleEdit&&scheduleEdit.id===id){scheduleEdit=null;render()}
+}
+
+/* ---- 待办动作 ---- */
+async function addTodo(){
+  if(!board||boardBusy)return;
+  const value=String(todoDraft||'').trim();
+  if(!value){todoError='请填写待办内容。';render();focusField('tbTodoInput');return}
+  if(value.length>LIMITS.todo){todoError=`待办最多 ${LIMITS.todo} 字，当前 ${value.length} 字。`;render();focusField('tbTodoInput');return}
+  todoError='';
+  const ok=await saveBoard({schedule:board.schedule,todos:[...board.todos,{text:value,done:false}]},{inline:'todo',toast:'待办已添加'});
+  if(ok){todoDraft='';render()}
+}
+async function toggleTodo(id){
+  if(!board||boardBusy)return;
+  const item=board.todos.find(entry=>entry.id===id);if(!item)return;
+  await saveBoard({schedule:board.schedule,todos:board.todos.map(entry=>entry.id===id?{...entry,done:!entry.done}:entry)},{toast:item.done?'已恢复为待办':'已标记完成'});
+}
+function openTodoEdit(id){
+  if(!board||boardBusy)return;
+  const item=board.todos.find(entry=>entry.id===id);if(!item)return;
+  todoEdit={id:item.id,text:item.text};todoError='';render();focusField('tbTodoEdit');
+}
+async function saveTodo(){
+  if(!todoEdit||boardBusy)return;
+  const value=String(todoEdit.text||'').trim();
+  if(!value){todoError='待办内容不能为空。';render();focusField('tbTodoEdit');return}
+  if(value.length>LIMITS.todo){todoError=`待办最多 ${LIMITS.todo} 字，当前 ${value.length} 字。`;render();focusField('tbTodoEdit');return}
+  todoError='';
+  const id=todoEdit.id;
+  const ok=await saveBoard({schedule:board.schedule,todos:board.todos.map(entry=>entry.id===id?{...entry,text:value}:entry)},{inline:'todo',toast:'待办已更新'});
+  if(ok){todoEdit=null;render()}
+}
+function confirmRemoveTodo(id){
+  if(!board||boardBusy)return;
+  const item=board.todos.find(entry=>entry.id===id);if(!item)return;
+  openDialog({title:'删除这条待办？',body:`「${item.text}」会从课程待办中删除，删除后无法恢复。`,cancel:'保留待办',confirm:'删除待办',onConfirm:()=>removeTodo(id)});
+}
+async function removeTodo(id){
+  if(!board||boardBusy)return;
+  const ok=await saveBoard({schedule:board.schedule,todos:board.todos.filter(item=>item.id!==id)},{toast:'待办已删除'});
+  if(ok&&todoEdit&&todoEdit.id===id){todoEdit=null;render()}
+}
+
+/* ---------- ima 知识库（只读状态；绑定与更换统一在 /ima 设置页完成） ---------- */
+function imaView(){
+  return `<section class="cg-card" aria-labelledby="imaTitle">
+    <div class="cg-card-head"><h2 id="imaTitle">ima 知识库</h2></div>
+    <iframe class="ima-native-frame" title="ima 原生问答" src="https://ima.qq.com/" referrerpolicy="no-referrer"></iframe>
+  </section>`;
+}
+
+function render(){
+  if(!course)return;
+  if(tab==='tasks'&&!weekStartKey)weekStartKey=weekStartOf(todayKey());
+  ROOT().innerHTML=head()+(tab==='tasks'?tasksView():tab==='ima'?imaView():tab==='roster'
+    ?`<iframe title="课程名单" src="/courses?view=roster#edit/${encodeURIComponent(course.id)}" style="display:block;width:100%;height:70vh;border:0"></iframe>`
+    :courseInfoCard()+introCard()+mapCard());
+
+}
+
+function courseInfoCard(){
+  return `<section class="cg-card"><div class="cg-card-head"><h2>课程信息</h2></div>
+  <form id="courseInfoForm">
+    <label class="cg-field">课程名称 <input name="name" required maxlength="80" value="${esc(course.name)}"></label>
+    <label class="cg-field">学期 <input name="term" required maxlength="40" value="${esc(course.term||'')}"></label>
+    <label class="cg-field">备注 <textarea name="note" maxlength="300">${esc(course.note||'')}</textarea></label>
+    <p class="cg-alert" role="alert" hidden></p>
+    <button class="cg-btn" type="submit">保存课程信息</button>
+  </form></section>`;
+}
+
+ROOT().addEventListener('submit',async event=>{
+  const form=event.target;
+  if(form.id!=='courseInfoForm')return;
+  event.preventDefault();
+  const button=form.querySelector('button');
+  if(button.disabled)return;
+  const error=form.querySelector('[role="alert"]');
+  const fields=Object.fromEntries(new FormData(form));
+  button.disabled=true;
+  error.hidden=true;
+  try{
+    const saved=await api('/api/courses/'+encodeURIComponent(course.id),'PUT',fields);
+    for(const key of ['name','term','note'])course[key]=saved[key];
+    document.title=pageTitle();
+    const title=ROOT().querySelector('h1');
+    if(title)title.textContent=course.name;
+    const subtitle=ROOT().querySelector('.cg-sub');
+    if(subtitle)subtitle.textContent=(course.term||'未填写学期')+' · '+statusLine();
+    toast('课程信息已保存');
+  }catch(e){
+    error.textContent=e.message;
+    error.hidden=false;
+  }finally{button.disabled=false}
+});
+function renderFailure(){
+  ROOT().innerHTML=`<nav class="cg-crumb" aria-label="位置"><a href="/courses">课程管理</a><span aria-hidden="true">/</span><span>课程工作区</span></nav>
+  <section class="cg-card"><h2>暂时打不开这门课程</h2><p class="cg-alert" role="alert">${esc(loadError||'加载失败，请重试。')}</p><div class="cg-head-actions"><button type="button" class="cg-btn cg-primary" data-action="retry">重新加载</button><a class="cg-btn" href="/courses">返回课程管理</a></div></section>`;
+}
+
+/* ---------- 事件 ---------- */
+ROOT().addEventListener('click',event=>{
+  const tabLink=event.target&&event.target.closest?event.target.closest('[data-tab]'):null;
+  if(tabLink&&tabLink.dataset&&tabLink.dataset.tab){
+    const next=tabLink.dataset.tab;
+    if(!Object.hasOwn(courseTabs,next))return;
+    if(next===tab){event.preventDefault();return}
+    if(busy){event.preventDefault();toast('正在保存，请稍候再切换功能');return}
+    if(tab==='guide'&&editing&&isDirty()){
+      event.preventDefault();
+      openDialog({title:'离开导学编辑？',body:'课程导学还有未保存的修改，切换功能后会丢失。',cancel:'继续编辑',confirm:'放弃修改并切换',onConfirm:()=>{editing=false;draft=null;invalid=null;alertText='';setTab(next)}});
+      return;
+    }
+    return;   // 交给浏览器完成 hash 导航，由 hashchange 统一切换
+  }
+  const trigger=event.target&&event.target.closest?event.target.closest('[data-action]'):null;
+  if(!trigger)return;
+  const action=trigger.dataset.action;
+  if(action==='edit')startEdit();
+  else if(action==='save')save();
+  else if(action==='cancel')cancelEdit();
+  else if(action==='add')addEntry(trigger.dataset.cat);
+  else if(action==='remove')removeEntry(trigger.dataset.cat,trigger.dataset.id);
+  else if(action==='retry')load();
+  else if(action==='week-prev'){weekStartKey=shiftDay(weekStartKey||weekStartOf(todayKey()),-7);render()}
+  else if(action==='week-next'){weekStartKey=shiftDay(weekStartKey||weekStartOf(todayKey()),7);render()}
+  else if(action==='week-now'){weekStartKey=weekStartOf(todayKey());render()}
+  else if(action==='schedule-add')openScheduleAdd();
+  else if(action==='schedule-edit')openScheduleEdit(trigger.dataset.id);
+  else if(action==='schedule-cancel'){scheduleEdit=null;scheduleError='';render()}
+  else if(action==='schedule-save')saveSchedule();
+  else if(action==='schedule-remove')confirmRemoveSchedule(trigger.dataset.id);
+  else if(action==='board-retry'){boardError='';board=null;loadBoard()}
+  else if(action==='todo-add')addTodo();
+  else if(action==='todo-toggle')toggleTodo(trigger.dataset.id);
+  else if(action==='todo-edit')openTodoEdit(trigger.dataset.id);
+  else if(action==='todo-cancel'){todoEdit=null;todoError='';render()}
+  else if(action==='todo-save')saveTodo();
+  else if(action==='todo-remove')confirmRemoveTodo(trigger.dataset.id);
+});
+ROOT().addEventListener('input',event=>{
+  const target=event.target;
+  if(!target)return;
+  if(target.id==='tbDate'&&scheduleEdit){scheduleEdit.date=target.value;return}
+  if(target.id==='tbTitle'&&scheduleEdit){scheduleEdit.title=target.value;return}
+  if(target.id==='tbNote'&&scheduleEdit){scheduleEdit.note=target.value;return}
+  if(target.id==='tbTodoInput'){todoDraft=target.value;return}
+  if(target.id==='tbTodoEdit'&&todoEdit){todoEdit.text=target.value;return}
+  if(!target.dataset||!editing||!draft)return;
+  if(target.dataset.field==='intro'){
+    draft.intro=target.value;
+    const counter=$('cgIntroCount');
+    if(counter)counter.textContent=draft.intro.length+' / '+LIMITS.intro;
+    return;
+  }
+  const entry=entryOf(target.dataset.cat,target.dataset.id);
+  if(!entry)return;
+  if(target.dataset.field==='name'||target.dataset.field==='note')entry[target.dataset.field]=target.value;
+  if(invalid&&invalid.cat===target.dataset.cat&&invalid.id===target.dataset.id){
+    invalid=null;
+    const row=target.closest?target.closest('.cg-row'):null;
+    if(row&&row.classList)row.classList.remove('invalid');
+  }
+});
+ROOT().addEventListener('keydown',event=>{
+  if(event.key!=='Enter'||event.isComposing)return;
+  const id=event.target&&event.target.id;
+  if(id==='tbTitle'){event.preventDefault();saveSchedule()}
+  else if(id==='tbTodoInput'){event.preventDefault();addTodo()}
+  else if(id==='tbTodoEdit'){event.preventDefault();saveTodo()}
+});
+window.addEventListener('hashchange',()=>{
+  const next=tabFromHash();
+  if(next===tab)return;
+  if(tab==='guide'&&editing&&isDirty()){
+    try{if(window.history&&window.history.replaceState)window.history.replaceState(null,'','#guide')}catch{}
+    openDialog({title:'离开导学编辑？',body:'课程导学还有未保存的修改，切换后会丢失。',cancel:'继续编辑',confirm:'放弃修改并切换',onConfirm:()=>{editing=false;draft=null;invalid=null;alertText='';setTab(next)}});
+    return;
+  }
+  setTab(next);
+});
+
+async function load(){
+  loadError='';editing=false;draft=null;invalid=null;alertText='';
+  board=null;boardLoading=false;boardError='';boardBusy=false;boardAlert='';weekStartKey='';scheduleEdit=null;todoEdit=null;scheduleError='';todoError='';todoDraft='';
+  ROOT().innerHTML='<div class="cg-loading">正在载入课程工作区…</div>';
+  try{
+    const id=courseId();
+    if(!id)throw new Error('课程地址不完整，请从课程管理进入。');
+    const [list,data]=await Promise.all([api('/api/courses'),api('/api/courses/'+encodeURIComponent(id)+'/guide')]);
+    const found=(list.items||[]).find(item=>item.id===id);
+    if(!found)throw new Error('课程不存在，可能已被删除。');
+    course=found;
+    guide={intro:data.intro||'',map:data.map||emptyMap(),updatedAt:data.updatedAt||0};
+    tab=tabFromHash();
+    document.title=pageTitle();
+    render();
+    if(tab==='tasks')loadBoard();
+  }catch(error){
+    loadError=error.message||'加载失败，请重试。';
+    renderFailure();
+  }
+}
+load();
+</script>
+</body>
+</html>

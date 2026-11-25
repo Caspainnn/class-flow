@@ -1,7 +1,8 @@
 'use strict';
+const tempPath = require('./temp-path.cjs');
 const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
 const {pack,inspect,extract}=require('../server/backup/archive');
-const ZIP=require('../server/node_modules/jszip'),root=fs.mkdtempSync(path.resolve('.tmp-backup-archive-'));
+const ZIP=require('../server/node_modules/jszip'),root=fs.mkdtempSync(tempPath('.tmp-backup-archive-'));
 const src=path.join(root,'source'),out=path.join(root,'output');fs.mkdirSync(src);fs.mkdirSync(out);
 const put=(name,v)=>{const f=path.join(src,name);fs.mkdirSync(path.dirname(f),{recursive:true});fs.writeFileSync(f,typeof v==='string'?v:JSON.stringify(v));};
 put('courses.json',[{id:'c',name:'隔离课程'}]);put('students.json',[{id:'s',courseId:'c',name:'隔离学生'}]);put('sessions.json',[]);put('settings.json',{windowMs:90000,workbuddy:{path:'SECRET_EXECUTABLE'},ppt:{skillPath:'PRIVATE_PATH'}});put('homework.json',[]);put('gradebatches.json',[]);put('questionnaires.json',{surveys:[]});put('.secret','NEVER_EXPORT');put('批改/batch/a.txt','student attachment');

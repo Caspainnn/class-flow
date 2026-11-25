@@ -1,8 +1,9 @@
 'use strict';
+const tempPath = require('./temp-path.cjs');
 // Isolated native compilation and shortcut checks; never opens the browser or teaching data.
 const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),crypto=require('node:crypto'),assert=require('node:assert/strict');
 const {spawn}=require('node:child_process');
-const project=path.resolve(__dirname,'..'),root=fs.mkdtempSync(path.join(project,'.tmp-desktop-shortcut-'));
+const project=path.resolve(__dirname,'..'),root=fs.mkdtempSync(tempPath('.tmp-desktop-shortcut-'));
 const tools=path.join(root,'tools'),desktop=path.join(root,'desktop'),data=path.join(root,'测试 data');
 fs.mkdirSync(tools);fs.mkdirSync(desktop);
 for(const file of ['launcher.cs','build-launcher.ps1','setup-desktop.ps1'])fs.copyFileSync(path.join(__dirname,file),path.join(tools,file));

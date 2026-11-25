@@ -1,7 +1,8 @@
 'use strict';
+const tempPath = require('./temp-path.cjs');
 // Live model test: invoke only when the user authorizes a real synthetic PPT run.
 const fs=require('node:fs'),path=require('node:path');
-const root=path.resolve('.tmp-ppt-teacher20'),base='http://127.0.0.1:3012';
+const root=tempPath('.tmp-ppt-teacher20'),base='http://127.0.0.1:3012';
 async function api(url,body,method){const r=await fetch(base+url,{method:method||(body?'POST':'GET'),headers:body?{'Content-Type':'application/json'}:{},body:body?JSON.stringify(body):undefined});const v=await r.json();if(!r.ok)throw Error(v.error||r.status);return v;}
 async function main(){
  const action=process.argv[2];let id=fs.existsSync(path.join(root,'task-id'))?fs.readFileSync(path.join(root,'task-id'),'utf8').trim():null;

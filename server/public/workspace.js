@@ -2,12 +2,14 @@
 (() => {
   const frame=document.getElementById('workspaceFrame'), mobile=document.getElementById('workspaceMobileNav');
   const pages=new Set(['/','/session','/compose','/live','/courses','/preparation','/homework','/grading','/workbuddy','/xueqing','/admin','/questionnaires','/dashboard','/backup']);
-  const route=value=>{const u=new URL(value,location.href);if(u.pathname==='/admin'&&u.searchParams.get('pane')==='set'&&u.hash==='#data'){u.pathname='/backup';u.search='';u.hash='';}return u.origin===location.origin&&pages.has(u.pathname)?u:null;};
+  const page=(pathname)=>pages.has(pathname)||/^\/course\/[\w-]+\/?$/.test(pathname);
+  const route=value=>{const u=new URL(value,location.href);if(u.pathname==='/admin'&&u.searchParams.get('pane')==='set'&&u.hash==='#data'){u.pathname='/backup';u.search='';u.hash='';}return u.origin===location.origin&&page(u.pathname)?u:null;};
   let current=location.href;
   function activeFor(url){
     const p=url.pathname,q=url.searchParams;
     if(p==='/dashboard')return 'dashboard';
     if(p==='/backup')return 'backup';
+    if(/^\/course(\/[\w-]+)?$/.test(p))return 'course';
     if(p==='/questionnaires')return 'xq-surveys';
     if(p==='/xueqing')return 'xq-'+(q.get('tab')||'warn');
     if(p==='/preparation')return q.get('type')==='plan'?'plan':'ppt';
@@ -24,6 +26,8 @@
     if(option)mobile.value=option.value;
   }
   window.workspaceLocationChanged=sync;
+  // 页面内脚本需要跳转（例如建课完成后进入课程工作区）时调用，保留浏览器历史与未保存确认。
+  window.workspaceNavigate=value=>navigate(value);
   function canLeave(nextUrl){
     try{return frame.contentWindow.appCanNavigate?frame.contentWindow.appCanNavigate(nextUrl):true;}
     catch{return true;}

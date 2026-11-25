@@ -1,6 +1,7 @@
 'use strict';
+const tempPath = require('./temp-path.cjs');
 const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict'),{spawn}=require('node:child_process'),http=require('node:http');
-const root=path.resolve(__dirname,'..'),dir=fs.mkdtempSync(path.join(root,'.tmp-dashboard-http-')),port=31914,origin='http://127.0.0.1:'+port;
+const root=path.resolve(__dirname,'..'),dir=fs.mkdtempSync(tempPath('.tmp-dashboard-http-')),port=31914,origin='http://127.0.0.1:'+port;
 const save=(n,v)=>fs.writeFileSync(path.join(dir,n+'.json'),JSON.stringify(v));
 save('courses',[{id:'isolated',name:'隔离课程',term:'测试学期'}]);save('students',[{id:'1',courseId:'isolated',name:'隔离学生'}]);save('settings',{});save('sessions',[]);save('homework',[]);save('gradebatches',[]);save('questionnaires',{surveys:[]});
 const child=spawn(process.execPath,[path.join(root,'server/server.js')],{cwd:root,env:{...process.env,DATA_DIR:dir,PORT:String(port),HOST:'127.0.0.1'},windowsHide:true,stdio:['ignore','pipe','pipe']});let log='';child.stdout.on('data',b=>log+=b);child.stderr.on('data',b=>log+=b);
