@@ -10,9 +10,9 @@ import winreg
 from ctypes import POINTER, byref, c_int, c_ubyte, c_ulong, c_ushort, c_void_p, c_wchar_p
 
 PROJECT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-TARGET = os.path.join(PROJECT, "课中签到.exe")
+TARGET = os.path.join(PROJECT, "一堂课.exe")
 ICON = os.path.join(PROJECT, "icon.ico")
-LNK_NAME = "课中签到.lnk"
+LNK_NAME = "一堂课.lnk"
 
 
 def desktop_dir():
