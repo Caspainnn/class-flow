@@ -56,6 +56,11 @@ static class Launcher {
   catch(WebException e){if(e.Response!=null){using(var reader=new StreamReader(e.Response.GetResponseStream())){var body=reader.ReadToEnd();Dictionary<string,object> result=null;try{result=new JavaScriptSerializer().Deserialize<Dictionary<string,object>>(body);}catch{}throw new Exception(result!=null&&result.ContainsKey("error")?Convert.ToString(result["error"]):"服务尚不支持此启动器，或端口被其他程序占用。请先安全停止旧服务。");}}throw;}
  }
  internal static bool Occupied(){try{using(var c=new TcpClient()){var t=c.ConnectAsync("127.0.0.1",Port);return t.Wait(400)&&c.Connected;}}catch{return false;}}
+ // 0=stopped, HTTP status code (e.g. 409 busy), -1=network error.
+ internal static int StopOld(){
+  try{var req=(HttpWebRequest)WebRequest.Create(Url+"api/desktop/stop");req.Proxy=null;req.Method="POST";req.ContentLength=0;req.Timeout=4000;req.ReadWriteTimeout=4000;req.Headers["X-Inclass-Desktop-Key"]=File.ReadAllText(Path.Combine(Data,".desktop-key")).Trim();using(var response=req.GetResponse())return 0;}
+  catch(WebException e){var r=e.Response as HttpWebResponse;return r!=null?(int)r.StatusCode:-1;}
+ }
  internal static Dictionary<string,object> Status(){var s=Request("status");if(!s.ContainsKey("identity")||Convert.ToString(s["identity"])!=Identity)throw new Exception("端口 "+Port+" 上的服务不属于当前项目或数据目录，未对其进行操作。请关闭重复副本或调整 PORT。");return s;}
  internal static void Trace(string text){try{Directory.CreateDirectory(Path.Combine(Root,"logs"));File.AppendAllText(Path.Combine(Root,"logs","launcher.log"),DateTime.Now.ToString("s")+" "+text+Environment.NewLine);}catch{}}
  internal static void Error(string text){MessageBox.Show(text,"一堂课",MessageBoxButtons.OK,MessageBoxIcon.Warning);}
@@ -71,18 +76,28 @@ static class Launcher {
 }
 
 sealed class TrayForm:ApplicationContext {
- readonly System.Windows.Forms.Timer events=new System.Windows.Forms.Timer{Interval=250};readonly NotifyIcon tray;readonly EventWaitHandle open,stop;readonly bool stopOnly;bool ready=false,quitting=false,stopPending=false,opening=false,monitoring=false,offline=false;int ticks=0;Process server;
+ readonly System.Windows.Forms.Timer events=new System.Windows.Forms.Timer{Interval=250};readonly NotifyIcon tray;readonly EventWaitHandle open,stop;readonly bool stopOnly;bool ready=false,quitting=false,stopPending=false,opening=false,monitoring=false,offline=false,reusedOld=false;int ticks=0;Process server;
  public TrayForm(EventWaitHandle o,EventWaitHandle s,bool stopping){
   open=o;stop=s;stopOnly=stopping;SynchronizationContext.SetSynchronizationContext(new WindowsFormsSynchronizationContext());
   tray=new NotifyIcon{Icon=Icon.ExtractAssociatedIcon(Application.ExecutablePath),Text="一堂课 · 正在启动",Visible=true};
   var menu=new ContextMenuStrip();menu.Items.Add("打开一堂课",null,(a,b)=>Open());menu.Items.Add("打开日志目录",null,(a,b)=>{Directory.CreateDirectory(Path.Combine(Launcher.Root,"logs"));Process.Start("explorer.exe","\""+Path.Combine(Launcher.Root,"logs")+"\"");});menu.Items.Add(new ToolStripSeparator());menu.Items.Add("退出一堂课",null,(a,b)=>Quit());tray.ContextMenuStrip=menu;tray.DoubleClick+=(a,b)=>Open();bool started=false;events.Tick+=(a,b)=>{if(!started){started=true;Start();return;}if(open.WaitOne(0))Open();if(stop.WaitOne(0))Quit();if(++ticks%40==0)Monitor();};events.Start();
  }
  async void Start(){
-  try{if(stopOnly&&!Launcher.Occupied()){Close();return;}await Task.Run((Action)EnsureServer);ready=true;Launcher.Trace("ready");tray.Text="一堂课 · 运行中";if(stopOnly||stopPending){Quit();return;}Open();tray.ShowBalloonTip(3500,"一堂课已启动","关闭网页后仍在后台运行，可在此处打开平台或退出。",ToolTipIcon.Info);}
+  try{if(stopOnly&&!Launcher.Occupied()){Close();return;}await Task.Run((Action)EnsureServer);ready=true;Launcher.Trace("ready");tray.Text="一堂课 · 运行中";if(stopOnly||stopPending){Quit();return;}if(reusedOld)tray.ShowBalloonTip(4000,"一堂课 · 继续使用旧服务","有备份、批改等任务进行中，未重启服务；本次更新将在下次启动时生效。",ToolTipIcon.Warning);Open();tray.ShowBalloonTip(3500,"一堂课已启动","关闭网页后仍在后台运行，可在此处打开平台或退出。",ToolTipIcon.Info);}
   catch(Exception ex){Launcher.Error(ex.Message+"\n\n日志目录："+Path.Combine(Launcher.Root,"logs"));Close();}
  }
  void EnsureServer(){
-  if(Launcher.Occupied()){try{Launcher.Status();return;}catch(WebException){throw new Exception("端口 "+Launcher.Port+" 已被占用，或旧版服务尚未更新。请先安全停止原服务再启动一堂课。");}}
+  if(Launcher.Occupied()){
+   try{Launcher.Status();}catch(WebException){throw new Exception("端口 "+Launcher.Port+" 已被占用，但不属于当前项目的服务（可能是旧版本或重复副本）。请结束占用该端口的程序，或调整 PORT 后重新配置桌面入口。");}
+   // 同一项目：先结束旧服务再重启，保证每次双击启动都运行当前磁盘上的代码。
+   // 有备份、批改等任务进行中时（409）不硬停，继续复用旧服务。
+   int stopped=Launcher.StopOld();
+   if(stopped==409){reusedOld=true;Launcher.Trace("occupied: task in progress, reuse old server");return;}
+   if(stopped!=0)throw new Exception("旧服务停止失败（HTTP "+stopped+"）。请从托盘「退出一堂课」安全停止后重试。");
+   for(int i=0;i<60;i++){if(!Launcher.Occupied())break;Thread.Sleep(250);}
+   if(Launcher.Occupied())throw new Exception("旧服务已停止但端口 "+Launcher.Port+" 未释放，请稍后重试。");
+   Launcher.Trace("old server stopped, starting fresh");
+  }
   string node=Launcher.FindNode(),js=Path.Combine(Launcher.Root,"server","server.js");if(node==null)throw new Exception("未找到 Node.js。请使用完整发行包，或安装 Node.js 20 及以上版本。");if(!File.Exists(js)||!Directory.Exists(Path.Combine(Launcher.Root,"server","node_modules")))throw new Exception("程序文件或基础依赖不完整，请重新解压完整发行包。不要单独移动一堂课.exe。");
   var version=new ProcessStartInfo(node,"--version"){UseShellExecute=false,CreateNoWindow=true,RedirectStandardOutput=true};using(var p=Process.Start(version)){if(!p.WaitForExit(4000)){p.Kill();throw new Exception("无法检测 Node.js 版本。");}int major;string value=p.StandardOutput.ReadToEnd().Trim().TrimStart('v').Split('.')[0];if(p.ExitCode!=0||!int.TryParse(value,out major)||major<20)throw new Exception("需要 Node.js 20 或以上版本。");}
   Directory.CreateDirectory(Launcher.Data);string probe=Path.Combine(Launcher.Data,".launcher-write-"+Guid.NewGuid().ToString("N"));File.WriteAllText(probe,"");File.Delete(probe);

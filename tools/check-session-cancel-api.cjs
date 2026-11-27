@@ -1,5 +1,6 @@
 'use strict';
-// Exercises real HTTP and isolated persistence: missing guards must not erase attendance.
+// Exercises real HTTP and isolated persistence: 取消即丢弃（需 confirm），已归档场次不可取消。
+process.on('unhandledRejection', e => { console.error('unhandledRejection:', e && e.cause && e.cause.code || e && e.message || e); });
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
@@ -73,7 +74,7 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
     const ticket = (await request('/api/claim', { code: (await state()).code })).body.ticket;
     const submitBody = { ticket, studentId: student.id, studentName: student.name, answer: 0 };
     const finishOldSubmit = await slowPost('/api/submit', submitBody);
-    assert.deepEqual((await cancel(first)), { status: 200, body: { ok: true, sessionId: first } });
+    assert.deepEqual((await cancel(first)), { status: 200, body: { ok: true, sessionId: first, discarded: 0 } });
     assert.equal((await state()).active, false);
     assert.deepEqual(saved(), [history], 'only current empty session removed, archived history retained');
     assert.equal((await request('/api/submit', submitBody)).status, 400, 'ticket invalid after cancellation');
@@ -87,11 +88,21 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
     const finishCancel = await slowPost('/api/session/cancel', { sessionId: second });
     const claim = (await request('/api/claim', { code: (await state()).code })).body;
     assert.equal((await request('/api/submit', { ...submitBody, ticket: claim.ticket })).status, 200);
-    assert.equal((await finishCancel()).status, 409, 'submission during cancel body read protects records');
+    assert.equal((await finishCancel()).status, 409, 'cancel body race cannot bypass record protection');
     assert.equal((await state()).present, 1);
-    assert.equal((await cancel(second)).status, 409, 'recorded session cannot be cancelled');
+    const refused = await cancel(second);
+    assert.equal(refused.status, 409, 'recorded session requires explicit confirmation to discard');
+    assert.equal(refused.body.needConfirm, true, 'refusal asks the teacher to confirm discarding');
+    assert.deepEqual((await request('/api/session/cancel', { sessionId: second, confirm: true })).body,
+      { ok: true, sessionId: second, discarded: 1 }, 'confirmed cancellation discards the record');
+    assert.equal((await state()).active, false, 'confirmed cancellation closes the session');
+    assert.ok(!saved().some(s => s.id === second), 'confirmed cancellation erases records instead of archiving');
+    const closed = (await start()).body.sessionId;
+    const claim2 = (await request('/api/claim', { code: (await state()).code })).body;
+    assert.equal((await request('/api/submit', { ...submitBody, ticket: claim2.ticket })).status, 200);
     await request('/api/session/end', {});
-    assert.equal((await cancel(second)).status, 409, 'closed session cannot be cancelled');
+    assert.equal((await cancel(closed)).status, 409, 'closed session cannot be cancelled');
+    assert.ok(saved().some(s => s.id === closed), 'closed session is archived, not discarded');
     const finishStart = await slowPost('/api/session/start', { courseId, question });
     const third = (await start()).body.sessionId;
     assert.equal((await finishStart()).status, 409, 'in-flight duplicate start cannot overwrite session');
@@ -101,7 +112,7 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
     assert.equal((await finishStaleCancel()).status, 409, 'in-flight cancel cannot remove replacement session');
     assert.equal((await state()).id, fourth);
     assert.equal((await cancel(fourth)).status, 200);
-    assert.equal(saved().find(s => s.id === second).records.length, 1);
+    assert.equal(saved().find(s => s.id === closed).records.length, 1);
     assert.deepEqual(saved().find(s => s.id === history.id), history);
     console.log('PASS: empty cancellation, required/current IDs, history and attendance protection, ticket invalidation, duplicate starts and in-flight request races');
   } finally {
