@@ -17,6 +17,7 @@
 .btn.pri{background:var(--ink);border-color:var(--ink);color:#fff}
 .btn.pri:hover{background:#2c2f33}
 .btn.mini{padding:5px 10px;font-size:11.5px}
+.btn.mini.icon{padding:5px 7px;line-height:0;display:inline-flex;align-items:center;justify-content:center}
 .btn.big{padding:11px 22px;font-size:13px}
 .btn:disabled,.btn[disabled]{opacity:.45;cursor:not-allowed}
 .btn:disabled:hover,.btn[disabled]:hover{border-color:var(--line)}
@@ -203,7 +204,7 @@ input:focus,select:focus{border-color:var(--blue);background:#fff}
   <h2 id="cancelSessionTitle">取消本次签到？</h2>
   <p id="cancelSessionMessage"></p>
   <p id="cancelSessionError" role="alert" hidden></p>
-  <div class="feedback-actions"><button class="btn" id="keepSessionBtn" autofocus>继续签到</button><button class="btn pri" id="endFromCancelBtn" hidden>结束本次并归档</button><button class="btn danger" id="confirmCancelSessionBtn">确认取消并返回选题</button></div>
+  <div class="feedback-actions"><button class="btn" id="keepSessionBtn" autofocus>继续签到</button><button class="btn danger" id="confirmCancelSessionBtn">确认取消并返回选题</button></div>
 </dialog>
 <script src="/shell.js"></script>
 <script>
@@ -299,22 +300,36 @@ function cleanLine(s) {
     .replace(/~~([^~]+)~~/g, '$1')               // ~~删除线~~
     .replace(/`([^`]*)`/g, '$1')                 // `行内代码`
     .replace(/\*/g, '')                          // 残留的散星号
+    .replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE00}-\u{FE0F}\u{20E3}\u{2B00}-\u{2BFF}]/gu, '') // ✅ ✔ 等表情
     .replace(/\s+/g, ' ')
     .trim();
 }
+/* 答案行不再要求独占一行：行内任意位置出现「答案」就取它后面紧跟的字母（A–F，支持 A、C / AC） */
+const ANSWER_RE = /(?:正确|参考|标准)?答案\s*[】\]]?\s*[:：]?\s*([A-Fa-f](?:[、,，和及]?[A-Fa-f])*)/;
+const NOISE_LINE = /^(?:解析|分析|说明|解释|考点|难度)\s*[:：]/;
 function parseQuestionBlock(raw) {
   const lines = raw.split(/\r?\n/)
     .map(cleanLine)
-    .filter(s => s && !NOISE_HEADER.test(s) && !/^!\[[^\]]*\]\([^)]*\)$/.test(s));  // 丢掉「选择题：」这类小标题和图片行
-  let type = null, answer = null, ansIdx = -1;
+    .filter(s => s && !NOISE_HEADER.test(s) && !NOISE_LINE.test(s) && !/^!\[[^\]]*\]\([^)]*\)$/.test(s));  // 丢掉小标题、解析行和图片行
+  let type = null, answer = null;
   lines.forEach((l, i) => {
     const t = l.match(/^【(单选|多选)题?】\s*(.*)$/);
     if (t) { type = t[1] === '多选' ? 'multiple' : 'single'; lines[i] = t[2]; }
-    const a = lines[i].match(/^(?:【答案】|(?:正确答案|参考答案|答案))\s*[:：]?\s*([A-Fa-f]{1,6})\s*[。.．]?$/);
-    if (a && answer === null) { answer = a[1].toUpperCase(); ansIdx = i; }
+    if (answer === null) {
+      const a = lines[i].match(ANSWER_RE);
+      if (a) {
+        const after = lines[i].slice(a.index + a[0].length);
+        /* 「答案A和B的主要区别是？」这类题干会被误判成答案，后面紧接中文就当没匹配上 */
+        if (!/^[\u4e00-\u9fa5]/.test(after)) {
+          answer = a[1].replace(/[^A-Fa-f]/g, '').toUpperCase();
+          // 只摘掉答案片段：答案跟选项同一行时（如「D. … 答案：C」），选项本身要留下
+          lines[i] = (lines[i].slice(0, a.index) + ' ' + after).trim();
+        }
+      }
+    }
   });
-  if (answer === null) return { error: '没找到「答案：X」这一行，无法自动识别正确答案' };
-  const body = lines.slice(0, ansIdx).concat(lines.slice(ansIdx + 1)).filter(l => l.trim());
+  if (answer === null) return { error: '没找到答案（需要出现「答案：C」这样的写法）' };
+  const body = lines.filter(l => l.trim() && /[\p{L}\p{N}]/u.test(l));   // 顺手丢掉只剩括号/标点的残片
   const optRe = /^([A-Fa-f])\s*[.、．:：)）]\s*(.+)$/;
   const opts = []; const qLines = []; let seenOpt = false, stray = null;
   body.forEach(l => {
@@ -436,15 +451,13 @@ function paintLive(st,archived) {
 function renderCancelMessage(){
   const stale = !STATE || STATE.id !== cancelTargetId;
   const hasRecords = !!(STATE && STATE.present > 0);
-  const blocked = stale || hasRecords;
-  $('#confirmCancelSessionBtn').disabled = blocked || ending;
-  // 已有学生提交时，取消本来就不允许：把死按钮换成能用的「结束并归档」，别让人点了没反应
-  $('#confirmCancelSessionBtn').hidden = hasRecords;
-  $('#endFromCancelBtn').hidden = !hasRecords;
-  $('#cancelSessionTitle').textContent = hasRecords ? '已有学生签到，不能取消' : '取消本次签到？';
+  const btn = $('#confirmCancelSessionBtn');
+  btn.disabled = stale || ending;
+  btn.textContent = hasRecords ? `丢弃 ${STATE.present} 条记录并返回选题` : '确认取消并返回选题';
+  $('#cancelSessionTitle').textContent = hasRecords ? '取消并丢弃本次签到？' : '取消本次签到？';
   $('#cancelSessionMessage').textContent = hasRecords
-    ? '已有学生提交签到，不能取消或返回选题。请保留本次数据，使用“结束本次并归档”。'
-    : '确认取消本次签到？当前尚无学生提交，取消后二维码和课堂码失效，本次空记录将移除，不计入签到次数与学情分析。';
+    ? `本次已有 ${STATE.present} 人签到。取消后这场签到和全部记录都会被丢弃——不归档、不计入出勤与学情分析，且无法恢复。`
+    : '确认取消本次签到？取消后二维码和课堂码立即失效，这场签到不留任何记录，也不计入出勤与学情分析。';
 }
 function closeCancelSession(){if($('#cancelSessionPanel').open)$('#cancelSessionPanel').close();cancelTargetId=null;}
 function requestCancelSession(){
@@ -457,16 +470,15 @@ $('#cancelSessionBtn').onclick=requestCancelSession;
 $('#keepSessionBtn').onclick=()=>{if(!ending)closeCancelSession();};
 $('#cancelSessionPanel').oncancel=event=>{if(ending)event.preventDefault();else cancelTargetId=null;};
 $('#confirmCancelSessionBtn').onclick=async()=>{
-  if(ending||!STATE||STATE.id!==cancelTargetId||STATE.present>0)return;
+  if(ending||!STATE||STATE.id!==cancelTargetId)return;
   ending=true;$('#confirmCancelSessionBtn').disabled=true;$('#endBtn').disabled=true;$('#keepSessionBtn').disabled=true;$('#cancelSessionError').hidden=true;
-  const d=await api('/api/session/cancel',{sessionId:cancelTargetId},'POST',message=>{const error=$('#cancelSessionError');error.textContent=message;error.hidden=false;});
+  const d=await api('/api/session/cancel',{sessionId:cancelTargetId,confirm:true},'POST',message=>{const error=$('#cancelSessionError');error.textContent=message;error.hidden=false;});
   ending=false;$('#endBtn').disabled=false;$('#keepSessionBtn').disabled=false;
   if(!d){await refreshState();renderCancelMessage();return;}
   if(poll)clearInterval(poll),poll=null;if(timer)clearInterval(timer),timer=null;
-  STATE=null;closeCancelSession();showStage(1);$('#startBtn').focus();
-  toast('已取消本次签到，空记录已移除；题目保留，可修改后重新发起');
+  STATE=null;ARCHIVED=null;closeCancelSession();showStage(1);$('#startBtn').focus();
+  toast(d.discarded?`已取消，${d.discarded} 条签到记录已丢弃；可修改题目后重新发起`:'已取消本次签到，可修改题目后重新发起');
 };
-$('#endFromCancelBtn').onclick=()=>{if(ending)return;closeCancelSession();$('#endBtn').click();};
 $('#attendancePrev').onclick=()=>{
   if(stage===3&&ARCHIVED){archiveReview=true;showStage(2);paintLive(ARCHIVED,true);}
   else if(stage===2&&archiveReview){archiveReview=false;showStage(1);}
@@ -504,12 +516,15 @@ function renderArchive(st) {
   showStage(3);
 }
 
-$('#againBtn').onclick = async () => {
+$('#againBtn').onclick = startNewSession;
+
+/* 「发起签到」/「发起新签到」：重新拉取数据后回到题目录入 */
+async function startNewSession() {
   const fresh = await api('/api/all');
   if (fresh) DATA = fresh;
-  STATE = null;
+  STATE = null; ARCHIVED = null;
   renderStage1();
-};
+}
 
 /* 归档后重新开放同一场签到：二维码继续用，已签到的记录保留，没签的同学还能扫 */
 $('#reSignBtn').onclick = async () => {
@@ -533,6 +548,11 @@ function attendanceTab(view) {
     $("#"+id).classList.toggle('pri',on);$("#"+id).setAttribute('aria-pressed',String(on));
   }
   const url=new URL(location.href);if(records)url.searchParams.set('tab','records');else url.searchParams.delete('tab');history.replaceState(null,'',url);
+  if(!records){
+    /* 左上角「发起签到」= 发起新签到：已归档时直接回到题目录入界面 */
+    if(stage===3) startNewSession();
+    else if(stage===2&&!archiveReview) toast('本次签到还在进行中；要发起新一场，请先结束并归档');
+  }
   if(records){
     const select=$('#historyCourse'),prior=select.value||$('#course').value||qs.get('courseId');
     select.innerHTML=(DATA.courses||[]).map(c=>`<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('');
@@ -606,19 +626,32 @@ function renderAttendanceSessions(list) {
         <td class="num">${s.present}/${s.total}</td>
         <td class="num"><span class="tag ${cls}">${s.rate}%</span></td>
         <td class="num">${s.correctRate == null ? '—' : s.correctRate + '%'}</td>
-        <td style="text-align:right;white-space:nowrap"><a class="btn mini" href="#" onclick="reopenFromHistory('${s.id}');return false">重新签到</a> <a class="btn mini" href="/api/export.xlsx?sessionId=${s.id}">导出</a></td>
+        <td style="text-align:right;white-space:nowrap"><button class="btn mini icon" title="删除这场签到记录" aria-label="删除这场签到记录" onclick="askDeleteSession('${s.id}',this)">${TRASH_ICON}</button> <a class="btn mini" href="/api/export.xlsx?sessionId=${s.id}">导出</a></td>
       </tr>`;
     }).join('')}</tbody></table>`;
 }
 
-/* 从签到记录里重新开放某一场：复用原场次的二维码与已签到数据 */
-window.reopenFromHistory = async function (id) {
-  const d = await api('/api/session/reopen', { sessionId: id });
-  if (!d) return;
-  DATA = (await api('/api/all')) || DATA;
-  toast('已重新开放该场签到，已签到记录保留');
-  enterLive();
+/* 删除一场签到记录：两步确认（第一次点变色，4 秒内再点才执行），不用 confirm() */
+const TRASH_ICON = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/><path d="M10 11v5M14 11v5"/></svg>';
+let armedDeleteBtn = null, armTimer = null;
+function disarmDelete() {
+  clearTimeout(armTimer); armTimer = null;
+  if (armedDeleteBtn) { armedDeleteBtn.classList.remove('danger'); armedDeleteBtn.innerHTML = TRASH_ICON; armedDeleteBtn = null; }
+}
+window.askDeleteSession = function (id, btn) {
+  if (armedDeleteBtn === btn) { disarmDelete(); deleteSessionRecord(id, btn); return; }
+  disarmDelete();
+  armedDeleteBtn = btn; btn.classList.add('danger'); btn.innerHTML = '确认删除';
+  armTimer = setTimeout(disarmDelete, 4000);
 };
+async function deleteSessionRecord(id, btn) {
+  btn.disabled = true;
+  const d = await api('/api/sessions/' + encodeURIComponent(id), { confirm: true }, 'DELETE', m => toast(m));
+  if (!d) { btn.disabled = false; btn.innerHTML = TRASH_ICON; return; }
+  toast(d.discarded ? `已删除这场签到（含 ${d.discarded} 条记录）` : '已删除这场签到');
+  if (ARCHIVED && ARCHIVED.id === id) ARCHIVED = null;
+  loadAttendanceHistory();
+}
 
 function renderAttendanceStudents(list) {
   if (!list.length) { $('#historyPerStudent').innerHTML = '<div class="empty">这门课还没有名单</div>'; return; }

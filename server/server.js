@@ -766,11 +766,36 @@ const handler = async (req, res) => {
     if (!s || s.id !== b.sessionId) {
       return json(res, 409, { error: '当前签到已变化，请刷新后重试' });
     }
-    if (s.records.length) return json(res, 409, { error: '已有学生提交，不能取消签到，请结束并保留记录' });
+    /* 取消 = 丢弃本次签到：不归档、不计入统计，记录一并删除。
+       已有学生提交时必须带 confirm 二次确认，避免误删 */
+    if (s.records.length && !b.confirm) {
+      return json(res, 409, {
+        error: `本次已有 ${s.records.length} 人签到，取消会连同这些记录一起丢弃`,
+        needConfirm: true, present: s.records.length
+      });
+    }
+    const discarded = s.records.length;
     store.write('sessions', store.read('sessions', []).filter(session => session.id !== s.id));
     activeSessionId = null;
     tickets = new Map();
-    return json(res, 200, { ok: true, sessionId: s.id });
+    for (const [pid, pd] of pendings) if (pd.sessionId === s.id) pendings.delete(pid);
+    return json(res, 200, { ok: true, sessionId: s.id, discarded });
+  }
+
+  /* 删除一场签到（含记录）：用于误开、作废的场次，只对已归档的场次开放 */
+  if (p.startsWith('/api/sessions/') && m === 'DELETE') {
+    const id = decodeURIComponent(p.slice('/api/sessions/'.length));
+    const b = await readBody(req);
+    if (!b.confirm) return json(res, 400, { error: '删除签到记录需要二次确认' });
+    const s = getSessions().find(x => x.id === id);
+    if (!s) return json(res, 404, { error: '这场签到不存在，可能已被删除' });
+    if (activeSessionId === id && !isExpired(s)) {
+      return json(res, 409, { error: '这场签到正在进行中，请先结束或取消' });
+    }
+    store.write('sessions', getSessions().filter(x => x.id !== id));
+    if (activeSessionId === id) activeSessionId = null;
+    for (const [pid, pd] of pendings) if (pd.sessionId === id) pendings.delete(pid);
+    return json(res, 200, { ok: true, id, discarded: s.records.length });
   }
 
   if (p === '/api/sessions' && m === 'GET') {
