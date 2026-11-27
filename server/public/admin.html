@@ -211,7 +211,7 @@ if (location.hash === '#ima') location.replace('/courses');
         <div class="col"><label for="setGrace">令牌宽限片数（片）</label><input id="setGrace" type="number" step="1" min="0"></div>
       </div>
       <div class="row">
-        <div class="col"><label for="setWindow">签到窗口（秒）</label><input id="setWindow" type="number" step="10" min="10"></div>
+        <div class="col"><label for="setWindow">自动关闭保险（小时，0 = 不自动关）</label><input id="setWindow" type="number" step="1" min="0"></div>
         <div class="col"><label for="setTicket">答题凭证有效期（秒）</label><input id="setTicket" type="number" step="10" min="20"></div>
       </div>
       <div class="row">
@@ -637,7 +637,9 @@ function renderSettings() {
   const s = D.settings || {};
   $('setRefresh').value = s.codeRefreshMs || 3000;
   $('setGrace').value = s.tokenGrace == null ? 3 : s.tokenGrace;
-  $('setWindow').value = Math.round((s.windowMs || 90000) / 1000);
+  const w = Number(s.windowMs);
+  /* 旧数据里 <10 分钟的值是「签到窗口」语义残留，展示成默认 6 小时保险 */
+  $('setWindow').value = (Number.isFinite(w) && (w === 0 || w >= 600000)) ? Math.round(w / 3600000 * 10) / 10 : 6;
   $('setTicket').value = Math.round((s.ticketTtlMs || 120000) / 1000);
   const R = Object.assign({ absenceRun: 2, corLastN: 5, corMinAns: 3, corRate: 20, hwMiss: 2, hwLow: 2, hwLowScore: 60 }, s.xqRules || {});
   $('setAbsRun').value = R.absenceRun;
@@ -653,9 +655,10 @@ function renderSettings() {
 function hint() {
   const r = Number($('setRefresh').value) || 3000;
   const g = Number($('setGrace').value) || 0;
+  const w = Number($('setWindow').value);
   $('setHint').textContent =
     `当前设置下：二维码每 ${r / 1000} 秒换一次，实际有效 ${(r * (g + 1)) / 1000} 秒（最后 ${g} 片仍可用）。`
-    + ` 签到窗口 ${$('setWindow').value} 秒，窗口关闭后即不能签到。`;
+    + ` 签到持续到老师点「结束并归档」；${w > 0 ? `${w} 小时无人结束时自动关闭（防隔夜误恢复）` : '不设自动关闭，忘点结束需手动处理'}。`;
 }
 ['setRefresh', 'setGrace', 'setWindow', 'setTicket'].forEach(id => { $(id).oninput = hint; });
 
@@ -663,7 +666,7 @@ $('saveSet').onclick = async () => {
   const d = await api('/api/settings', {
     codeRefreshMs: Number($('setRefresh').value),
     tokenGrace: Number($('setGrace').value),
-    windowMs: Number($('setWindow').value) * 1000,
+    windowMs: Number($('setWindow').value) * 3600000,
     ticketTtlMs: Number($('setTicket').value) * 1000
   }, 'PUT');
   if (d) { toast('已保存，下一场点名生效'); D.settings = d; hint(); }

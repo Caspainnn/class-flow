@@ -105,6 +105,14 @@ h1{font-size:18px;font-weight:500;line-height:1.55;margin-bottom:16px}
     <button class="btn" id="retry">改成输入课堂码</button>
   </div>
 
+  <div class="view" id="vWait">
+    <div class="center">
+      <div class="spin"></div>
+      <div class="t">等老师重新开放签到</div>
+      <div class="s" id="waitHint">你的扫码已登记，老师一开放就能直接答题，不用重新扫码。<br>请保持这个页面打开。</div>
+    </div>
+  </div>
+
   <div class="view" id="vForm">
     <h1 id="qtext">—</h1>
     <div id="opts"></div>
@@ -153,12 +161,15 @@ function netFail(e) {
 }
 
 const token = new URLSearchParams(location.search).get('t') || '';
+/* 二维码 URL 路径里带着场次 id：/s/<id>?t=...——会话关闭时靠它进入等待队列 */
+const PATH_SID = (location.pathname.match(/\/s\/([A-Za-z0-9_-]+)/) || [])[1] || '';
 let MODE = token ? 'qr' : 'code';
 let TICKET = null, PICK = null, LEFT = 0, timerId = null;
 let KNOWN = false;          // 用的是记住的身份，还是正在手动填
+let PENDING = null, WAIT_AT = 0;
 
 function view(name) {
-  ['vCode', 'vLoading', 'vError', 'vForm', 'vDone'].forEach(v => $(v).classList.toggle('on', v === name));
+  ['vCode', 'vLoading', 'vError', 'vWait', 'vForm', 'vDone'].forEach(v => $(v).classList.toggle('on', v === name));
 }
 
 function fail(msg, hint) {
@@ -175,6 +186,7 @@ function fail(msg, hint) {
 
 async function claim(payload) {
   view('vLoading');
+  if (PATH_SID) payload.sessionId = PATH_SID;
   try {
     const r = await fetchJSON('/api/claim', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -182,6 +194,7 @@ async function claim(payload) {
     });
     const d = await r.json();
     if (!r.ok) return fail(d.error || '校验失败');
+    if (d.waiting && d.pending) return startWaiting(d.pending, d.title);
     TICKET = d.ticket;
     LEFT = Math.floor(d.expiresIn / 1000);
     if (d.title) $('course').textContent = d.title;
@@ -189,6 +202,56 @@ async function claim(payload) {
   } catch (e) {
     netFail(e);
   }
+}
+
+/* ---- 等待队列：会话关闭时扫了有效码 → 老师重新开放同一场后自动进题 ---- */
+function startWaiting(pid, title) {
+  stopWaiting();
+  PENDING = pid; WAIT_AT = Date.now();
+  if (title) $('course').textContent = title;
+  $('stateText').textContent = '等待中';
+  view('vWait');
+  pollPending();
+  timerId = setInterval(pollPending, 3000);
+}
+function stopWaiting() {
+  clearInterval(timerId); timerId = null; PENDING = null;
+}
+async function pollPending() {
+  if (!PENDING) return;
+  try {
+    const r = await fetchJSON('/api/pending', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pending: PENDING })
+    });
+    const d = await r.json();
+    if (!r.ok) {
+      stopWaiting();
+      return fail('等待已过期', '请联系老师，或抬头重新扫投影上的二维码。');
+    }
+    if (d.ok && d.ticket) {                 // 老师重新开放了 → 自动进题
+      stopWaiting();
+      TICKET = d.ticket;
+      LEFT = Math.floor(d.expiresIn / 1000);
+      if (d.title) $('course').textContent = d.title;
+      $('stateText').textContent = '已连接';
+      buildForm(d.question);
+      return;
+    }
+    if (d.stale) {                          // 老师改用了别的场次
+      stopWaiting();
+      return fail('老师已发起新的签到', '请抬头重新扫投影上的最新二维码。');
+    }
+    if (d.already) {                        // 等待期间这台手机已经签过
+      stopWaiting();
+      $('doneTitle').textContent = '已经签过到了';
+      $('doneSub').textContent = '一个人只能签一个学号。如果不是你签的，举手告诉老师。';
+      return view('vDone');
+    }
+    if (Date.now() - WAIT_AT > 180000) {
+      $('waitHint').innerHTML = '等了很久还没开放。老师可能已经换新题目重新签到——<br>抬头看投影重新扫码最稳妥。';
+    }
+  } catch (e) { /* 网络抖动：保持等待，下个周期再试，不打断 */ }
 }
 
 function openCodeView() {

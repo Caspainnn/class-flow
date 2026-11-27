@@ -42,14 +42,33 @@ const refreshMs = () => num(SETTINGS.codeRefreshMs, 3000);
 const graceSlices = () => SETTINGS.tokenGrace == null
   ? 3   // 全新部署没有 settings.json 时也保证码有效 4 片（12s），不至于扫慢一点就过期
   : Math.max(0, Math.floor(Number(SETTINGS.tokenGrace) || 0));
-const windowMs = () => num(SETTINGS.windowMs, 90000);
-// 迟到状态已移除：窗口关闭即不能签，lateGraceMs 仅保留在 settings 里做兼容，不再参与判定
+/* 签到不再有 90 秒窗口：老师点「结束并归档」才关闭。
+   windowMs 语义改为「忘点结束」的自动关闭保险——默认 6 小时（覆盖半天，绝不跨夜），
+   0 = 不设保险；旧数据残留的 90000 之类（<10 分钟）按旧「签到窗口」语义理解，归为默认保险 */
+const FUSE_DEFAULT = 6 * 3600 * 1000;
+const fuseMs = () => {
+  const v = Number(SETTINGS.windowMs);
+  if (v === 0) return 0;
+  if (Number.isFinite(v) && v >= 600000) return v;
+  return FUSE_DEFAULT;
+};
+const fuseEnd = now => fuseMs() ? now + fuseMs() : now + 30 * 86400000;   // 不设保险时存一个远期值，JSON 里仍是有限数
+/* 读取时判定，不加定时器：closed 或保险到期都算关闭 */
+function isExpired(s) {
+  if (s.closed) return true;
+  const f = fuseMs();
+  return f > 0 && Date.now() > s.endsAt;
+}
+// 迟到状态已移除；lateGraceMs 仅保留在 settings 里做兼容，不再参与判定
 const ticketTtlMs = () => num(SETTINGS.ticketTtlMs, 120000);
 const CODE_SLOT_MS = 30000;
 
 /* ---------------- 运行态 ---------------- */
 let activeSessionId = null;
 let tickets = new Map();
+/* 排队凭证：会话关闭时扫了有效二维码的学生，老师重新开放同一场后自动换正式票进题 */
+let pendings = new Map();
+const PENDING_TTL = 30 * 60000;
 // 设备指纹：同一台手机（同一浏览器）只允许签一个人
 const DEVICE_COOKIE = 'ic_dev';
 
@@ -176,7 +195,7 @@ function startSession(courseId, rawQuestion) {
     courseId: course.id,
     question: { text: q.text, options: q.options, correct: q.correct, type: q.type },
     startedAt: now,
-    endsAt: now + windowMs(),
+    endsAt: fuseEnd(now),
     closed: false,
     records: []
   };
@@ -213,9 +232,9 @@ function sessionState(s) {
     joinUrl: ORIGIN + '/join',
     question: { text: s.question.text, options: s.question.options, correct: s.question.correct, type: s.question.type || (Array.isArray(s.question.correct) ? 'multiple' : 'single') },
     startedAt: s.startedAt,
-    open: now < s.endsAt,
-    remainMs: Math.max(0, s.endsAt - now),
-    windowMs: windowMs(),
+    open: !isExpired(s),
+    elapsedMs: Math.max(0, now - s.startedAt),
+    fuseMs: fuseMs(),
     total: roster.length,
     present: s.records.length,
     absent,
@@ -476,7 +495,13 @@ const handler = async (req, res) => {
   /* ---- 学生 ---- */
   if (p === '/api/claim' && m === 'POST') {
     const b = await readBody(req);
-    const s = currentSession();
+    let s = currentSession();
+    /* 场次已结束但老师可能马上重新开放：二维码 URL 里带着场次 id，凭它也能验 token，
+       让「老师刚点结束」和「保险到期」时扫码的学生进入等待队列，而不是报错 */
+    if (!s && b.sessionId) {
+      const found = getSessions().find(x => x.id === String(b.sessionId));
+      if (found && (verifyToken(found.id, b.token) || verifyCode(found.id, b.code))) s = found;
+    }
     if (!s) return json(res, 400, { error: '课堂还没开始' });
     const byToken = b.token ? verifyToken(s.id, b.token) : false;
     const byCode = b.code ? verifyCode(s.id, b.code) : false;
@@ -485,8 +510,6 @@ const handler = async (req, res) => {
         error: b.code ? '课堂码不对，看投影上最新的数字' : '二维码已刷新，请重新扫一下投影上的码'
       });
     }
-    const now = Date.now();
-    if (now > s.endsAt) return json(res, 400, { error: '本次签到已关闭，请看投影上最新的二维码' });
 
     // 一台设备一个会话只能领一张票：挡「同一部手机反复扫码帮别人签」
     let dev = deviceOf(req);
@@ -500,8 +523,58 @@ const handler = async (req, res) => {
       return json(res, 400, { error: '这台手机本次已经签过了，一个人只能签一个学号' });
     }
 
+    const now = Date.now();
+    if (isExpired(s)) {
+      /* 会话已关闭：不发错误，发排队凭证（30 分钟），老师重新开放同一场后自动进题 */
+      const pid = crypto.randomBytes(12).toString('hex');
+      pendings.set(pid, { sessionId: s.id, device: dev, at: now, exp: now + PENDING_TTL });
+      const course = findCourse(s.courseId);
+      return json(res, 200, {
+        waiting: true, pending: pid, expiresIn: PENDING_TTL,
+        title: course ? course.name : ''
+      });
+    }
+
     const ticket = crypto.randomBytes(16).toString('hex');
     tickets.set(ticket, { claimedAt: now, exp: now + ticketTtlMs(), used: false, device: dev });
+    const course = findCourse(s.courseId);
+    return json(res, 200, {
+      ok: true, ticket,
+      expiresIn: ticketTtlMs(),
+      title: course ? course.name : '',
+      question: { text: s.question.text, options: s.question.options, type: s.question.type || (Array.isArray(s.question.correct) ? 'multiple' : 'single') }
+    });
+  }
+
+  /* 排队凭证轮询：老师重新开放同一场后，等待中的学生自动换正式票进题，不用重新扫码 */
+  if (p === '/api/pending' && m === 'POST') {
+    const b = await readBody(req);
+    const pid = String(b.pending || '');
+    const pd = pendings.get(pid);
+    if (!pd || Date.now() > pd.exp) {
+      pendings.delete(pid);
+      return json(res, 400, { error: '等待已过期' });
+    }
+    const dev = deviceOf(req);
+    if (dev && dev !== pd.device) return json(res, 400, { error: '凭证不属于这台手机' });
+    const s = getSessions().find(x => x.id === pd.sessionId);
+    const cur = currentSession();
+    if (!s || (cur && cur.id !== pd.sessionId)) {
+      /* 老师删除了这场，或改用别的场次发起了新签到：排队作废 */
+      pendings.delete(pid);
+      return json(res, 200, { stale: true });
+    }
+    if (!cur || isExpired(s)) return json(res, 200, { waiting: true, expiresIn: pd.exp - Date.now() });
+    /* 已重新开放 → 换正式票（设备/学号去重与 claim 同一套） */
+    if ([...tickets.values()].some(t => t.device === pd.device)
+      || s.records.some(r => r.device && r.device === pd.device)) {
+      pendings.delete(pid);
+      return json(res, 200, { already: true });
+    }
+    const now = Date.now();
+    const ticket = crypto.randomBytes(16).toString('hex');
+    tickets.set(ticket, { claimedAt: now, exp: now + ticketTtlMs(), used: false, device: pd.device });
+    pendings.delete(pid);
     const course = findCourse(s.courseId);
     return json(res, 200, {
       ok: true, ticket,
@@ -640,7 +713,7 @@ const handler = async (req, res) => {
   if (p === '/api/session/start' && m === 'POST') {
     const b = await readBody(req);
     const current = currentSession();
-    if (current && !current.closed) return json(res, 409, { error: '已有进行中的签到，请先结束或取消当前签到' });
+    if (current && !isExpired(current)) return json(res, 409, { error: '已有进行中的签到，请先结束或取消当前签到' });
     const s = startSession(b.courseId, b.question);
     if (s.error) return json(res, 400, s);
     return json(res, 200, { ok: true, sessionId: s.id });
@@ -662,7 +735,7 @@ const handler = async (req, res) => {
     }
     const now = Date.now();
     s.closed = false;
-    s.endsAt = now + windowMs();
+    s.endsAt = fuseEnd(now);
     s.reopenedAt = now;                       // 只作追溯用，不参与统计
     s.reopenCount = (s.reopenCount || 0) + 1;
     saveSession(s);
@@ -690,7 +763,7 @@ const handler = async (req, res) => {
       return json(res, 400, { error: '请指定要取消的签到' });
     }
     const s = currentSession();
-    if (!s || s.closed || s.id !== b.sessionId) {
+    if (!s || s.id !== b.sessionId) {
       return json(res, 409, { error: '当前签到已变化，请刷新后重试' });
     }
     if (s.records.length) return json(res, 409, { error: '已有学生提交，不能取消签到，请结束并保留记录' });
@@ -1000,11 +1073,11 @@ const handler = async (req, res) => {
 };
 
 /* ---------------- 启动 ---------------- */
-/* 重启后接着上次没结束的那场（老师电脑崩了不用重开一场；窗口已过则不再续） */
+/* 重启后接着上次没结束的那场（老师电脑崩了不用重开一场）；保险到期或已关闭的不再续，
+   防止「昨天忘点结束」的会话今天开机又被恢复成进行中 */
 (function resumeActive() {
-  const now = Date.now();
   const last = getSessions()
-    .filter(s => !s.closed && now < s.endsAt)
+    .filter(s => !isExpired(s))
     .sort((a, b) => b.startedAt - a.startedAt)[0];
   if (last) activeSessionId = last.id;
 })();
@@ -1018,7 +1091,7 @@ http.createServer(handler).listen(PORT, HOST, () => {
   console.log('  手机扫不开时依次检查：① Windows 防火墙放行本服务 ② 手机与电脑同一 Wi-Fi（部分课堂 Wi-Fi 开了设备隔离）');
   console.log('  ③ 投影上网址里的 IP 与手机所在网段一致；不一致时用 PUBLIC_ORIGIN 环境变量指定正确地址');
   console.log(`  数据目录  ${store.DATA_DIR}`);
-  console.log(`  码 ${refreshMs() / 1000}s 刷新 · 有效 ${(refreshMs() * (graceSlices() + 1)) / 1000}s · 窗口 ${windowMs() / 1000}s`);
+  console.log(`  码 ${refreshMs() / 1000}s 刷新 · 有效 ${(refreshMs() * (graceSlices() + 1)) / 1000}s · 签到持续到老师点结束${fuseMs() ? `（${Math.round(fuseMs() / 3600000)} 小时无人结束时自动关闭）` : '（不设自动关闭）'}`);
   if (activeSessionId) console.log(`  接着上次未结束的签到：${activeSessionId}`);
   console.log('');
 });

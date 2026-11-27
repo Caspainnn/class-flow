@@ -385,14 +385,12 @@ function enterLive() {
   refreshState();
 }
 
-let REMAIN = 0;
+let ELAPSED = 0;
 function tickClock() {
   if (!STATE) return;
-  REMAIN = Math.max(0, REMAIN - 1000);
-  const m = Math.floor(REMAIN / 60000), s = Math.floor(REMAIN % 60000 / 1000);
-  $('#clock').textContent = REMAIN > 0
-    ? `剩余 ${m > 0 ? m + ' 分 ' : ''}${s} 秒 · 二维码每 3 秒刷新`
-    : '签到窗口已结束';
+  ELAPSED += 1000;
+  const m = Math.floor(ELAPSED / 60000);
+  $('#clock').textContent = `签到中 · 已进行 ${m} 分钟 · 直到老师点「结束并归档」${STATE.fuseMs ? `（${Math.round(STATE.fuseMs / 3600000)} 小时无人结束时自动关闭）` : ''} · 二维码每 3 秒刷新`;
 }
 
 async function refreshState() {
@@ -410,7 +408,8 @@ async function refreshState() {
 
 function paintLive(st,archived) {
   STATE = st;archiveReview=archived;
-  REMAIN = st.remainMs;
+  ELAPSED = Math.floor((st.elapsedMs || 0) / 1000) * 1000;
+  tickClock();
 
   $('#liveTitle').innerHTML = `${archived?'扫码签到情况（已归档）':'签到进行中'} <span>${esc(st.course)} · ${st.total} 人</span>`;
   $('#qrImg').closest('.qr').style.display=archived?'none':'';
