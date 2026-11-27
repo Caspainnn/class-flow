@@ -520,7 +520,17 @@ const handler = async (req, res) => {
     }
     if ([...tickets.values()].some(t => t.device === dev)
       || s.records.some(r => r.device && r.device === dev)) {
-      return json(res, 400, { error: '这台手机本次已经签过了，一个人只能签一个学号' });
+      /* 真签过（有记录）→ 明确告诉他已签到，不再给「输入课堂码」这种走不通的入口；
+         只领过票却没提交（关掉页面/超时）→ 清掉旧票重新发一张，让他继续签到 */
+      const mine = s.records.find(r => r.device && r.device === dev);
+      if (mine) {
+        return json(res, 400, {
+          error: '这台手机本次已经签过了，一个人只能签一个学号',
+          signed: true, studentId: mine.studentId, name: mine.name,
+          position: s.records.indexOf(mine) + 1, total: getStudents(s.courseId).length
+        });
+      }
+      for (const [key, t] of tickets) if (t.device === dev && !t.used) tickets.delete(key);
     }
 
     const now = Date.now();

@@ -85,7 +85,7 @@ h1{font-size:18px;font-weight:500;line-height:1.55;margin-bottom:16px}
 
   <div class="view" id="vCode">
     <h1>输入课堂码</h1>
-    <div class="sub">投影上有一组 4 位数字，每 30 秒变一次。二维码扫不出来时用这个。</div>
+    <div class="sub">投影上有一组 4 位数字，每 30 秒变一次。只有二维码扫不出来时才用这个；已经签到的不用再输。</div>
     <div class="field">
       <label>课堂码</label>
       <input id="ccode" class="codeinput" maxlength="4" inputmode="numeric" placeholder="––––" autocomplete="off">
@@ -172,13 +172,15 @@ function view(name) {
   ['vCode', 'vLoading', 'vError', 'vWait', 'vForm', 'vDone'].forEach(v => $(v).classList.toggle('on', v === name));
 }
 
-function fail(msg, hint) {
+function fail(msg, hint, canUseCode) {
   clearInterval(timerId);
   $('errMsg').textContent = msg;
   $('errHint').textContent = hint || (MODE === 'code'
     ? '请抬头看投影上最新的课堂码。'
     : '请抬头看讲台，重新扫一次最新的二维码。');
-  $('retry').style.display = MODE === 'code' ? 'none' : 'block';
+  /* 课堂码只是扫码失败时的替代入口：只有「换一张票就能继续」的错误才给这个按钮，
+     已经签过、名单不符、网络不通这些情况下输了码也走不通，不要给出死路 */
+  $('retry').style.display = canUseCode && MODE !== 'code' ? 'block' : 'none';
   $('state').classList.add('warn');
   $('stateText').textContent = '已失效';
   view('vError');
@@ -193,7 +195,21 @@ async function claim(payload) {
       body: JSON.stringify(payload)
     });
     const d = await r.json();
-    if (!r.ok) return fail(d.error || '校验失败');
+    if (!r.ok) {
+      /* 这台手机已经签过：直接给「已签到」结果页，不再引导去输课堂码（那不是身份，输了也没用） */
+      if (d.signed) {
+        const me = localStorage.getItem(LS_SID) || '';
+        const mine = me && me === d.studentId;
+        $('doneTitle').textContent = mine ? '你已经签过到了' : '这台手机已经签过了';
+        $('doneSub').innerHTML = mine
+          ? `${esc(d.name || '')} · 第 ${d.position || 1} 位到课<br>不用重复扫，安心听课就行。`
+          : '一台手机只能签一个学号。<br>如果是帮别人签的，或签错了，举手告诉老师。';
+        $('state').classList.remove('warn');
+        $('stateText').textContent = '已签到';
+        return view('vDone');
+      }
+      return fail(d.error || '校验失败', undefined, /二维码/.test(d.error || ''));
+    }
     if (d.waiting && d.pending) return startWaiting(d.pending, d.title);
     TICKET = d.ticket;
     LEFT = Math.floor(d.expiresIn / 1000);
@@ -227,7 +243,7 @@ async function pollPending() {
     const d = await r.json();
     if (!r.ok) {
       stopWaiting();
-      return fail('等待已过期', '请联系老师，或抬头重新扫投影上的二维码。');
+      return fail('等待已过期', '请联系老师，或抬头重新扫投影上的二维码。', true);
     }
     if (d.ok && d.ticket) {                 // 老师重新开放了 → 自动进题
       stopWaiting();
@@ -240,7 +256,7 @@ async function pollPending() {
     }
     if (d.stale) {                          // 老师改用了别的场次
       stopWaiting();
-      return fail('老师已发起新的签到', '请抬头重新扫投影上的最新二维码。');
+      return fail('老师已发起新的签到', '请抬头重新扫投影上的最新二维码。', true);
     }
     if (d.already) {                        // 等待期间这台手机已经签过
       stopWaiting();
@@ -340,7 +356,7 @@ function sync() {
 }
 
 function tick() {
-  if (LEFT <= 0) return fail('答题超时', '请抬头看讲台，重新扫一次最新的二维码。');
+  if (LEFT <= 0) return fail('答题超时', '请抬头看讲台，重新扫一次最新的二维码。', true);
   $('ticketTimer').textContent = `本次签到凭证 ${LEFT} 秒后失效`;
   LEFT--;
 }
@@ -365,7 +381,8 @@ $('submit').onclick = async () => {
         $('doneSub').textContent = '一个人只能签一个学号。如果不是你签的，举手告诉老师。';
         return view('vDone');
       }
-      if (/凭证|超时|还没开始/.test(msg)) return fail(msg);
+      if (/还没开始/.test(msg)) return fail(msg, '老师还没开始签到，等投影上出现二维码再扫。', false);
+      if (/凭证|超时/.test(msg)) return fail(msg, undefined, true);
       $('formErr').textContent = msg;
       $('formErr').classList.add('on');
       $('submit').textContent = '提交并签到';
